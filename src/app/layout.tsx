@@ -1,5 +1,4 @@
 "use client";
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -33,12 +32,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.className} min-h-screen`}
+        className={`${inter.className} min-h-screen no-transition`}
         suppressHydrationWarning
       >
         <ThemeProvider defaultTheme="system" storageKey="esap-theme">
           <ThemeTransitionProvider>
-            <EnhancedBackground intensity="medium">
+            <EnhancedBackground intensity="low">
               <div className="flex min-h-screen w-full">
                 <div className="m-5">
                   <Sidebar />

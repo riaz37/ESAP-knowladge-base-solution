@@ -28,7 +28,7 @@ export function ThemeToggle({
     const button = event.currentTarget as HTMLButtonElement;
     const switchingToDark = resolvedTheme === 'light';
 
-    // Add appropriate CSS class for ZenUI-style animation
+    // Add ZenUI-style animation classes for smooth transitions
     if (switchingToDark) {
       button.classList.add('switching-to-dark');
       setTimeout(() => button.classList.remove('switching-to-dark'), 1200);
@@ -36,6 +36,12 @@ export function ThemeToggle({
       button.classList.add('switching-to-light');
       setTimeout(() => button.classList.remove('switching-to-light'), 1200);
     }
+
+    // Add smooth scaling effect
+    button.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      button.style.transform = '';
+    }, 150);
 
     toggleTheme(event);
   };

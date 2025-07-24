@@ -35,7 +35,6 @@ import {
   Database,
   BarChart3,
   Table,
-  Sparkles,
   Clock,
   CheckCircle,
   XCircle,
@@ -365,37 +364,7 @@ export default function DBKnowledgePage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-background via-background to-muted/20 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.div
-          className="absolute top-20 left-20 w-96 h-96 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 blur-3xl"
-          animate={{
-            x: [0, 100, 0],
-            y: [0, -50, 0],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-        <motion.div
-          className="absolute top-40 right-32 w-64 h-64 rounded-full bg-gradient-to-r from-secondary/10 to-primary/10 blur-2xl"
-          animate={{
-            x: [0, -80, 0],
-            y: [0, 60, 0],
-            scale: [1, 0.8, 1],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 5,
-          }}
-        />
-      </div>
+    <div className="w-full min-h-screen relative">{/* Removed redundant background - using EnhancedBackground from layout */}
 
       {/* Hero Section */}
       <motion.div
@@ -510,11 +479,7 @@ export default function DBKnowledgePage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.5 }}
             >
-              <Card className="mt-6 overflow-hidden relative backdrop-blur-xl bg-white/10 dark:bg-black/10 border-white/20 dark:border-white/10 shadow-2xl">
-                {/* Glass effect overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-white/5 to-transparent dark:from-white/10 dark:via-white/5 dark:to-transparent" />
-                {/* Animated rainbow glow effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary/40 via-secondary/30 to-secondary/40 rounded-lg blur-lg opacity-50 animate-pulse" />
+              <Card className="mt-6 relative">{/* Simplified card styling */}
 
                 <CardContent className="relative flex flex-col items-center justify-center py-16 gap-6">
                   <div className="relative">

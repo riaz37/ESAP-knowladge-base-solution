@@ -55,11 +55,20 @@ export function ThemeProvider({
       
       setResolvedTheme(resolved);
       
-      // Update document class and data attribute
+      // Update document class and data attribute with smooth transition
       const root = document.documentElement;
+      
+      // Add no-transition class temporarily to prevent flash
+      document.body.classList.add('no-transition');
+      
       root.classList.remove('light', 'dark');
       root.classList.add(resolved);
       root.setAttribute('data-theme', resolved);
+      
+      // Remove no-transition class after DOM update
+      requestAnimationFrame(() => {
+        document.body.classList.remove('no-transition');
+      });
       
       // Update meta theme-color for mobile browsers
       const metaThemeColor = document.querySelector('meta[name="theme-color"]');

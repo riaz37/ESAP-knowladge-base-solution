@@ -149,6 +149,19 @@
   }
 }
 
+/* Enhanced view transition support for expanding circle effect */
+@supports (view-transition-name: none) {
+  /* Custom transition for theme changes */
+  ::view-transition-new(root) {
+    animation: none;
+    clip-path: circle(0px at 50% 50%);
+  }
+  
+  ::view-transition-old(root) {
+    animation: none;
+  }
+}
+
 /* Smooth transitions for all theme-aware elements */
 * {
   transition:
