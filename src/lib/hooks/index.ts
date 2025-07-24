@@ -6,4 +6,5 @@ export * from './use-business-rules-modal';
 export * from './use-database-operations';
 export * from './use-user-settings';
 export * from './use-tour';
+export * from './use-toast';
 export * from './useThemeTransition';

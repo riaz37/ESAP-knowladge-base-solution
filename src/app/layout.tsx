@@ -7,6 +7,7 @@ import { EnhancedBackground } from "@/components/ui/enhanced-background";
 import { ThemeTransitionProvider } from "@/components/ThemeTransitionProvider";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
+import { Toaster } from "@/components/ui/sonner";
 import { useState, useRef } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -66,6 +67,7 @@ export default function RootLayout({
               </div>
             </EnhancedBackground>
           </ThemeTransitionProvider>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

@@ -5,7 +5,6 @@ import { useFileUploadStore } from "@/store/file-upload-store";
 import { useSmartFileUpload } from "@/lib/hooks";
 import { FileUploadStatus } from "./FileUploadStatus";
 import { useEffect, useState } from "react";
-import { Toast } from "@/components/Toast";
 import { StatefulButton } from "../ui/stateful-button";
 import { useResolvedTheme } from "@/contexts/ThemeContext";
 
@@ -25,7 +24,6 @@ export const FileUpload: React.FC<FileUploadProps> = () => {
     reset,
   } = useFileUploadStore();
   const { startUpload } = useSmartFileUpload();
-  const [showToast, setShowToast] = useState(false);
 
   // Handle file drop
   const onDrop = (acceptedFiles: File[]) => {
@@ -98,12 +96,10 @@ export const FileUpload: React.FC<FileUploadProps> = () => {
     startUpload(uploadedFiles);
   };
 
-  // Toast and reset after completion
+  // Reset after completion
   useEffect(() => {
     if (status === "completed") {
-      setShowToast(true);
       setTimeout(() => {
-        setShowToast(false);
         reset();
       }, 3000);
     }
@@ -112,13 +108,6 @@ export const FileUpload: React.FC<FileUploadProps> = () => {
   // UI
   return (
     <div className="w-full">
-      {/* Toast on completion */}
-      <Toast
-        isVisible={showToast}
-        message="All files processed successfully!"
-        type="success"
-        onClose={() => setShowToast(false)}
-      />
       {/* Dropzone is always visible, but disabled and animated during processing */}
       <div
         {...getRootProps()}

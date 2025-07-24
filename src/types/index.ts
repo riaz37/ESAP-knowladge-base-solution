@@ -41,5 +41,4 @@ export type {
   ErrorCategory,
   EnhancedError,
   ErrorReportingConfig,
-  ErrorToastOptions,
 } from "./error";
