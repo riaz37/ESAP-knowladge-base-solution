@@ -97,7 +97,7 @@ export function ThemeProvider({
         event,
         () => setTheme(newTheme),
         isCurrentlyDark,
-        700 // Coordinated with icon animation duration
+        1200 // Slower, more comfortable transition
       );
     } else {
       // Fallback for programmatic theme changes

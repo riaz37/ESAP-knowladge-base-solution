@@ -31,10 +31,10 @@ export function ThemeToggle({
     // Add appropriate CSS class for ZenUI-style animation
     if (switchingToDark) {
       button.classList.add('switching-to-dark');
-      setTimeout(() => button.classList.remove('switching-to-dark'), 700);
+      setTimeout(() => button.classList.remove('switching-to-dark'), 1200);
     } else {
       button.classList.add('switching-to-light');
-      setTimeout(() => button.classList.remove('switching-to-light'), 700);
+      setTimeout(() => button.classList.remove('switching-to-light'), 1200);
     }
 
     toggleTheme(event);

@@ -222,7 +222,7 @@
   background: radial-gradient(circle, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.7) 40%, transparent 70%);
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(0);
-  transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   pointer-events: none;
   opacity: 0;
 }
@@ -238,7 +238,7 @@
   background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 40%, transparent 70%);
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(0);
-  transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   pointer-events: none;
   opacity: 0;
 }

@@ -61,13 +61,13 @@ function debounce<T extends (...args: any[]) => any>(
  * Smart theme transition with expanding circle effect for both directions
  * Light → Dark: New dark theme expands outward
  * Dark → Light: New light theme expands outward
- * Coordinated with smooth icon animations (700ms duration)
+ * Smooth and comfortable transition timing
  */
 export function createSemanticThemeTransition(
   event: React.MouseEvent,
   callback: () => void,
   isCurrentlyDark: boolean, // Kept for backward compatibility, not used in expanding-only mode
-  duration: number = 700 // Reduced to match icon animation duration
+  duration: number = 1200 // Slower, more comfortable transition
 ): Promise<void> {
   return new Promise((resolve) => {
     // Check for reduced motion preference
@@ -132,7 +132,7 @@ export function createSemanticThemeTransition(
 export function createCircularTransition(
   event: React.MouseEvent,
   callback: () => void,
-  duration: number = 800
+  duration: number = 1200
 ): Promise<void> {
   return createSemanticThemeTransition(event, callback, false, duration);
 }
@@ -144,7 +144,7 @@ export function createCircularTransition(
 export function createContractingTransition(
   event: React.MouseEvent,
   callback: () => void,
-  duration: number = 800
+  duration: number = 1200
 ): Promise<void> {
   return createSemanticThemeTransition(event, callback, true, duration);
 }
@@ -200,7 +200,7 @@ export function prefersReducedMotion(): boolean {
  * Get optimal transition duration based on user preferences
  */
 export function getOptimalTransitionDuration(
-  defaultDuration: number = 800
+  defaultDuration: number = 1200
 ): number {
   if (prefersReducedMotion()) {
     return 0;
@@ -228,7 +228,7 @@ export function createConfigurableThemeTransition(
   config: ThemeTransitionConfig = {}
 ): Promise<void> {
   const {
-    duration = 800,
+    duration = 1200, // Updated to match the slower transition
     easing = "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
     respectReducedMotion = true,
     fallbackTransition = true,
