@@ -5,14 +5,13 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { collections } from "@/app/dummy-data/information";
 import { useResolvedTheme } from "@/store/theme-store";
 import { useEffect } from "react";
 import QueryHistoryIcon from "@/icons/sidebar/QueryHistoryIcon";
 import { FaDownload, FaPlus } from "react-icons/fa";
 import { useUIStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
-import { isRouteActive, SPECIAL_ROUTES } from "@/lib/utils/navigation";
+import { getSidebarRoutes, isRouteActive, SPECIAL_ROUTES } from "@/lib/utils/navigation";
 
 // Import custom hooks
 import {
@@ -47,11 +46,14 @@ export default function Sidebar() {
     await databaseOps.clearHistory(userSettings.userId);
   };
 
+  // Get sidebar routes from the consolidated routing system
+  const sidebarRoutes = getSidebarRoutes();
+
   // Only show history and business rules on /db-knowledge
   const showDbKnowledgeExtras = pathname === SPECIAL_ROUTES.DB_KNOWLEDGE;
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center w-80">
       {/* Logo outside the sidebar border */}
       <div className="w-full flex justify-center items-center mb-5 scale-[1.3]">
         <Image
@@ -68,35 +70,37 @@ export default function Sidebar() {
         />
       </div>
 
-      <Card className="backdrop-blur-md bg-white/10 dark:bg-black/10 border-white/20 dark:border-white/10">
-        <CardContent className="p-6">
-          <aside className="w-full">
+      <Card className="backdrop-blur-md bg-white/10 dark:bg-black/10 border-white/20 dark:border-white/10 w-full min-h-[600px]">
+        <CardContent className="p-6 h-full">
+          <aside className="w-full h-full flex flex-col">
             {/* Tab List */}
             <nav className="flex flex-col gap-2 w-full">
-              {collections.map((col) => {
-                const isActive = isRouteActive(pathname, col.route);
+              {sidebarRoutes.map((route) => {
+                const isActive = isRouteActive(pathname, route.path);
                 return (
-                  <Link href={col.route} key={col.key} className="w-full">
+                  <Link href={route.path} key={route.key} className="w-full cursor-pointer">
                     <Button
                       variant={isActive ? "default" : "ghost"}
                       className={cn(
-                        "w-full h-12 justify-start gap-3 text-left font-medium",
+                        "w-full h-12 justify-start gap-3 text-left font-medium cursor-pointer",
                         isActive
                           ? "bg-emerald-500 hover:bg-emerald-600 text-white"
-                          : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                          : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-white"
                       )}
                     >
-                      <col.sidebarIcon
-                        fill={
-                          isActive
-                            ? "#ffffff"
-                            : resolvedTheme === "dark"
-                            ? "#ffffff"
-                            : "#222222"
-                        }
-                        className="w-5 h-5"
-                      />
-                      {col.name}
+                      {route.sidebarIcon && (
+                        <route.sidebarIcon
+                          fill={
+                            isActive
+                              ? "#ffffff"
+                              : resolvedTheme === "dark"
+                              ? "#ffffff"
+                              : "#222222"
+                          }
+                          className="w-5 h-5"
+                        />
+                      )}
+                      {route.name}
                     </Button>
                   </Link>
                 );
@@ -119,7 +123,7 @@ export default function Sidebar() {
                             resolvedTheme === "dark" ? "#ffffff" : "#000000"
                           }
                         />
-                        <span className="text-base font-semibold tracking-tight">
+                        <span className="text-base font-semibold tracking-tight text-gray-900 dark:text-white">
                           History
                         </span>
                       </div>
@@ -128,7 +132,7 @@ export default function Sidebar() {
                         disabled={databaseOps.historyLoading}
                         size="sm"
                         variant="outline"
-                        className="h-8 px-3 text-xs"
+                        className="h-8 px-3 text-xs cursor-pointer"
                       >
                         Clear
                       </Button>
@@ -140,7 +144,7 @@ export default function Sidebar() {
                         <Button
                           key={i}
                           variant="ghost"
-                          className="w-full justify-start h-auto p-2 text-left font-normal text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                          className="w-full justify-start h-auto p-2 text-left font-normal text-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer text-gray-900 dark:text-white"
                           title={item.question}
                           onClick={() => {
                             /* Optionally set query in global state */
@@ -170,7 +174,7 @@ export default function Sidebar() {
                   <Button
                     onClick={() => setShowBusinessRulesModal(true)}
                     variant="outline"
-                    className="flex-1 h-12"
+                    className="flex-1 h-12 cursor-pointer"
                   >
                     <FaDownload className="w-4 h-4 mr-2" />
                     Business Rules
@@ -178,7 +182,7 @@ export default function Sidebar() {
                   <Button
                     onClick={() => setShowBusinessRulesModal(true)}
                     size="icon"
-                    className="h-12 w-12 rounded-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700"
+                    className="h-12 w-12 rounded-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 cursor-pointer"
                   >
                     <FaPlus className="w-4 h-4" />
                   </Button>

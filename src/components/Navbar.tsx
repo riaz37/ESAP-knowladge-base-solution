@@ -38,12 +38,6 @@ export default function Navbar({
   userId,
   setEditingUserId,
   handleSaveUserId,
-  query,
-  setQuery,
-  selected,
-  handleQuerySubmit,
-  loading,
-  quickActions,
   editingUserId,
 }: NavbarProps) {
   // Use centralized theme solution

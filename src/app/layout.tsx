@@ -7,6 +7,7 @@ import { ThemeTransitionProvider } from "@/components/ThemeTransitionProvider";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import { Toaster } from "@/components/ui/sonner";
+import ErrorBoundary from "@/components/ui/error-boundary";
 import { useState, useRef } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -61,7 +62,9 @@ export default function RootLayout({
                     quickActions={[]}
                     editingUserId={editingUserId}
                   />
-                  <div className="flex-1">{children}</div>
+                  <div className="flex-1">
+                    <ErrorBoundary>{children}</ErrorBoundary>
+                  </div>
                 </div>
               </div>
             </EnhancedBackground>
