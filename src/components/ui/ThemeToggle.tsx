@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useThemeState } from "@/store/theme-store";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,13 +22,13 @@ export function ThemeToggle({
   size = "md",
   variant = "icon"
 }: ThemeToggleProps) {
-  const { theme, resolvedTheme, toggleTheme, setTheme } = useTheme();
+  const { theme, resolvedTheme, toggleTheme, setTheme } = useThemeState();
 
   const handleToggle = (event: React.MouseEvent) => {
     const button = event.currentTarget as HTMLButtonElement;
     const switchingToDark = resolvedTheme === 'light';
 
-    // Add appropriate CSS class for ZenUI-style animation
+    // Add ZenUI-style animation classes for smooth transitions
     if (switchingToDark) {
       button.classList.add('switching-to-dark');
       setTimeout(() => button.classList.remove('switching-to-dark'), 1200);
@@ -36,6 +36,12 @@ export function ThemeToggle({
       button.classList.add('switching-to-light');
       setTimeout(() => button.classList.remove('switching-to-light'), 1200);
     }
+
+    // Add smooth scaling effect
+    button.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      button.style.transform = '';
+    }, 150);
 
     toggleTheme(event);
   };
@@ -171,7 +177,7 @@ export function ModeToggle({ className = "" }: { className?: string }) {
 
 // Theme selector dropdown component for more advanced theme switching
 export function ThemeSelector({ className = "" }: { className?: string }) {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useThemeState();
 
   return (
     <select
@@ -198,7 +204,7 @@ export function ThemeSelector({ className = "" }: { className?: string }) {
 
 // Hook for components that need theme information
 export function useThemeInfo() {
-  const { theme, resolvedTheme } = useTheme();
+  const { theme, resolvedTheme } = useThemeState();
   
   return {
     theme,

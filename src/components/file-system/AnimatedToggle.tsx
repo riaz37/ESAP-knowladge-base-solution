@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useResolvedTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 
 interface AnimatedToggleProps {
   activeMode: "upload" | "query";

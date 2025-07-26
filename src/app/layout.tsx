@@ -1,12 +1,13 @@
 "use client";
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeStoreProvider } from "@/components/ThemeStoreProvider";
 import { EnhancedBackground } from "@/components/ui/enhanced-background";
 import { ThemeTransitionProvider } from "@/components/ThemeTransitionProvider";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
+import { Toaster } from "@/components/ui/sonner";
+import ErrorBoundary from "@/components/ui/error-boundary";
 import { useState, useRef } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -32,12 +33,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.className} min-h-screen`}
+        className={`${inter.className} min-h-screen no-transition`}
         suppressHydrationWarning
       >
-        <ThemeProvider defaultTheme="system" storageKey="esap-theme">
+        <ThemeStoreProvider>
           <ThemeTransitionProvider>
-            <EnhancedBackground intensity="medium">
+            <EnhancedBackground intensity="low">
               <div className="flex min-h-screen w-full">
                 <div className="m-5">
                   <Sidebar />
@@ -61,12 +62,15 @@ export default function RootLayout({
                     quickActions={[]}
                     editingUserId={editingUserId}
                   />
-                  <div className="flex-1">{children}</div>
+                  <div className="flex-1">
+                    <ErrorBoundary>{children}</ErrorBoundary>
+                  </div>
                 </div>
               </div>
             </EnhancedBackground>
           </ThemeTransitionProvider>
-        </ThemeProvider>
+          <Toaster />
+        </ThemeStoreProvider>
       </body>
     </html>
   );

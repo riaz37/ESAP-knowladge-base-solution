@@ -3,17 +3,16 @@ import { Dashboard } from "@/components/dashboard";
 import { OpeningAnimation } from "@/components/ui/opening-animation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collectionData, sampleChartData } from "./dummy-data/information";
+import { collectionData } from "./dummy-data/information";
 
 // Import custom hooks
-import { useDatabaseOperations, useTour, useUserSettings } from "@/lib/hooks";
+import { useDatabaseOperations, useUserSettings } from "@/lib/hooks";
 
 export default function DashboardPage() {
   const [showOpeningAnimation, setShowOpeningAnimation] = useState(false);
   const router = useRouter();
 
   const databaseOps = useDatabaseOperations();
-  const tour = useTour();
   const userSettings = useUserSettings();
 
   // Initialize component
@@ -43,8 +42,6 @@ export default function DashboardPage() {
     if (typeof window !== "undefined") {
       localStorage.setItem("welcome-animation-shown", "true");
     }
-    // Use tour hook to handle tour logic
-    tour.handleOpeningComplete();
   };
 
   // Remove Sidebar, Navbar, and SPA-style conditional rendering

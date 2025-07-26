@@ -2,7 +2,7 @@
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 import React, { useEffect, useState } from "react";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 
 export const EnhancedBackground = ({
   children,
@@ -13,7 +13,7 @@ export const EnhancedBackground = ({
   className?: string;
   intensity?: "low" | "medium" | "high";
 }) => {
-  const { theme, resolvedTheme } = useTheme();
+  const resolvedTheme = useResolvedTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -24,10 +24,10 @@ export const EnhancedBackground = ({
     return <div className="w-full h-full" />;
   }
 
-  const currentTheme = resolvedTheme || theme;
+  const currentTheme = resolvedTheme;
   const particleCount =
-    intensity === "high" ? 30 : intensity === "low" ? 10 : 20;
-  const gridSize = intensity === "high" ? 40 : intensity === "low" ? 60 : 50;
+    intensity === "high" ? 15 : intensity === "low" ? 5 : 8; // Reduced particle count
+  const gridSize = intensity === "high" ? 60 : intensity === "low" ? 80 : 70; // Larger grid for less clutter
 
   return (
     <div className={cn("relative w-full h-full overflow-hidden", className)}>
@@ -41,14 +41,14 @@ export const EnhancedBackground = ({
         }}
       />
 
-      {/* Animated grid */}
-      <div className="absolute inset-0 opacity-10">
+      {/* Subtle animated grid */}
+      <div className="absolute inset-0 opacity-5">
         <div
           className="absolute inset-0"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(34,197,94,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(34,197,94,0.1) 1px, transparent 1px)
+              linear-gradient(rgba(34,197,94,0.05) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(34,197,94,0.05) 1px, transparent 1px)
             `,
             backgroundSize: `${gridSize}px ${gridSize}px`,
           }}
@@ -79,13 +79,13 @@ export const EnhancedBackground = ({
         ))}
       </div>
 
-      {/* Animated lines */}
+      {/* Subtle animated lines */}
       <div className="absolute inset-0">
-        {[...Array(intensity === "high" ? 8 : intensity === "low" ? 3 : 5)].map(
+        {[...Array(intensity === "high" ? 4 : intensity === "low" ? 1 : 2)].map(
           (_, i) => (
             <motion.div
               key={i}
-              className="absolute h-px bg-gradient-to-r from-transparent via-green-400 to-transparent"
+              className="absolute h-px bg-gradient-to-r from-transparent via-green-400/30 to-transparent"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
@@ -93,37 +93,37 @@ export const EnhancedBackground = ({
               }}
               animate={{
                 x: [0, 100, 0],
-                opacity: [0, 1, 0],
+                opacity: [0, 0.3, 0],
               }}
               transition={{
-                duration: 6 + Math.random() * 4,
+                duration: 8 + Math.random() * 4,
                 repeat: Infinity,
-                delay: Math.random() * 6,
+                delay: Math.random() * 8,
               }}
             />
           )
         )}
       </div>
 
-      {/* Glowing orbs */}
+      {/* Subtle glowing orbs */}
       <div className="absolute inset-0">
-        {[...Array(intensity === "high" ? 6 : intensity === "low" ? 2 : 4)].map(
+        {[...Array(intensity === "high" ? 3 : intensity === "low" ? 1 : 2)].map(
           (_, i) => (
             <motion.div
               key={i}
-              className="absolute w-32 h-32 bg-green-400/10 rounded-full blur-xl"
+              className="absolute w-48 h-48 bg-green-400/5 rounded-full blur-3xl"
               style={{
-                left: `${20 + i * 15}%`,
-                top: `${30 + i * 10}%`,
+                left: `${20 + i * 25}%`,
+                top: `${30 + i * 15}%`,
               }}
               animate={{
-                scale: [1, 1.5, 1],
-                opacity: [0.3, 0.6, 0.3],
+                scale: [1, 1.2, 1],
+                opacity: [0.1, 0.2, 0.1],
               }}
               transition={{
-                duration: 8 + Math.random() * 4,
+                duration: 12 + Math.random() * 6,
                 repeat: Infinity,
-                delay: Math.random() * 4,
+                delay: Math.random() * 6,
               }}
             />
           )

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DatabaseService, QueryService, HistoryService } from '../api';
 import { DbQueryParams } from '../api/services/query-service';
+import { useToast } from './use-toast';
 
 /**
  * Hook for managing database operations
@@ -13,11 +14,7 @@ export function useDatabaseOperations() {
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{
-    isVisible: boolean;
-    message: string;
-    type: 'success' | 'error' | 'info';
-  }>({ isVisible: false, message: '', type: 'success' });
+  const { success, error: showError } = useToast();
 
   /**
    * Fetch query history for a user
@@ -59,7 +56,6 @@ export function useDatabaseOperations() {
   const reloadDatabase = async () => {
     setReloadLoading(true);
     setLoading(true); // Also set main loading state to show animation
-    setToast({ isVisible: false, message: '', type: 'success' });
 
     try {
       // Clear current state
@@ -67,24 +63,16 @@ export function useDatabaseOperations() {
       setHistoryLoading(false);
       setHistoryError(null);
       setDbResponse(null);
-      
+
       const response = await DatabaseService.reloadDatabase();
-      
+
       // Show success toast
-      setToast({
-        isVisible: true,
-        message: 'Database reloaded successfully!',
-        type: 'success',
-      });
-      
+      success('Database reloaded successfully!');
+
       return response;
     } catch (error: any) {
       console.error('Reload DB error:', error);
-      setToast({
-        isVisible: true,
-        message: error.message || 'Failed to reload database. Please try again.',
-        type: 'error',
-      });
+      showError(error.message || 'Failed to reload database. Please try again.');
       throw error;
     } finally {
       setReloadLoading(false);
@@ -128,12 +116,10 @@ export function useDatabaseOperations() {
     history,
     historyLoading,
     historyError,
-    toast,
     fetchQueryHistory,
     clearHistory,
     reloadDatabase,
     sendDatabaseQuery,
     setDbResponse,
-    setToast,
   };
 }

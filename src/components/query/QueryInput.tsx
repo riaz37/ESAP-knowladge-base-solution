@@ -1,6 +1,5 @@
 import React from "react";
 import { FloatingElements } from "@/components/ui/enhanced-background";
-import { BackgroundBeamsWithCollision } from "@/components/ui/background-beams-with-collision";
 import { StatefulButton } from "@/components/ui/stateful-button";
 import { FlipWordsDemo } from "@/components/ui/flip-words";
 import Image from "next/image";
@@ -94,48 +93,46 @@ const QueryInput: React.FC<QueryInputProps> = ({
               gap: 16,
             }}
           >
-            <BackgroundBeamsWithCollision intensity="high">
-              <div
+            <div
+              style={{
+                display: "flex",
+                padding: 0,
+                alignItems: "flex-start",
+                flex: 1,
+                borderRadius: 20,
+                alignSelf: "stretch",
+                height: "100%",
+                border:
+                  theme === "dark"
+                    ? "2px solid rgba(0, 191, 111, 0.30)"
+                    : "1.5px solid #e1f4ea",
+                background: theme === "dark" ? "rgba(0, 0, 0, 0.3)" : "#f0f9f5",
+                backdropFilter: theme === "dark" ? "blur(22.5px)" : undefined,
+                width: "100%",
+              }}
+            >
+              <textarea
+                id="query"
+                className=""
                 style={{
-                  display: "flex",
-                  padding: 0,
-                  alignItems: "flex-start",
-                  flex: 1,
-                  borderRadius: 20,
-                  alignSelf: "stretch",
-                  height: "100%",
-                  border:
-                    theme === "dark"
-                      ? "2px solid rgba(0, 191, 111, 0.30)"
-                      : "1.5px solid #e1f4ea",
-                  background: theme === "dark" ? "transparent" : "#f0f9f5",
-                  backdropFilter: theme === "dark" ? "blur(22.5px)" : undefined,
+                  border: "none",
+                  outline: "none",
+                  background: "transparent",
+                  color: theme === "dark" ? "#fff" : "#222",
+                  fontSize: 16,
                   width: "100%",
+                  minHeight: "100%",
+                  resize: "none",
+                  borderRadius: 24,
+                  padding: 24,
+                  flex: 1,
                 }}
-              >
-                <textarea
-                  id="query"
-                  className=""
-                  style={{
-                    border: "none",
-                    outline: "none",
-                    background: "transparent",
-                    color: theme === "dark" ? "#fff" : "#222",
-                    fontSize: 16,
-                    width: "100%",
-                    minHeight: "100%",
-                    resize: "none",
-                    borderRadius: 24,
-                    padding: 24,
-                    flex: 1,
-                  }}
-                  placeholder="Ask your questions here"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  disabled={selected !== "db"}
-                />
-              </div>
-            </BackgroundBeamsWithCollision>
+                placeholder="Ask your questions here"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                disabled={selected !== "db"}
+              />
+            </div>
             <div
               style={{
                 display: "flex",

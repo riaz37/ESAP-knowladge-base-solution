@@ -1,10 +1,10 @@
 "use client";
 
-import { useTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 import Image from "next/image";
 
 export default function SupportTeamPage() {
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useResolvedTheme();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-8">

@@ -101,12 +101,3 @@ export interface AppError {
     ignoredErrors: string[];
   }
   
-  // Toast notification error types
-  export interface ErrorToastOptions {
-    title?: string;
-    message: string;
-    duration?: number;
-    showRetry?: boolean;
-    onRetry?: () => void;
-    persistent?: boolean;
-  }

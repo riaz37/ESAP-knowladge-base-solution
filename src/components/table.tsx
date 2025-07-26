@@ -9,7 +9,7 @@ import {
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import FilterIcon from "@/icons/sidebar/filterIcon";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/store/theme-store";
 
 export type TableColumn = {
   key: string;
