@@ -8,7 +8,7 @@ import ReactMarkdown from "react-markdown";
 import React from "react";
 import remarkGfm from "remark-gfm";
 import { StatefulButton } from "../ui/stateful-button";
-import { useResolvedTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 
 interface FileQueryProps {}
 

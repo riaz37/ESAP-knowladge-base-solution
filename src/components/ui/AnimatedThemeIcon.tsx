@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/store/theme-store';
 
 interface AnimatedThemeIconProps {
   width?: number;

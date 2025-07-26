@@ -2,14 +2,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import QueryInput from "@/components/query/QueryInput";
-import { GraphsRow } from "@/components/graphs";
 import FigmaTableDemo from "@/components/table";
 import Lottie from "lottie-react";
 import robotAnimation2 from "../../../public/robot-lottie3.json";
 import { useUIStore } from "@/store/uiStore";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 
 // Import shadcn components
 import {
@@ -93,7 +92,7 @@ const quickActions = [
 export default function DBKnowledgePage() {
   const [query, setQuery] = useState("");
   const { showBusinessRulesModal, setShowBusinessRulesModal } = useUIStore();
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useResolvedTheme();
 
   // Custom hooks
   const databaseOps = useDatabaseOperations();
@@ -348,15 +347,6 @@ export default function DBKnowledgePage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="relative pt-6">
-              {/* Glass overlay for charts */}
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent dark:via-black/5 pointer-events-none" />
-              <GraphsRow
-                chartData={chartData}
-                loading={databaseOps.loading}
-                isDummy={!chartData || (!chartData.bar && !chartData.pie)}
-              />
-            </CardContent>
           </Card>
         )}
       </motion.div>
@@ -364,7 +354,8 @@ export default function DBKnowledgePage() {
   }
 
   return (
-    <div className="w-full min-h-screen relative">{/* Removed redundant background - using EnhancedBackground from layout */}
+    <div className="w-full min-h-screen relative">
+      {/* Removed redundant background - using EnhancedBackground from layout */}
 
       {/* Hero Section */}
       <motion.div
@@ -479,7 +470,8 @@ export default function DBKnowledgePage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.5 }}
             >
-              <Card className="mt-6 relative">{/* Simplified card styling */}
+              <Card className="mt-6 relative">
+                {/* Simplified card styling */}
 
                 <CardContent className="relative flex flex-col items-center justify-center py-16 gap-6">
                   <div className="relative">

@@ -1,7 +1,7 @@
 "use client";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeStoreProvider } from "@/components/ThemeStoreProvider";
 import { EnhancedBackground } from "@/components/ui/enhanced-background";
 import { ThemeTransitionProvider } from "@/components/ThemeTransitionProvider";
 import Sidebar from "@/components/Sidebar";
@@ -35,7 +35,7 @@ export default function RootLayout({
         className={`${inter.className} min-h-screen no-transition`}
         suppressHydrationWarning
       >
-        <ThemeProvider defaultTheme="system" storageKey="esap-theme">
+        <ThemeStoreProvider>
           <ThemeTransitionProvider>
             <EnhancedBackground intensity="low">
               <div className="flex min-h-screen w-full">
@@ -67,7 +67,7 @@ export default function RootLayout({
             </EnhancedBackground>
           </ThemeTransitionProvider>
           <Toaster />
-        </ThemeProvider>
+        </ThemeStoreProvider>
       </body>
     </html>
   );

@@ -10,31 +10,40 @@ export const collections = [
     name: "Dashboard",
     icon: "🏠",
     sidebarIcon: DashboardIcon,
+    route: "/",
+    category: "main" as const,
   },
   {
     key: "db",
     name: "DB Knowledge",
     icon: "🔒",
     sidebarIcon: DatabaseIcon,
+    route: "/db-knowledge",
+    category: "knowledge" as const,
   },
   {
     key: "File system",
     name: "File system",
     icon: "🗂️",
     sidebarIcon: SalesKnowledgeIcon,
+    route: "/file-system",
+    category: "tools" as const,
   },
-
   {
     key: "hr",
     name: "HR Knowledge",
     icon: "👥",
     sidebarIcon: HrKnowledgeIcon,
+    route: "/hr-knowledge",
+    category: "knowledge" as const,
   },
   {
     key: "support Team",
     name: "Support Team",
     icon: "🛠️",
     sidebarIcon: SupportKnowledgeIcon,
+    route: "/support-team",
+    category: "knowledge" as const,
   },
 ];
 

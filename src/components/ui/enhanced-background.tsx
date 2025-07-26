@@ -2,7 +2,7 @@
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 import React, { useEffect, useState } from "react";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 
 export const EnhancedBackground = ({
   children,
@@ -13,7 +13,7 @@ export const EnhancedBackground = ({
   className?: string;
   intensity?: "low" | "medium" | "high";
 }) => {
-  const { theme, resolvedTheme } = useTheme();
+  const resolvedTheme = useResolvedTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -24,7 +24,7 @@ export const EnhancedBackground = ({
     return <div className="w-full h-full" />;
   }
 
-  const currentTheme = resolvedTheme || theme;
+  const currentTheme = resolvedTheme;
   const particleCount =
     intensity === "high" ? 15 : intensity === "low" ? 5 : 8; // Reduced particle count
   const gridSize = intensity === "high" ? 60 : intensity === "low" ? 80 : 70; // Larger grid for less clutter

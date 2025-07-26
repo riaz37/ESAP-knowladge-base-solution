@@ -3,7 +3,7 @@ import { useState } from "react";
 import { FileUpload } from "./FileUpload";
 import { FileQuery } from "./FileQuery";
 import { AnimatedToggle } from "./AnimatedToggle";
-import { useResolvedTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 
 export interface FileSystemProps {}
 

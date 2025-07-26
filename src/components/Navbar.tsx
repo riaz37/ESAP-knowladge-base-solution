@@ -6,7 +6,7 @@ import { SecondaryButton } from "./glass-ui/buttons/SecondaryButton";
 import ReloadIcon from "@/icons/sidebar/reloadIcon";
 import DarkModeToggleIcon from "@/icons/sidebar/darkModeToggleIcon";
 import UserIcon from "@/icons/sidebar/userIcon";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface NavbarProps {
@@ -47,7 +47,7 @@ export default function Navbar({
   editingUserId,
 }: NavbarProps) {
   // Use centralized theme solution
-  const { resolvedTheme, toggleTheme } = useTheme();
+  const resolvedTheme = useResolvedTheme();
   return (
     <FadeInSection delay={0.2}>
       <div className="flex items-center flex-row justify-between mb-7 w-full">

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FadeInSection } from "@/components/ui/opening-animation";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 import { Sparkles, Clock, Rocket, Star } from "lucide-react";
 
 interface ComingSoonProps {
@@ -19,7 +19,7 @@ const ComingSoon: React.FC<ComingSoonProps> = ({
   description = "Our new dashboard experience is currently under development. Stay tuned for powerful analytics, insights, and tools that will transform how you interact with your knowledge base.",
   launchDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
 }) => {
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useResolvedTheme();
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,

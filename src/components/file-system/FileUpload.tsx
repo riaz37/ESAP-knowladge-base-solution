@@ -6,7 +6,7 @@ import { useSmartFileUpload } from "@/lib/hooks";
 import { FileUploadStatus } from "./FileUploadStatus";
 import { useEffect, useState } from "react";
 import { StatefulButton } from "../ui/stateful-button";
-import { useResolvedTheme } from "@/contexts/ThemeContext";
+import { useResolvedTheme } from "@/store/theme-store";
 
 interface FileUploadProps {}
 
