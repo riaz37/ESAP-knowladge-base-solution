@@ -22,7 +22,7 @@ export default function DBKnowledgeHero({
 }: DBKnowledgeHeroProps) {
   return (
     <div className="relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5" />
+      <div className="absolute inset-0" />
       <div className="relative">
         <Card className="border-0 shadow-none bg-transparent">
           <CardContent className="pt-8 pb-6">

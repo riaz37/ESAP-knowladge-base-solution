@@ -129,7 +129,17 @@
 @layer base {
   /* Global element defaults */
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+  
+  /* Add outline for keyboard navigation but remove for mouse users */
+  *:focus-visible {
+    @apply outline-ring/50 outline-2 outline-offset-2 outline;
+  }
+  
+  /* Remove outline for query input specifically */
+  #query:focus-visible {
+    outline: none !important;
   }
 
   /* Custom gradient background for the entire app */
