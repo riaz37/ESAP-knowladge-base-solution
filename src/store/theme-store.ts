@@ -2,22 +2,22 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createSemanticThemeTransition } from "@/lib/hooks/useThemeTransition";
 
-type Theme = 'light' | 'dark' | 'system';
+type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeState {
-  theme: Theme;
-  resolvedTheme: 'light' | 'dark';
+  themeMode: ThemeMode;
+  theme: 'light' | 'dark';
   mounted: boolean;
   
   // Actions
-  setTheme: (theme: Theme) => void;
+  setThemeMode: (themeMode: ThemeMode) => void;
   toggleTheme: (event?: React.MouseEvent) => void;
-  setResolvedTheme: (resolvedTheme: 'light' | 'dark') => void;
+  setTheme: (theme: 'light' | 'dark') => void;
   setMounted: (mounted: boolean) => void;
   initializeTheme: () => void;
   
   // Internal helper methods
-  updateResolvedTheme: () => void;
+  updateTheme: () => void;
   updateDOM: () => void;
   setupSystemThemeListener: () => (() => void) | undefined;
 }
@@ -25,36 +25,36 @@ interface ThemeState {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
-      theme: 'system',
-      resolvedTheme: 'dark',
+      themeMode: 'system',
+      theme: 'dark',
       mounted: false,
 
-      setTheme: (newTheme: Theme) => {
-        set({ theme: newTheme });
-        get().updateResolvedTheme();
+      setThemeMode: (newThemeMode: ThemeMode) => {
+        set({ themeMode: newThemeMode });
+        get().updateTheme();
       },
 
       toggleTheme: (event?: React.MouseEvent) => {
-        const { theme, resolvedTheme } = get();
-        const newTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'light' : (resolvedTheme === 'dark' ? 'light' : 'dark');
+        const { themeMode, theme } = get();
+        const newThemeMode = themeMode === 'light' ? 'dark' : themeMode === 'dark' ? 'light' : (theme === 'dark' ? 'light' : 'dark');
 
         // Use semantic theme transition if event is provided
         if (event && typeof document !== 'undefined') {
-          const isCurrentlyDark = resolvedTheme === 'dark';
+          const isCurrentlyDark = theme === 'dark';
 
           createSemanticThemeTransition(
             event,
-            () => get().setTheme(newTheme),
+            () => get().setThemeMode(newThemeMode),
             isCurrentlyDark,
             1200
           );
         } else {
-          get().setTheme(newTheme);
+          get().setThemeMode(newThemeMode);
         }
       },
 
-      setResolvedTheme: (resolvedTheme: 'light' | 'dark') => {
-        set({ resolvedTheme });
+      setTheme: (theme: 'light' | 'dark') => {
+        set({ theme });
         get().updateDOM();
       },
 
@@ -64,38 +64,38 @@ export const useThemeStore = create<ThemeState>()(
         if (typeof window === 'undefined') return;
         
         set({ mounted: true });
-        get().updateResolvedTheme();
+        get().updateTheme();
         get().setupSystemThemeListener();
       },
 
       // Internal helper methods (not exposed in interface)
-      updateResolvedTheme: () => {
+      updateTheme: () => {
         if (typeof window === 'undefined') return;
         
-        const { theme } = get();
+        const { themeMode } = get();
         let resolved: 'light' | 'dark';
         
-        if (theme === 'system') {
+        if (themeMode === 'system') {
           resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         } else {
-          resolved = theme;
+          resolved = themeMode;
         }
         
-        get().setResolvedTheme(resolved);
+        get().setTheme(resolved);
       },
 
       updateDOM: () => {
         if (typeof document === 'undefined') return;
         
-        const { resolvedTheme } = get();
+        const { theme } = get();
         const root = document.documentElement;
         
         // Add no-transition class temporarily to prevent flash
         document.body.classList.add('no-transition');
         
         root.classList.remove('light', 'dark');
-        root.classList.add(resolvedTheme);
-        root.setAttribute('data-theme', resolvedTheme);
+        root.classList.add(theme);
+        root.setAttribute('data-theme', theme);
         
         // Remove no-transition class after DOM update
         requestAnimationFrame(() => {
@@ -105,18 +105,18 @@ export const useThemeStore = create<ThemeState>()(
         // Update meta theme-color for mobile browsers
         const metaThemeColor = document.querySelector('meta[name="theme-color"]');
         if (metaThemeColor) {
-          metaThemeColor.setAttribute('content', resolvedTheme === 'dark' ? '#0f172a' : '#ffffff');
+          metaThemeColor.setAttribute('content', theme === 'dark' ? '#0f172a' : '#ffffff');
         }
       },
 
       setupSystemThemeListener: () => {
         if (typeof window === 'undefined') return;
         
-        const { theme } = get();
+        const { themeMode } = get();
         
-        if (theme === 'system') {
+        if (themeMode === 'system') {
           const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-          const handleChange = () => get().updateResolvedTheme();
+          const handleChange = () => get().updateTheme();
           
           mediaQuery.addEventListener('change', handleChange);
           
@@ -127,25 +127,32 @@ export const useThemeStore = create<ThemeState>()(
     }),
     {
       name: 'esap-theme',
-      partialize: (state) => ({ theme: state.theme }),
+      partialize: (state) => ({ themeMode: state.themeMode }),
     }
   )
 );
 
 // Selector hooks for better performance
 export const useTheme = () => useThemeStore((state) => state.theme);
-export const useResolvedTheme = () => useThemeStore((state) => state.resolvedTheme);
-export const useThemeActions = () => useThemeStore((state) => ({
-  setTheme: state.setTheme,
-  toggleTheme: state.toggleTheme,
-  initializeTheme: state.initializeTheme,
-}));
+export const useThemeMode = () => useThemeStore((state) => state.themeMode);
+export const useThemeActions = () =>
+  useThemeStore((state) => ({
+    setThemeMode: state.setThemeMode,
+    toggleTheme: state.toggleTheme,
+    setTheme: state.setTheme,
+    initializeTheme: state.initializeTheme,
+  }));
 
 // Combined hook for components that need both theme and actions
-export const useThemeState = () => useThemeStore((state) => ({
-  theme: state.theme,
-  resolvedTheme: state.resolvedTheme,
-  mounted: state.mounted,
-  setTheme: state.setTheme,
-  toggleTheme: state.toggleTheme,
-}));
+export const useThemeState = () =>
+  useThemeStore((state) => ({
+    themeMode: state.themeMode,
+    theme: state.theme,
+    mounted: state.mounted,
+    setThemeMode: state.setThemeMode,
+    toggleTheme: state.toggleTheme,
+    setTheme: state.setTheme,
+  }));
+
+// Legacy hook for backward compatibility (will be removed)
+export const useResolvedTheme = () => useThemeStore((state) => state.theme);

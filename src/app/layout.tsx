@@ -17,7 +17,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Example state management (replace with Zustand if needed)
   const [searchTerm, setSearchTerm] = useState("");
   const [showUserTooltip, setShowUserTooltip] = useState(false);
   const [userId, setUserId] = useState("default");
@@ -38,36 +37,34 @@ export default function RootLayout({
       >
         <ThemeStoreProvider>
           <ThemeTransitionProvider>
-            <EnhancedBackground intensity="low">
-              <div className="flex min-h-screen w-full">
-                <div className="m-5">
-                  <Sidebar />
-                </div>
-                <div className="flex-1 flex flex-col min-h-screen mt-10">
-                  <Navbar
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    handleReloadDb={handleReloadDb}
-                    showUserTooltip={showUserTooltip}
-                    setShowUserTooltip={setShowUserTooltip}
-                    userTooltipRef={userTooltipRef}
-                    userId={userId}
-                    setEditingUserId={setEditingUserId}
-                    handleSaveUserId={handleSaveUserId}
-                    query={""}
-                    setQuery={() => {}}
-                    selected={"dashboard"}
-                    handleQuerySubmit={() => {}}
-                    loading={false}
-                    quickActions={[]}
-                    editingUserId={editingUserId}
-                  />
-                  <div className="flex-1">
-                    <ErrorBoundary>{children}</ErrorBoundary>
-                  </div>
+            <div className="flex min-h-screen w-full">
+              <div className="m-5">
+                <Sidebar />
+              </div>
+              <div className="flex-1 flex flex-col min-h-screen mt-10">
+                <Navbar
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  handleReloadDb={handleReloadDb}
+                  showUserTooltip={showUserTooltip}
+                  setShowUserTooltip={setShowUserTooltip}
+                  userTooltipRef={userTooltipRef}
+                  userId={userId}
+                  setEditingUserId={setEditingUserId}
+                  handleSaveUserId={handleSaveUserId}
+                  query={""}
+                  setQuery={() => {}}
+                  selected={"dashboard"}
+                  handleQuerySubmit={() => {}}
+                  loading={false}
+                  quickActions={[]}
+                  editingUserId={editingUserId}
+                />
+                <div className="flex-1">
+                  <ErrorBoundary>{children}</ErrorBoundary>
                 </div>
               </div>
-            </EnhancedBackground>
+            </div>
           </ThemeTransitionProvider>
           <Toaster />
         </ThemeStoreProvider>

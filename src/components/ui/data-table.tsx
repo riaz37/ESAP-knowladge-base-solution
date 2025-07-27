@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import FilterIcon from "@/icons/sidebar/filterIcon";
-import { useResolvedTheme } from "@/store/theme-store";
+import { useResolvedTheme, useTheme } from "@/store/theme-store";
 import { ChevronUp, ChevronDown, MoreVertical } from "lucide-react";
 
 export type TableColumn = {
@@ -62,7 +62,7 @@ export default function DataTable({
   pageSizeOptions = [7, 10, 20, 30],
   defaultPageSize = 7,
 }: DataTableProps) {
-  const { theme } = useTheme();
+  const theme = useTheme();
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});

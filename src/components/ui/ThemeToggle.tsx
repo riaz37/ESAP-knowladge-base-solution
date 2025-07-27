@@ -22,11 +22,11 @@ export function ThemeToggle({
   size = "md",
   variant = "icon"
 }: ThemeToggleProps) {
-  const { theme, resolvedTheme, toggleTheme, setTheme } = useThemeState();
+  const { themeMode, theme, toggleTheme, setThemeMode } = useThemeState();
 
   const handleToggle = (event: React.MouseEvent) => {
     const button = event.currentTarget as HTMLButtonElement;
-    const switchingToDark = resolvedTheme === 'light';
+    const switchingToDark = theme === 'light';
 
     // Add ZenUI-style animation classes for smooth transitions
     if (switchingToDark) {
@@ -51,15 +51,15 @@ export function ThemeToggle({
       // Use smooth transition for dropdown selections too
       const switchingToDark = (newTheme === 'dark') || (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-      if (switchingToDark && resolvedTheme === 'light') {
+      if (switchingToDark && theme === 'light') {
         toggleTheme(event);
-      } else if (!switchingToDark && resolvedTheme === 'dark') {
+      } else if (!switchingToDark && theme === 'dark') {
         toggleTheme(event);
       } else {
-        setTheme(newTheme);
+        setThemeMode(newTheme);
       }
     } else {
-      setTheme(newTheme);
+      setThemeMode(newTheme);
     }
   };
 
@@ -122,14 +122,14 @@ export function ThemeToggle({
           backdrop-blur-sm
           ${className}
         `}
-        aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
+        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
       >
         <div className="relative">
           <Sun className="h-4 w-4 scale-100 rotate-0 transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] dark:scale-0 dark:-rotate-90" />
           <Moon className="absolute inset-0 h-4 w-4 scale-0 rotate-90 transition-all duration-700 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] dark:scale-100 dark:rotate-0" />
         </div>
         <span className="text-sm font-medium">
-          {resolvedTheme === 'dark' ? 'Light' : 'Dark'} Mode
+          {theme === 'dark' ? 'Light' : 'Dark'} Mode
         </span>
       </button>
     );
@@ -151,8 +151,8 @@ export function ThemeToggle({
         backdrop-blur-sm
         ${className}
       `}
-      aria-label={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
-      title={`Current: ${theme} mode (${resolvedTheme})`}
+      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      title={`Current: ${themeMode} mode (${theme})`}
     >
       <div className="relative transition-transform duration-300 ease-in-out hover:rotate-12">
         <Sun
@@ -177,12 +177,12 @@ export function ModeToggle({ className = "" }: { className?: string }) {
 
 // Theme selector dropdown component for more advanced theme switching
 export function ThemeSelector({ className = "" }: { className?: string }) {
-  const { theme, setTheme } = useThemeState();
+  const { themeMode, setThemeMode } = useThemeState();
 
   return (
     <select
-      value={theme}
-      onChange={(e) => setTheme(e.target.value as 'light' | 'dark' | 'system')}
+      value={themeMode}
+      onChange={(e) => setThemeMode(e.target.value as 'light' | 'dark' | 'system')}
       className={`
         px-3 py-2 rounded-lg
         bg-white/50 dark:bg-[#232435]/50
@@ -204,13 +204,13 @@ export function ThemeSelector({ className = "" }: { className?: string }) {
 
 // Hook for components that need theme information
 export function useThemeInfo() {
-  const { theme, resolvedTheme } = useThemeState();
+  const { themeMode, theme } = useThemeState();
   
   return {
+    themeMode,
     theme,
-    resolvedTheme,
-    isDark: resolvedTheme === 'dark',
-    isLight: resolvedTheme === 'light',
-    isSystem: theme === 'system'
+    isDark: theme === 'dark',
+    isLight: theme === 'light',
+    isSystem: themeMode === 'system'
   };
 }

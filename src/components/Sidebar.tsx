@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { useResolvedTheme } from "@/store/theme-store";
+import { useTheme } from "@/store/theme-store";
 import { useEffect } from "react";
 import QueryHistoryIcon from "@/icons/sidebar/QueryHistoryIcon";
 import { FaDownload, FaPlus } from "react-icons/fa";
@@ -22,7 +22,7 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const resolvedTheme = useResolvedTheme();
+  const theme = useTheme();
   const { showBusinessRulesModal, setShowBusinessRulesModal } = useUIStore();
 
   // Custom hooks
@@ -58,7 +58,7 @@ export default function Sidebar() {
       <div className="w-full flex justify-center items-center mb-5 scale-[1.3]">
         <Image
           src={
-            resolvedTheme === "dark"
+            theme === "dark"
               ? "/logo/ESAP_W.png"
               : "/logo/ESAP_B_PNG.png"
           }
@@ -93,7 +93,7 @@ export default function Sidebar() {
                           fill={
                             isActive
                               ? "#ffffff"
-                              : resolvedTheme === "dark"
+                              : theme === "dark"
                               ? "#ffffff"
                               : "#222222"
                           }
@@ -120,7 +120,7 @@ export default function Sidebar() {
                         <QueryHistoryIcon
                           className="w-5 h-5"
                           fill={
-                            resolvedTheme === "dark" ? "#ffffff" : "#000000"
+                            theme === "dark" ? "#ffffff" : "#000000"
                           }
                         />
                         <span className="text-base font-semibold tracking-tight text-gray-900 dark:text-white">

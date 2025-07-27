@@ -4,9 +4,8 @@ import { FadeInSection } from "./ui/opening-animation";
 import SearchIcon from "@/icons/sidebar/searchIcon";
 import { SecondaryButton } from "./glass-ui/buttons/SecondaryButton";
 import ReloadIcon from "@/icons/sidebar/reloadIcon";
-import DarkModeToggleIcon from "@/icons/sidebar/darkModeToggleIcon";
 import UserIcon from "@/icons/sidebar/userIcon";
-import { useResolvedTheme } from "@/store/theme-store";
+import { useTheme } from "@/store/theme-store";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 interface NavbarProps {
@@ -41,7 +40,7 @@ export default function Navbar({
   editingUserId,
 }: NavbarProps) {
   // Use centralized theme solution
-  const resolvedTheme = useResolvedTheme();
+  const theme = useTheme();
   return (
     <FadeInSection delay={0.2}>
       <div className="flex items-center flex-row justify-between mb-7 w-full">
@@ -72,7 +71,7 @@ export default function Navbar({
             iconPlacement="left"
             icon={
               (
-                <ReloadIcon fill={resolvedTheme === "dark" ? "#fff" : "#222"} />
+                <ReloadIcon fill={theme === "dark" ? "#fff" : "#222"} />
               ) as unknown as string
             }
             onClick={handleReloadDb}
@@ -80,7 +79,7 @@ export default function Navbar({
             style={{
               minHeight: "40px",
             }}
-            mode={resolvedTheme === "dark" ? "dark" : "light"}
+            mode={theme === "dark" ? "dark" : "light"}
           />
           {/* ZenUI-style Theme Toggle */}
           <ThemeToggle
