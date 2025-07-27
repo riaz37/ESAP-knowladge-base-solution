@@ -3,7 +3,7 @@ import { Table, FileText, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import FigmaTableDemo from "@/components/table";
+import DataTable from "@/components/ui/data-table";
 
 interface MultipleRecordsViewProps {
   data: any[];
@@ -58,7 +58,7 @@ export default function MultipleRecordsView({ data, chartData }: MultipleRecords
         <CardContent className="relative p-0">
           {/* Glass overlay for table */}
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent dark:via-black/5 pointer-events-none" />
-          <FigmaTableDemo
+          <DataTable
             columns={allKeys.map((key) => ({ key, label: key }))}
             allKeys={allKeys}
             data={data}

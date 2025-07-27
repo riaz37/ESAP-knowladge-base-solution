@@ -7,3 +7,4 @@ export { default as ErrorState } from './ErrorState';
 export { default as EmptyState } from './EmptyState';
 export { default as SingleRecordView } from './SingleRecordView';
 export { default as MultipleRecordsView } from './MultipleRecordsView';
+export { default as QueryInput } from './QueryInput';

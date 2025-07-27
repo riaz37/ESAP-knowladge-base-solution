@@ -4,8 +4,6 @@ import { OpeningAnimation } from "@/components/ui/opening-animation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { collectionData } from "./dummy-data/information";
-
-// Import custom hooks
 import { useDatabaseOperations, useUserSettings } from "@/lib/hooks";
 
 export default function DashboardPage() {
@@ -44,8 +42,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Remove Sidebar, Navbar, and SPA-style conditional rendering
-  // Only render the Dashboard component and related UI
+
   return (
     <>
       {showOpeningAnimation ? (
