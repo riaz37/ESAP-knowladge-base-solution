@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { useTheme } from '@/store/theme-store';
+import { useResolvedTheme } from '@/store/theme-store';
 
 interface AnimatedThemeIconProps {
   width?: number;
@@ -14,7 +14,7 @@ export function AnimatedThemeIcon({
   height = 24, 
   className = "" 
 }: AnimatedThemeIconProps) {
-  const { resolvedTheme } = useTheme();
+  const resolvedTheme = useResolvedTheme();
   const isDark = resolvedTheme === 'dark';
 
   return (
