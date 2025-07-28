@@ -17,11 +17,14 @@
     "@radix-ui/react-navigation-menu": "^1.2.13",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
+    "@react-three/drei": "^10.6.1",
+    "@react-three/fiber": "^9.3.0",
     "@stianlarsen/border-beam": "^1.0.11",
     "@tanstack/react-table": "^8.21.3",
     "@tsparticles/engine": "^3.8.1",
     "@tsparticles/react": "^3.0.0",
     "@tsparticles/slim": "^3.8.1",
+    "@types/three": "^0.178.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.3",
@@ -45,6 +48,7 @@
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
+    "three": "^0.178.0",
     "zustand": "^4.4.1"
   },
   "devDependencies": {
