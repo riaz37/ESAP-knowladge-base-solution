@@ -1,8 +1,8 @@
 "use client";
-import React, { useRef, useEffect, useState, Suspense } from 'react';
+import React, { useRef, useState, Suspense } from 'react';
 import { Canvas, useFrame, useLoader } from '@react-three/fiber';
 import { OrbitControls, useTexture } from '@react-three/drei';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import * as THREE from 'three';
 
 interface BrainMeshProps {
@@ -43,7 +43,7 @@ const BrainMesh: React.FC<BrainMeshProps> = ({
   const brainClone = brainObject.clone();
 
   // Apply materials to all meshes in the object with interactive properties
-  brainClone.traverse((child) => {
+  brainClone.traverse((child: THREE.Object3D) => {
     if (child instanceof THREE.Mesh) {
       child.material = new THREE.MeshPhongMaterial({
         map: texture,
@@ -59,7 +59,7 @@ const BrainMesh: React.FC<BrainMeshProps> = ({
 
   // Create wireframe version
   const wireframeClone = brainObject.clone();
-  wireframeClone.traverse((child) => {
+  wireframeClone.traverse((child: THREE.Object3D) => {
     if (child instanceof THREE.Mesh) {
       child.material = new THREE.MeshBasicMaterial({
         color: color,
