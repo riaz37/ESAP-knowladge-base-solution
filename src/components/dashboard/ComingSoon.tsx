@@ -1,6 +1,7 @@
 //@ts-ignore
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import * as THREE from "three";
+import { BrainModel } from "../3d/BrainModel";
 
 // Type definitions
 interface SystemNode {
@@ -350,34 +351,9 @@ const KnowledgebaseHero: React.FC = () => {
     pointLight.position.set(0, 0, 0);
     scene.add(pointLight);
 
-    // Create simple central sphere
+    // Create placeholder for brain model (will be rendered separately with React Three Fiber)
     const globeGroup = new THREE.Group();
     scene.add(globeGroup);
-
-    // Main central sphere - minimalist
-    const globeGeometry = new THREE.SphereGeometry(1, 32, 32);
-    const globeMaterial = new THREE.MeshPhongMaterial({
-      color: 0x0a1a1a,
-      shininess: 100,
-      transparent: true,
-      opacity: 0.8,
-      emissive: 0x10b981,
-      emissiveIntensity: 0.1,
-    });
-
-    const mainGlobe = new THREE.Mesh(globeGeometry, globeMaterial);
-    globeGroup.add(mainGlobe);
-
-    // Simple wireframe overlay
-    const wireframeGeometry = new THREE.SphereGeometry(1.02, 16, 16);
-    const wireframeMaterial = new THREE.MeshBasicMaterial({
-      color: 0x10b981,
-      transparent: true,
-      opacity: 0.3,
-      wireframe: true,
-    });
-    const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
-    globeGroup.add(wireframe);
 
     // Create connection lines from center to card positions
     const connections: THREE.Line[] = [];
@@ -473,10 +449,7 @@ const KnowledgebaseHero: React.FC = () => {
 
       animationRef.current = requestAnimationFrame(animate);
 
-      // Very subtle globe rotation
-      if (globeGroup) {
-        globeGroup.rotation.y += 0.002;
-      }
+      // Brain model rotation is handled by React Three Fiber component
 
       // Animate connection particles
       particlesRef.current.forEach(particleObj => {
@@ -569,6 +542,17 @@ const KnowledgebaseHero: React.FC = () => {
     <div className="relative w-full h-screen bg-gradient-to-br from-emerald-950 via-green-950 to-teal-950 overflow-hidden">
       {/* 3D Scene */}
       <div ref={mountRef} className="absolute inset-0" />
+
+      {/* 3D Brain Model - Interactive */}
+      <div className="absolute inset-0 flex items-center justify-center z-10">
+        <div className="w-96 h-96">
+          <BrainModel
+            color="#10b981"
+            emissiveIntensity={0.2}
+            enableControls={true}
+          />
+        </div>
+      </div>
 
       {/* Overlay Content */}
       <div className="relative z-20 flex flex-col items-center justify-center h-full text-white px-4 pointer-events-none">
