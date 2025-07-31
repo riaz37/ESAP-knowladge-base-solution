@@ -25,13 +25,28 @@ export function useSmartFileUpload() {
 
     try {
       const response = await FileService.uploadFiles(files);
+      console.log('Upload response:', response);
+      
+      // Add safety checks for response structure
+      if (!response || !response.data) {
+        throw new Error('Invalid response from upload service');
+      }
+      
       const data = response.data;
+      console.log('Upload data:', data);
+      
+      // Check if bundle_id exists
+      if (!data.bundle_id) {
+        throw new Error('No bundle_id received from upload service');
+      }
+      
       setInitialResponse(data);
       setBundleId(data.bundle_id);
       setStatus("pending");
       // Start polling using the store's global polling
       startPolling(data.bundle_id);
     } catch (e: any) {
+      console.error('Upload error:', e);
       setError(e.message || "Unknown error");
       setProcessing(false);
     }

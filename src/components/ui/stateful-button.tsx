@@ -18,55 +18,74 @@ export const StatefulButton = ({
   const [scope, animate] = useAnimate();
 
   const animateLoading = async () => {
-    await animate(
-      ".loader",
-      {
-        width: "20px",
-        scale: 1,
-        display: "block",
-      },
-      {
-        duration: 0.2,
+    try {
+      const loaderElement = scope.current?.querySelector(".loader");
+      if (loaderElement) {
+        await animate(
+          ".loader",
+          {
+            width: "20px",
+            scale: 1,
+            display: "block",
+          },
+          {
+            duration: 0.2,
+          }
+        );
       }
-    );
+    } catch (error) {
+      console.warn("Animation error in animateLoading:", error);
+    }
   };
 
   const animateSuccess = async () => {
-    await animate(
-      ".loader",
-      {
-        width: "0px",
-        scale: 0,
-        display: "none",
-      },
-      {
-        duration: 0.2,
-      }
-    );
-    await animate(
-      ".check",
-      {
-        width: "20px",
-        scale: 1,
-        display: "block",
-      },
-      {
-        duration: 0.2,
-      }
-    );
+    try {
+      const loaderElement = scope.current?.querySelector(".loader");
+      const checkElement = scope.current?.querySelector(".check");
 
-    await animate(
-      ".check",
-      {
-        width: "0px",
-        scale: 0,
-        display: "none",
-      },
-      {
-        delay: 2,
-        duration: 0.2,
+      if (loaderElement) {
+        await animate(
+          ".loader",
+          {
+            width: "0px",
+            scale: 0,
+            display: "none",
+          },
+          {
+            duration: 0.2,
+          }
+        );
       }
-    );
+
+      if (checkElement) {
+        await animate(
+          ".check",
+          {
+            width: "20px",
+            scale: 1,
+            display: "block",
+          },
+          {
+            duration: 0.2,
+          }
+        );
+
+        await animate(
+          ".check",
+          {
+            width: "0px",
+            scale: 0,
+            display: "none",
+          },
+          {
+            delay: 2,
+            duration: 0.2,
+          }
+        );
+      }
+    } catch (error) {
+      console.warn("Animation error in animateSuccess:", error);
+    }
   };
 
   const handleClick = async (event: React.MouseEvent<HTMLButtonElement>) => {

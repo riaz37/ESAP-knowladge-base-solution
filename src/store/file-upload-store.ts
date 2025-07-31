@@ -44,30 +44,116 @@ export const useFileUploadStore = create<FileUploadState>((set, get) => ({
     const ref = setInterval(async () => {
       try {
         const response = await FileService.getBundleStatus(bundleId);
+
+        console.log("Polling - Full response:", response);
+        console.log("Polling - Response data:", response?.data);
+        console.log("Polling - Response type:", typeof response);
+        console.log("Polling - Data type:", typeof response?.data);
+
+        // Check if response exists and has data
+        if (!response || !response.data) {
+          console.warn("No response or data from bundle status API", {
+            response,
+            data: response?.data,
+          });
+          return;
+        }
+
         const data = response.data;
+
+        // Add safety checks for data structure
+        if (!data || typeof data !== "object") {
+          console.warn(
+            "Invalid bundle status data:",
+            data,
+            "Type:",
+            typeof data
+          );
+          return;
+        }
+
+        // Handle error responses from the API (bundle not found, etc.)
+        if (
+          data.detail &&
+          (data.detail.includes("not found") ||
+            data.detail.includes("No response from server"))
+        ) {
+          console.warn("Bundle not ready yet, continuing to poll...");
+          return;
+        }
+
+        // If this is an error response but not a "not found" error, handle it
+        if (data.error && !response.success) {
+          console.warn("Bundle status error:", data.detail);
+          return;
+        }
+
         setBundleStatus(data);
-        // Normalize status
+
+        // Normalize status with safety checks
         let normalized = "pending";
-        if (data.status === "PROCESSING" || data.status === "RUNNING")
+        const statusValue = data.status || data.state || "pending";
+
+        if (
+          statusValue === "PROCESSING" ||
+          statusValue === "RUNNING" ||
+          statusValue === "processing" ||
+          statusValue === "running"
+        )
           normalized = "running";
-        if (data.status === "COMPLETED" || data.status === "completed")
+        if (
+          statusValue === "COMPLETED" ||
+          statusValue === "completed" ||
+          statusValue === "FINISHED" ||
+          statusValue === "finished"
+        )
           normalized = "completed";
+        if (
+          statusValue === "FAILED" ||
+          statusValue === "failed" ||
+          statusValue === "ERROR" ||
+          statusValue === "error"
+        )
+          normalized = "completed"; // Treat failed as completed to stop polling
+
         setStatus(normalized as "pending" | "running" | "completed");
+
+        console.log(
+          "Status normalized to:",
+          normalized,
+          "from original:",
+          statusValue
+        );
+
         if (normalized === "completed") {
+          console.log("File processing completed! Stopping polling...");
+          setProcessing(false);
+          get().stopPolling();
+        } else {
+          console.log("Still processing, continuing to poll...");
+        }
+      } catch (e: any) {
+        console.error("Polling error:", e);
+        // Don't immediately stop on errors, continue polling for a bit
+        // Only stop if it's a persistent error
+        const currentState = get();
+        if (!currentState.error) {
+          setError(e.message || "Unknown error");
           setProcessing(false);
           get().stopPolling();
         }
-      } catch (e: any) {
-        setError(e.message || "Unknown error");
-        setProcessing(false);
-        get().stopPolling();
       }
     }, 3000);
     set({ pollingRef: ref });
   },
   stopPolling: () => {
     const { pollingRef } = get();
-    if (pollingRef) clearInterval(pollingRef);
+    console.log("stopPolling called, pollingRef:", pollingRef);
+    if (pollingRef) {
+      clearInterval(pollingRef);
+      console.log("Polling interval cleared");
+    }
     set({ polling: false, pollingRef: null });
+    console.log("Polling state reset");
   },
 }));

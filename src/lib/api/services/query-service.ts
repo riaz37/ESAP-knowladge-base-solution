@@ -1,7 +1,7 @@
-import { ApiResponse } from '@/types/api';
-import { apiClient } from '../client';
-import { API_ENDPOINTS, buildEndpointWithQueryParams } from '../endpoints';
-import { transformResponse } from '../transformers';
+import { ApiResponse } from "@/types/api";
+import { apiClient } from "../client";
+import { API_ENDPOINTS, buildEndpointWithQueryParams } from "../endpoints";
+import { transformResponse } from "../transformers";
 
 /**
  * Interface for search query parameters
@@ -46,7 +46,7 @@ export const QueryService = {
         max_chunks_for_answer: params.maxChunksForAnswer ?? 40,
         answer_style: params.answerStyle ?? "detailed",
       });
-      
+
       return transformResponse(response);
     } catch (error) {
       throw error;
@@ -58,12 +58,10 @@ export const QueryService = {
    */
   async query(params: DbQueryParams): Promise<ApiResponse<any>> {
     try {
-      const endpoint = buildEndpointWithQueryParams(API_ENDPOINTS.QUERY, {
+      const response = await apiClient.post(API_ENDPOINTS.QUERY, {
         question: params.question,
         user_id: params.userId,
       });
-      
-      const response = await apiClient.post(endpoint);
       return transformResponse(response);
     } catch (error) {
       throw error;
@@ -73,12 +71,15 @@ export const QueryService = {
   /**
    * Send a database query directly with question and userId
    */
-  async sendDatabaseQuery(question: string, userId: string): Promise<ApiResponse<any>> {
+  async sendDatabaseQuery(
+    question: string,
+    userId: string
+  ): Promise<ApiResponse<any>> {
     return this.query({
       question,
-      userId
+      userId,
     });
-  }
+  },
 };
 
 export default QueryService;
