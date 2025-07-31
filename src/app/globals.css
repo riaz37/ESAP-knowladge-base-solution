@@ -52,10 +52,10 @@
    CSS CUSTOM PROPERTIES (DESIGN TOKENS)
    ============================================ */
 
-/* Light mode color palette (HSL format) */
+/* Light mode color palette (Enhanced for beautiful light mode) */
 :root {
   --radius: 0.625rem;
-  --background: 0 0% 100%;
+  --background: 0 0% 99%;
   --foreground: 222.2 84% 4.9%;
   --card: 0 0% 100%;
   --card-foreground: 222.2 84% 4.9%;
@@ -63,29 +63,38 @@
   --popover-foreground: 222.2 84% 4.9%;
   --primary: 160 84% 39%;
   --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
+  --secondary: 160 20% 96%;
   --secondary-foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96%;
+  --muted: 160 15% 97%;
   --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
+  --accent: 160 25% 95%;
   --accent-foreground: 222.2 84% 4.9%;
   --destructive: 0 84.2% 60.2%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
+  --border: 160 20% 90%;
+  --input: 160 15% 94%;
   --ring: 160 84% 39%;
   --chart-1: 12 76% 61%;
   --chart-2: 173 58% 39%;
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
-  --sidebar: 0 0% 100%;
+  --sidebar: 160 30% 98%;
   --sidebar-foreground: 222.2 84% 4.9%;
   --sidebar-primary: 160 84% 39%;
   --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 210 40% 96%;
+  --sidebar-accent: 160 25% 95%;
   --sidebar-accent-foreground: 222.2 84% 4.9%;
-  --sidebar-border: 214.3 31.8% 91.4%;
+  --sidebar-border: 160 20% 88%;
   --sidebar-ring: 160 84% 39%;
+  
+  /* Light mode specific variables */
+  --light-glass-bg: rgba(255, 255, 255, 0.85);
+  --light-glass-border: rgba(16, 185, 129, 0.15);
+  --light-spotlight-color: rgba(16, 185, 129, 0.08);
+  --light-card-shadow: rgba(16, 185, 129, 0.1);
+  --light-text-primary: #1f2937;
+  --light-text-secondary: #6b7280;
+  --light-text-muted: #9ca3af;
 }
 
 /* Dark mode color palette (OKLCH format for better color accuracy) */
@@ -390,15 +399,47 @@
 
 /* Card gradient component - USED IN: various cards throughout the app */
 .card-gradient {
-  @apply bg-gradient-to-br from-white/80 to-gray-50/40 dark:from-[#011f17]/80 dark:to-[#011f17]/40;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  @apply bg-gradient-to-br from-white/90 to-emerald-50/60 dark:from-[#011f17]/80 dark:to-[#011f17]/40;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.08), 0 4px 16px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(16, 185, 129, 0.12);
 }
 
 .dark .card-gradient {
   box-shadow: 0 0 20px rgba(0, 255, 185, 0.03);
   border: 1px solid rgba(54, 62, 60, 0.1);
+}
+
+/* Light mode glass morphism effects */
+.glass-light {
+  background: var(--light-glass-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--light-glass-border);
+  box-shadow: 0 8px 32px var(--light-card-shadow), 
+              0 1px 0 rgba(255, 255, 255, 0.5) inset;
+}
+
+/* Enhanced light mode spotlight */
+.spotlight-light {
+  background: radial-gradient(
+    ellipse at center,
+    var(--light-spotlight-color) 0%,
+    transparent 70%
+  );
+}
+
+/* Light mode system cards */
+.system-card-light {
+  background: linear-gradient(
+    158.39deg,
+    rgba(255, 255, 255, 0.95) 14.19%,
+    rgba(255, 255, 255, 0.85) 50.59%,
+    rgba(255, 255, 255, 0.90) 68.79%,
+    rgba(255, 255, 255, 0.95) 105.18%
+  );
+  border: 1.2px solid rgba(16, 185, 129, 0.2);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.12),
+              0 1px 0 rgba(255, 255, 255, 0.8) inset;
 }
 
 /* Button component styles - USED IN: custom buttons throughout the app */
@@ -593,6 +634,18 @@
 
 .animate-spotlight {
   animation: spotlight 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.5s 1 forwards;
+}
+
+/* Floating particles animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+    opacity: 1;
+  }
 }
 
 /* ============================================

@@ -7,8 +7,39 @@ export default function HRKnowledgePage() {
   const resolvedTheme = useResolvedTheme();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-8">
-      <div className="text-center max-w-2xl mx-auto">
+    <div className="flex flex-col items-center justify-center min-h-screen p-8"
+         style={{
+           background: resolvedTheme === 'light' 
+             ? 'linear-gradient(135deg, #ffffff 0%, #f0f9f5 30%, #e6f7ff 70%, #f0f9f5 100%)'
+             : undefined
+         }}>
+      
+      {/* Enhanced background for light mode */}
+      {resolvedTheme === 'light' && (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/30 via-transparent to-blue-50/20 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-tl from-green-50/40 via-transparent to-emerald-50/30 pointer-events-none" />
+          
+          {/* Floating light particles */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {[...Array(15)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-1 bg-emerald-400/20 rounded-full animate-pulse"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  animation: `float ${5 + Math.random() * 5}s ease-in-out infinite`,
+                  animationDelay: `${Math.random() * 3}s`,
+                  boxShadow: '0 0 8px rgba(16, 185, 129, 0.25)',
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+      
+      <div className="text-center max-w-2xl mx-auto relative z-10">
         {/* Icon/Illustration */}
         <div className="mb-8">
           <div 

@@ -1,6 +1,7 @@
 "use client";
 import { Dashboard } from "@/components/dashboard";
 import { OpeningAnimation } from "@/components/ui/opening-animation";
+import { EnhancedBackground } from "@/components/ui/enhanced-background";
 import { useEffect, useState } from "react";
 import { useDatabaseOperations, useUserSettings } from "@/lib/hooks";
 
@@ -47,7 +48,9 @@ export default function DashboardPage() {
         </OpeningAnimation>
       ) : (
         <main className="flex-1 animate-[fadeIn_0.5s_ease-out_forwards]">
-          <Dashboard />
+          <EnhancedBackground intensity="medium" className="min-h-screen">
+            <Dashboard />
+          </EnhancedBackground>
         </main>
       )}
     </>

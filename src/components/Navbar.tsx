@@ -58,7 +58,7 @@ export default function Navbar() {
         {/* Robot Icon */}
         <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center border border-gray-600/30 hover:bg-gray-600/50 transition-colors cursor-pointer">
           <Image
-            src="/roboicon-small.png"
+            src="/autopilot.svg"
             alt="Robot"
             width={24}
             height={24}

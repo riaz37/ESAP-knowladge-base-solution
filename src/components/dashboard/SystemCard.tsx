@@ -9,6 +9,7 @@ interface SystemCardProps {
   onMouseDown: (e: React.MouseEvent, nodeId: string) => void;
   onMouseEnter: (nodeId: string) => void;
   onMouseLeave: () => void;
+  theme?: 'light' | 'dark';
 }
 
 export const SystemCard: React.FC<SystemCardProps> = ({
@@ -19,6 +20,7 @@ export const SystemCard: React.FC<SystemCardProps> = ({
   onMouseDown,
   onMouseEnter,
   onMouseLeave,
+  theme = 'dark',
 }) => {
   return (
     <div
@@ -50,7 +52,7 @@ export const SystemCard: React.FC<SystemCardProps> = ({
           }
         }}
       >
-        {/* Glass Card - Exact API Connect Design */}
+        {/* Glass Card - Theme-aware Design */}
         <div
           className={`relative overflow-hidden ${
             isDragging ? "shadow-2xl shadow-emerald-500/20" : ""
@@ -59,14 +61,23 @@ export const SystemCard: React.FC<SystemCardProps> = ({
             width: "371.2px",
             height: "200px",
             borderRadius: "25.6px",
-            background: "rgba(255, 255, 255, 0.03)",
-            border: "1.2px solid transparent",
-            backgroundImage: "linear-gradient(158.39deg, rgba(255, 255, 255, 0.06) 14.19%, rgba(255, 255, 255, 0.000015) 50.59%, rgba(255, 255, 255, 0.000015) 68.79%, rgba(255, 255, 255, 0.015) 105.18%)",
+            background: theme === 'light' 
+              ? "rgba(255, 255, 255, 0.95)" 
+              : "rgba(255, 255, 255, 0.03)",
+            border: theme === 'light' 
+              ? "1.2px solid rgba(16, 185, 129, 0.2)" 
+              : "1.2px solid transparent",
+            backgroundImage: theme === 'light' 
+              ? "linear-gradient(158.39deg, rgba(255, 255, 255, 0.98) 14.19%, rgba(240, 249, 245, 0.95) 50.59%, rgba(255, 255, 255, 0.98) 68.79%, rgba(240, 249, 245, 0.95) 105.18%)"
+              : "linear-gradient(158.39deg, rgba(255, 255, 255, 0.06) 14.19%, rgba(255, 255, 255, 0.000015) 50.59%, rgba(255, 255, 255, 0.000015) 68.79%, rgba(255, 255, 255, 0.015) 105.18%)",
             backgroundOrigin: "border-box",
             backgroundClip: "padding-box, border-box",
             padding: "12.8px",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
+            boxShadow: theme === 'light' 
+              ? "0 8px 32px rgba(16, 185, 129, 0.12), 0 1px 0 rgba(255, 255, 255, 0.8) inset"
+              : undefined,
           }}
         >
           {/* Animated glow dots in corners */}
@@ -112,10 +123,14 @@ export const SystemCard: React.FC<SystemCardProps> = ({
 
             {/* Right side - Text content */}
             <div className="flex-1">
-              <h2 className="text-white text-2xl font-semibold mb-3 tracking-wide">
+              <h2 className={`text-2xl font-semibold mb-3 tracking-wide ${
+                theme === 'light' ? 'text-gray-800' : 'text-white'
+              }`}>
                 API Connect
               </h2>
-              <p className="text-gray-300 text-base leading-relaxed">
+              <p className={`text-base leading-relaxed ${
+                theme === 'light' ? 'text-gray-600' : 'text-gray-300'
+              }`}>
                 Automate refund<br />
                 processes with<br />
                 configurable policy<br />
