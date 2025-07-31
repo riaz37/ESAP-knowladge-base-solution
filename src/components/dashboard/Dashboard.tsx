@@ -42,7 +42,7 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-screen bg-gradient-to-br from-emerald-950 via-green-950 to-teal-950 overflow-hidden">
+    <div className="relative w-full h-screen bg-background overflow-hidden">
       {/* 3D Scene */}
       <div ref={mountRef} className="absolute inset-0" />
 

@@ -13,24 +13,28 @@ export default function Navbar() {
 
   return (
     <nav
-      className="fixed top-[30px] left-1/2 transform -translate-x-1/2 z-50 bg-black/30 backdrop-blur-lg border border-white/20 rounded-full flex items-center justify-between"
+      className="fixed top-[30px] left-1/2 transform -translate-x-1/2 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-between shadow-2xl shadow-black/20"
       style={{
         width: "1351px",
         height: "64px",
         paddingLeft: "20px",
         paddingRight: "20px",
+        background: "linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
       }}
     >
       {/* Left side - Logo and Menu */}
       <div className="flex items-center gap-6">
         {/* ESAP Logo */}
-        <div className="flex items-center">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full">
           <Image
             src="/logo/ESAP_W.png"
             alt="ESAP"
-            width={60}
-            height={20}
-            className="h-5 w-auto"
+            width={120}
+            height={40}
+            className="h-8 w-auto"
           />
         </div>
 
