@@ -20,10 +20,12 @@ export default function Navbar() {
         height: "64px",
         paddingLeft: "20px",
         paddingRight: "20px",
-        background: "linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))",
+        background:
+          "linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+        boxShadow:
+          "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
       }}
     >
       {/* Left side - Logo and Menu */}
@@ -40,18 +42,30 @@ export default function Navbar() {
         </div>
 
         {/* Menu Button */}
-        <div 
+        <div
           onClick={handleMenuClick}
           className="flex items-center gap-2 px-4 py-2 bg-emerald-500/15 rounded-full border border-emerald-500/25 hover:bg-emerald-500/20 transition-all duration-300 cursor-pointer group"
         >
           <div className="w-4 h-4 flex flex-col items-center justify-center gap-0.5">
             {/* Three horizontal bars */}
-            <div className={`w-4 h-0.5 bg-emerald-400 rounded-full transition-all duration-300 ${showSidebar ? 'rotate-45 translate-y-1' : ''}`}></div>
-            <div className={`w-4 h-0.5 bg-emerald-400 rounded-full transition-all duration-300 ${showSidebar ? 'opacity-0' : ''}`}></div>
-            <div className={`w-4 h-0.5 bg-emerald-400 rounded-full transition-all duration-300 ${showSidebar ? '-rotate-45 -translate-y-1' : ''}`}></div>
+            <div
+              className={`w-4 h-0.5 bg-emerald-400 rounded-full transition-all duration-300 ${
+                showSidebar ? "rotate-45 translate-y-1" : ""
+              }`}
+            ></div>
+            <div
+              className={`w-4 h-0.5 bg-emerald-400 rounded-full transition-all duration-300 ${
+                showSidebar ? "opacity-0" : ""
+              }`}
+            ></div>
+            <div
+              className={`w-4 h-0.5 bg-emerald-400 rounded-full transition-all duration-300 ${
+                showSidebar ? "-rotate-45 -translate-y-1" : ""
+              }`}
+            ></div>
           </div>
           <span className="text-emerald-400 text-sm font-medium group-hover:text-emerald-300 transition-colors">
-            {showSidebar ? 'Close' : 'Menu'}
+            {showSidebar ? "Close" : "Menu"}
           </span>
         </div>
 
@@ -62,7 +76,7 @@ export default function Navbar() {
             alt="Robot"
             width={24}
             height={24}
-            className="w-6 h-6"
+            className="w-6 h-6 cursor-pointer"
           />
         </div>
       </div>
@@ -80,9 +94,9 @@ export default function Navbar() {
         </div>
 
         {/* Theme Toggle */}
-        <ThemeToggle 
-          size="sm" 
-          className="bg-gray-700/50 border-gray-600/30 hover:bg-gray-600/50" 
+        <ThemeToggle
+          size="sm"
+          className="bg-gray-700/50 border-gray-600/30 hover:bg-gray-600/50"
         />
 
         {/* User Avatar */}
