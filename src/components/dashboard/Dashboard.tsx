@@ -1,9 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { BrainModel } from "../3d/BrainModel";
 import { SystemCard } from "./SystemCard";
-import { HeroContent } from "./HeroContent";
-import { BackgroundEffects } from "./BackgroundEffects";
-import { AnimationStyles } from "./AnimationStyles";
+import { Spotlight } from "../ui/spotlight";
 import { useDragAndDrop } from "./hooks/useDragAndDrop";
 import { useThreeScene } from "./hooks/useThreeScene";
 import { SYSTEM_NODES, INITIAL_CARD_POSITIONS } from "./constants";
@@ -42,7 +40,15 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="relative w-full h-screen bg-background overflow-hidden">
+    <div className="relative w-full h-screen bg-background overflow-hidden pt-[124px]">
+      {/* Green Spotlight Effect - From top middle of page */}
+      <div className="absolute inset-0 z-[5] pointer-events-none overflow-visible">
+        <Spotlight
+          className="!opacity-100 animate-spotlight absolute -top-20 left-1/2 transform -translate-x-1/2 w-[140%] h-[140%]"
+          fill="#10b981"
+        />
+      </div>
+
       {/* 3D Scene */}
       <div ref={mountRef} className="absolute inset-0" />
 

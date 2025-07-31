@@ -1,6 +1,5 @@
 import React from "react";
 import { SystemNode, CardPosition } from "./types";
-import { NeonIcon } from "./NeonIcon";
 
 interface SystemCardProps {
   node: SystemNode;
@@ -40,6 +39,15 @@ export const SystemCard: React.FC<SystemCardProps> = ({
         onMouseDown={(e) => onMouseDown(e, node.id)}
         style={{
           cursor: isDragging ? "grabbing" : "grab",
+          filter: isActive || isDragging ? "drop-shadow(0 0 30px rgba(16, 185, 129, 0.6))" : undefined,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.filter = "drop-shadow(0 0 40px rgba(16, 185, 129, 0.8))";
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive && !isDragging) {
+            e.currentTarget.style.filter = "";
+          }
         }}
       >
         {/* Glass Card - Exact API Connect Design */}

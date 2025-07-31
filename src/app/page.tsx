@@ -46,7 +46,7 @@ export default function DashboardPage() {
           <div />
         </OpeningAnimation>
       ) : (
-        <main className="flex-1 flex flex-col p-5 gap-6 animate-[fadeIn_0.5s_ease-out_forwards] ml-3">
+        <main className="flex-1 animate-[fadeIn_0.5s_ease-out_forwards]">
           <Dashboard />
         </main>
       )}

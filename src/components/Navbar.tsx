@@ -3,6 +3,7 @@ import React from "react";
 import Image from "next/image";
 import { Bell, User } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function Navbar() {
   const { showSidebar, setShowSidebar } = useUIStore();
@@ -66,7 +67,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Right side - Notifications and User */}
+      {/* Right side - Notifications, Theme Toggle and User */}
       <div className="flex items-center gap-4">
         {/* Notification Bell */}
         <div className="relative">
@@ -77,6 +78,12 @@ export default function Navbar() {
             <span className="text-white text-xs font-bold">1</span>
           </div>
         </div>
+
+        {/* Theme Toggle */}
+        <ThemeToggle 
+          size="sm" 
+          className="bg-gray-700/50 border-gray-600/30 hover:bg-gray-600/50" 
+        />
 
         {/* User Avatar */}
         <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center border border-gray-600/30 hover:bg-gray-600/50 transition-colors cursor-pointer">

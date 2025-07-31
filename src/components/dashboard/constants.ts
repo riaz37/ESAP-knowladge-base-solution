@@ -46,12 +46,12 @@ export const SYSTEM_NODES: SystemNode[] = [
 ];
 
 export const INITIAL_CARD_POSITIONS: CardPosition[] = [
-  { x: 15, y: 25 },
-  { x: 85, y: 25 },
-  { x: 15, y: 50 },
-  { x: 85, y: 50 },
-  { x: 15, y: 75 },
-  { x: 85, y: 75 },
+  { x: 25, y: 15 },   // Left top
+  { x: 20, y: 45 },   // Left middle (curved inward)
+  { x: 25, y: 75 },   // Left bottom
+  { x: 75, y: 15 },   // Right top
+  { x: 80, y: 45 },   // Right middle (curved outward)
+  { x: 75, y: 75 },   // Right bottom
 ];
 
 export const ANIMATION_CONFIG = {
