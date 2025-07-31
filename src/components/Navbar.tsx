@@ -1,182 +1,109 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { FadeInSection } from "./ui/opening-animation";
-import SearchIcon from "@/icons/sidebar/searchIcon";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
-import ReloadIcon from "@/icons/sidebar/reloadIcon";
-import UserIcon from "@/icons/sidebar/userIcon";
+import React from "react";
+import Image from "next/image";
+import { Bell, User } from "lucide-react";
+import { useUIStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
-interface NavbarProps {
-  searchTerm: string;
-  setSearchTerm: (searchTerm: string) => void;
-  handleReloadDb: () => void;
-  showUserTooltip: boolean;
-  setShowUserTooltip: (showUserTooltip: boolean) => void;
-  userTooltipRef: React.RefObject<HTMLDivElement | null>;
-  userId: string;
-  setEditingUserId: (editingUserId: boolean) => void;
-  handleSaveUserId: (val: string) => void;
-  query: string;
-  setQuery: (query: string) => void;
-  selected: string;
-  handleQuerySubmit: () => void;
-  loading: boolean;
-  quickActions: any[];
-  editingUserId: boolean;
-}
+export default function Navbar() {
+  const { showSidebar, setShowSidebar } = useUIStore();
 
-export default function Navbar({
-  searchTerm,
-  setSearchTerm,
-  handleReloadDb,
-  showUserTooltip,
-  setShowUserTooltip,
-  userTooltipRef,
-  userId,
-  setEditingUserId,
-  handleSaveUserId,
-  editingUserId,
-}: NavbarProps) {
-  const [userIdInput, setUserIdInput] = useState(userId === "default" ? "" : userId);
-
-  useEffect(() => {
-    setUserIdInput(userId === "default" ? "" : userId);
-  }, [userId]);
-
-  const handleSave = () => {
-    handleSaveUserId(userIdInput);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSave();
-    }
+  const handleMenuClick = () => {
+    setShowSidebar(!showSidebar);
   };
 
   return (
-    <FadeInSection delay={0.2}>
-      <div className="flex items-center justify-between w-full mb-7">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100"></h1>
-        <div className="flex items-center gap-3 w-1/2">
-          {/* Search Box */}
-          <div className="relative flex-1 group">
-            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-12 w-full bg-background/50  border-2 border-border/50 dark:border-border/30 focus-visible:ring-2 focus-visible:ring-ring/50"
-            />
+    <nav
+      className="fixed top-[30px] left-1/2 transform -translate-x-1/2 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-between shadow-2xl shadow-black/20"
+      style={{
+        width: "1351px",
+        height: "64px",
+        paddingLeft: "20px",
+        paddingRight: "20px",
+        background:
+          "linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        boxShadow:
+          "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+      }}
+    >
+      {/* Left side - Logo and Menu */}
+      <div className="flex items-center gap-6">
+        {/* ESAP Logo */}
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full">
+          <Image
+            src="/logo/ESAP_W.png"
+            alt="ESAP"
+            width={120}
+            height={40}
+            className="h-8 w-auto"
+          />
+        </div>
+
+        {/* Menu Button */}
+        <div
+          onClick={handleMenuClick}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500/15 rounded-full border border-emerald-500/25 hover:bg-emerald-500/20 transition-all duration-300 cursor-pointer group"
+        >
+          <div className="w-4 h-4 flex flex-col items-center justify-center gap-0.5">
+            {/* Three horizontal bars */}
+            <div
+              className={`w-4 h-0.5 bg-emerald-400 rounded-full transition-all duration-300 ${
+                showSidebar ? "rotate-45 translate-y-1" : ""
+              }`}
+            ></div>
+            <div
+              className={`w-4 h-0.5 bg-emerald-400 rounded-full transition-all duration-300 ${
+                showSidebar ? "opacity-0" : ""
+              }`}
+            ></div>
+            <div
+              className={`w-4 h-0.5 bg-emerald-400 rounded-full transition-all duration-300 ${
+                showSidebar ? "-rotate-45 -translate-y-1" : ""
+              }`}
+            ></div>
           </div>
+          <span className="text-emerald-400 text-sm font-medium group-hover:text-emerald-300 transition-colors">
+            {showSidebar ? "Close" : "Menu"}
+          </span>
+        </div>
 
-          {/* Reload Button */}
-          <Button
-            onClick={handleReloadDb}
-            variant="outline"
-            className="h-12 px-4 gap-2 bg-background/50 backdrop-blur-sm border-2 border-border/50 dark:border-border/30 hover:bg-accent/50"
-          >
-            <ReloadIcon className="h-5 w-5" />
-            <span className="hidden sm:inline">Reload DB</span>
-          </Button>
-
-          {/* Theme Toggle */}
-          <ThemeToggle variant="icon" className="h-12 w-12 p-0" />
-
-          {/* User Menu */}
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 p-0 rounded-full bg-background/50 backdrop-blur-sm border-2 border-border/50 dark:border-border/30"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowUserTooltip(!showUserTooltip);
-              }}
-              aria-label="User settings"
-            >
-              <UserIcon className="h-6 w-6" />
-            </Button>
-
-            {/* User ID Tooltip */}
-            {showUserTooltip && (
-              <Card
-                ref={userTooltipRef}
-                className="absolute right-0 mt-2 w-72 p-4 bg-background/80 backdrop-blur-lg border-2 border-border/50 dark:border-border/30 shadow-lg z-50"
-              >
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">
-                      User ID Settings
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {userId === "default"
-                        ? "Set your user ID to save query history"
-                        : `Current User ID: ${userId}`}
-                    </p>
-                  </div>
-
-                  {editingUserId ? (
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="userId" className="text-xs text-muted-foreground">
-                          User ID
-                        </Label>
-                        <Input
-                          id="userId"
-                          type="text"
-                          placeholder="Enter user ID"
-                          value={userIdInput}
-                          onChange={(e) => setUserIdInput(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          autoFocus
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2 pt-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingUserId(false);
-                            setShowUserTooltip(false);
-                          }}
-                          className="h-8 text-xs"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={handleSave}
-                          className="h-8 text-xs bg-primary/90 hover:bg-primary"
-                        >
-                          Save
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => setEditingUserId(true)}
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2 h-8 text-xs bg-primary/5 hover:bg-primary/10 text-foreground gap-2"
-                    >
-                      <span>✏️</span>
-                      {userId === "default" ? "Set User ID" : "Change User ID"}
-                    </Button>
-                  )}
-                </div>
-              </Card>
-            )}
-          </div>
+        {/* Robot Icon */}
+        <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center border border-gray-600/30 hover:bg-gray-600/50 transition-colors cursor-pointer">
+          <Image
+            src="/autopilot.svg"
+            alt="Robot"
+            width={24}
+            height={24}
+            className="w-6 h-6 cursor-pointer"
+          />
         </div>
       </div>
-    </FadeInSection>
+
+      {/* Right side - Notifications, Theme Toggle and User */}
+      <div className="flex items-center gap-4">
+        {/* Notification Bell */}
+        <div className="relative">
+          <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center border border-gray-600/30 hover:bg-gray-600/50 transition-colors cursor-pointer">
+            <Bell className="w-5 h-5 text-white/90" />
+          </div>
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center border-2 border-black/50">
+            <span className="text-white text-xs font-bold">1</span>
+          </div>
+        </div>
+
+        {/* Theme Toggle */}
+        <ThemeToggle
+          size="sm"
+          className="bg-gray-700/50 border-gray-600/30 hover:bg-gray-600/50"
+        />
+
+        {/* User Avatar */}
+        <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center border border-gray-600/30 hover:bg-gray-600/50 transition-colors cursor-pointer">
+          <User className="w-5 h-5 text-white/90" />
+        </div>
+      </div>
+    </nav>
   );
 }

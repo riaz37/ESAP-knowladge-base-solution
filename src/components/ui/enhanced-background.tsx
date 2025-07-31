@@ -37,9 +37,19 @@ export const EnhancedBackground = ({
         style={{
           backgroundImage: currentTheme === "dark"
             ? "linear-gradient(to bottom right, #0a0a0a, #1a1a1a, #2a2a2a)"
-            : "linear-gradient(to bottom right, #ffffff, #f0f9f5, #e6f7ff)"
+            : "linear-gradient(135deg, #ffffff 0%, #f8fafc 25%, #f0f9f5 50%, #e6f7ff 75%, #f0f9f5 100%)"
         }}
       />
+
+      {/* Additional light mode enhancements */}
+      {currentTheme === "light" && (
+        <>
+          {/* Subtle radial gradients for depth */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-100/30 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-blue-100/25 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-green-50/20 rounded-full blur-3xl" />
+        </>
+      )}
 
       {/* Subtle animated grid */}
       <div className="absolute inset-0 opacity-5">
