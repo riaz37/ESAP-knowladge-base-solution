@@ -74,6 +74,12 @@ export const FileQuery: React.FC<FileQueryProps> = () => {
       query,
       useIntentReranker,
       useChunkReranker,
+      useDualEmbeddings: true,
+      intentTopK: 20,
+      chunkTopK: 40,
+      chunkSource: "reranked",
+      maxChunksForAnswer: 40,
+      answerStyle: "detailed",
     });
   };
 

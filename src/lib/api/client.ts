@@ -12,8 +12,8 @@ const DEFAULT_CONFIG: ApiRequestConfig = {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  timeout: 30000, // 30 seconds
-  retries: 0,
+  timeout: 120000, // 2 minutes for search queries
+  retries: 1,
 };
 
 /**

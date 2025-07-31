@@ -1,6 +1,6 @@
-import React from 'react';
-import { SystemNode, CardPosition } from './types';
-import { NeonIcon } from './NeonIcon';
+import React from "react";
+import { SystemNode, CardPosition } from "./types";
+import { NeonIcon } from "./NeonIcon";
 
 interface SystemCardProps {
   node: SystemNode;
@@ -28,7 +28,7 @@ export const SystemCard: React.FC<SystemCardProps> = ({
         left: `${position.x}%`,
         top: `${position.y}%`,
         zIndex: isDragging ? 1000 : 10,
-        transition: isDragging ? 'none' : 'all 0.3s ease-out',
+        transition: isDragging ? "none" : "all 0.3s ease-out",
       }}
       onMouseEnter={() => onMouseEnter(node.id)}
       onMouseLeave={onMouseLeave}
@@ -39,114 +39,96 @@ export const SystemCard: React.FC<SystemCardProps> = ({
         } ${isDragging ? "z-50 shadow-2xl" : ""}`}
         onMouseDown={(e) => onMouseDown(e, node.id)}
         style={{
-          cursor: isDragging ? 'grabbing' : 'grab',
+          cursor: isDragging ? "grabbing" : "grab",
         }}
       >
-        {/* Glass Morphism Card */}
-        <div className={`w-48 h-36 rounded-xl relative overflow-hidden ${
-          isDragging ? 'shadow-2xl shadow-emerald-500/20' : ''
-        }`}>
-          {/* Background glass layer */}
-          <div className={`absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl ${
-            isDragging ? 'border-emerald-400/50 shadow-emerald-500/30' : ''
-          }`} />
-          
-          {/* Animated border glow */}
-          <div 
-            className={`absolute inset-0 rounded-xl transition-all duration-500 ${
-              isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-            }`}
-            style={{
-              background: `linear-gradient(45deg, ${node.color}40, transparent, ${node.color}40)`,
-              backgroundSize: '400% 400%',
-              animation: (isActive || isDragging) ? 'borderGlow 2s ease infinite' : 'none',
-            }}
-          />
-          
-          {/* Inner glow effect */}
-          <div
-            className={`absolute inset-[1px] rounded-xl bg-gradient-to-br from-black/20 via-black/30 to-black/40 backdrop-blur-sm ${
-              isDragging ? 'from-black/10 via-black/20 to-black/30' : ''
-            }`}
-          />
-          
-          {/* Shimmer effect */}
-          <div className={`absolute inset-0 rounded-xl transition-opacity duration-700 ${
-            isDragging ? 'opacity-50' : 'opacity-0 group-hover:opacity-30'
-          }`}>
-            <div 
-              className="absolute inset-0 rounded-xl"
-              style={{
-                background: `linear-gradient(135deg, transparent 0%, ${node.color}20 50%, transparent 100%)`,
-                transform: 'translateX(-100%)',
-                animation: 'shimmer 2s ease-in-out infinite',
-              }}
-            />
-          </div>
+        {/* Glass Card - Exact API Connect Design */}
+        <div
+          className={`relative overflow-hidden ${
+            isDragging ? "shadow-2xl shadow-emerald-500/20" : ""
+          }`}
+          style={{
+            width: "371.2px",
+            height: "200px",
+            borderRadius: "25.6px",
+            background: "rgba(255, 255, 255, 0.03)",
+            border: "1.2px solid transparent",
+            backgroundImage: "linear-gradient(158.39deg, rgba(255, 255, 255, 0.06) 14.19%, rgba(255, 255, 255, 0.000015) 50.59%, rgba(255, 255, 255, 0.000015) 68.79%, rgba(255, 255, 255, 0.015) 105.18%)",
+            backgroundOrigin: "border-box",
+            backgroundClip: "padding-box, border-box",
+            padding: "12.8px",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+          }}
+        >
+          {/* Animated glow dots in corners */}
+          <div className="absolute top-4 left-4 w-1 h-1 bg-emerald-400 rounded-full animate-pulse opacity-60" 
+               style={{ boxShadow: "0 0 8px #10b981" }} />
+          <div className="absolute top-8 left-2 w-0.5 h-0.5 bg-emerald-300 rounded-full animate-pulse opacity-40" 
+               style={{ boxShadow: "0 0 4px #6ee7b7" }} />
+          <div className="absolute bottom-12 left-6 w-0.5 h-0.5 bg-emerald-400 rounded-full animate-pulse opacity-50" 
+               style={{ boxShadow: "0 0 6px #10b981" }} />
+          <div className="absolute bottom-4 left-2 w-1 h-1 bg-emerald-300 rounded-full animate-pulse opacity-30" 
+               style={{ boxShadow: "0 0 8px #6ee7b7" }} />
 
-          {/* Corner highlights */}
-          <div className="absolute top-0 left-0 w-8 h-8 bg-gradient-to-br from-white/30 to-transparent rounded-xl opacity-60" />
-          <div className="absolute bottom-0 right-0 w-6 h-6 bg-gradient-to-tl from-white/20 to-transparent rounded-xl opacity-40" />
-
-          {/* Drag indicator */}
-          {isDragging && (
-            <div className="absolute top-2 right-2 w-3 h-3 bg-emerald-400 rounded-full animate-pulse shadow-lg shadow-emerald-400/50" />
-          )}
-
-          {/* Content */}
-          <div className="relative z-20 p-5 h-full flex flex-col justify-between">
-            {/* Icon and status */}
-            <div className="flex items-center justify-between">
-              <div className={`transform transition-transform duration-300 ${
-                isDragging ? 'scale-110' : 'group-hover:scale-110'
-              }`}>
-                <NeonIcon type={node.icon} color={node.color} />
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    isDragging ? 'animate-pulse' : 'animate-pulse'
-                  }`}
-                  style={{ 
-                    backgroundColor: node.color,
-                    boxShadow: `0 0 12px ${node.color}80, 0 0 24px ${node.color}40`
-                  }}
-                />
-                <div className="text-[10px] text-emerald-300/80 font-light">
-                  {isDragging ? 'MOVING' : 'LIVE'}
+          {/* Main content layout */}
+          <div className="relative z-10 h-full flex items-center gap-6">
+            {/* Left side - Circular icon area */}
+            <div className="flex-shrink-0">
+              {/* Outer glow ring */}
+              <div 
+                className="relative w-24 h-24 rounded-full border border-emerald-400/30"
+                style={{
+                  background: "radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%)",
+                  boxShadow: "0 0 20px rgba(16, 185, 129, 0.2), inset 0 0 20px rgba(16, 185, 129, 0.1)"
+                }}
+              >
+                {/* Inner icon container */}
+                <div className="absolute inset-2 rounded-full bg-emerald-600 flex items-center justify-center"
+                     style={{
+                       background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                       boxShadow: "0 0 15px rgba(16, 185, 129, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.1)"
+                     }}>
+                  {/* API text */}
+                  <span className="text-white font-bold text-sm tracking-wide">API</span>
+                  
+                  {/* Gear icon on top */}
+                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-emerald-300">
+                      <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" fill="currentColor"/>
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Title and description */}
-            <div>
-              <h3 className={`text-white font-medium text-base mb-2 transition-colors duration-300 ${
-                isDragging ? 'text-emerald-100' : 'group-hover:text-emerald-100'
-              }`}>
-                {node.label}
-              </h3>
-              <div className="flex items-center gap-2 text-xs text-emerald-300/70">
-                <div 
-                  className="w-1 h-1 rounded-full animate-pulse" 
-                  style={{ 
-                    backgroundColor: node.color,
-                    boxShadow: `0 0 4px ${node.color}`
-                  }}
-                />
-                {isDragging ? 'Repositioning...' : 'System Active'}
-              </div>
+            {/* Right side - Text content */}
+            <div className="flex-1">
+              <h2 className="text-white text-2xl font-semibold mb-3 tracking-wide">
+                API Connect
+              </h2>
+              <p className="text-gray-300 text-base leading-relaxed">
+                Automate refund<br />
+                processes with<br />
+                configurable policy<br />
+                enforcement.
+              </p>
             </div>
           </div>
 
-          {/* Border highlight on hover */}
-          <div 
-            className={`absolute inset-0 rounded-xl transition-all duration-500 pointer-events-none ${
-              isDragging ? 'opacity-80' : 'opacity-0 group-hover:opacity-60'
+          {/* Drag indicator */}
+          {isDragging && (
+            <div className="absolute top-3 right-3 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" 
+                 style={{ boxShadow: "0 0 8px #10b981" }} />
+          )}
+
+          {/* Hover glow effect */}
+          <div
+            className={`absolute inset-0 rounded-[25.6px] transition-all duration-500 pointer-events-none ${
+              isDragging || isActive ? "opacity-30" : "opacity-0 group-hover:opacity-20"
             }`}
             style={{
-              background: `linear-gradient(90deg, transparent, ${node.color}40, transparent)`,
-              backgroundSize: '200% 100%',
-              animation: (isActive || isDragging) ? 'borderSweep 3s ease infinite' : 'none',
+              background: "radial-gradient(circle at 30% 50%, rgba(16, 185, 129, 0.2) 0%, transparent 70%)",
             }}
           />
         </div>

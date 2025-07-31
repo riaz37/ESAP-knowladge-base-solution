@@ -2,13 +2,12 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeStoreProvider } from "@/components/ThemeStoreProvider";
-import { EnhancedBackground } from "@/components/ui/enhanced-background";
 import { ThemeTransitionProvider } from "@/components/ThemeTransitionProvider";
-import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
+import Menu from "@/components/Menu";
 import { Toaster } from "@/components/ui/sonner";
 import ErrorBoundary from "@/components/ui/error-boundary";
-import { useState, useRef } from "react";
+import { useUIStore } from "@/store/uiStore";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,18 +16,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showUserTooltip, setShowUserTooltip] = useState(false);
-  const [userId, setUserId] = useState("default");
-  const [editingUserId, setEditingUserId] = useState(false);
-  const userTooltipRef = useRef<HTMLDivElement | null>(null);
-  const handleReloadDb = () => {};
-  const handleSaveUserId = (val: string) => {
-    setUserId(val || "default");
-    setEditingUserId(false);
-    setShowUserTooltip(false);
-  };
-  // ...other state as needed...
+  const { showSidebar, setShowSidebar } = useUIStore();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -37,32 +26,25 @@ export default function RootLayout({
       >
         <ThemeStoreProvider>
           <ThemeTransitionProvider>
-            <div className="flex min-h-screen w-full">
-              <div className="m-5">
-                <Sidebar />
-              </div>
-              <div className="flex-1 flex flex-col min-h-screen mt-10">
-                <Navbar
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  handleReloadDb={handleReloadDb}
-                  showUserTooltip={showUserTooltip}
-                  setShowUserTooltip={setShowUserTooltip}
-                  userTooltipRef={userTooltipRef}
-                  userId={userId}
-                  setEditingUserId={setEditingUserId}
-                  handleSaveUserId={handleSaveUserId}
-                  query={""}
-                  setQuery={() => {}}
-                  selected={"dashboard"}
-                  handleQuerySubmit={() => {}}
-                  loading={false}
-                  quickActions={[]}
-                  editingUserId={editingUserId}
+            <Navbar />
+
+            {/* Menu Overlay */}
+            {showSidebar && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+                  onClick={() => setShowSidebar(false)}
                 />
-                <div className="flex-1">
-                  <ErrorBoundary>{children}</ErrorBoundary>
-                </div>
+
+                {/* Menu */}
+                <Menu />
+              </>
+            )}
+
+            <div className="min-h-screen w-full">
+              <div className="flex-1">
+                <ErrorBoundary>{children}</ErrorBoundary>
               </div>
             </div>
           </ThemeTransitionProvider>

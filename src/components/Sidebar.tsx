@@ -54,22 +54,6 @@ export default function Sidebar() {
 
   return (
     <div className="flex flex-col items-center w-80">
-      {/* Logo outside the sidebar border */}
-      <div className="w-full flex justify-center items-center mb-5 scale-[1.3]">
-        <Image
-          src={
-            theme === "dark"
-              ? "/logo/ESAP_W.png"
-              : "/logo/ESAP_B_PNG.png"
-          }
-          alt="ESAP Logo"
-          width={180}
-          height={60}
-          priority
-          className="object-contain max-w-[180px] h-auto"
-        />
-      </div>
-
       <Card className="backdrop-blur-md bg-white/10 dark:bg-black/10 border-white/20 dark:border-white/10 w-full min-h-[600px]">
         <CardContent className="p-6 h-full">
           <aside className="w-full h-full flex flex-col">

@@ -142,9 +142,9 @@
     outline: none !important;
   }
 
-  /* Custom gradient background for the entire app */
+  /* Primary background color for all pages */
   body {
-    @apply bg-gradient-to-br from-[#f0f9f5] to-[#ffffff] dark:from-[#001a13] dark:to-[#002a1f];
+    background: var(--BG-2-Primary-Color, rgba(0, 0, 0, 0.85));
     @apply antialiased;
   }
 

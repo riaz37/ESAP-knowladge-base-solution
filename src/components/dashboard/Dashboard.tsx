@@ -59,8 +59,6 @@ const Dashboard: React.FC = () => {
 
       {/* Overlay Content */}
       <div className="relative z-20 flex flex-col items-center justify-center h-full text-white px-4 pointer-events-none">
-        <HeroContent />
-
         {/* System Cards - Now draggable */}
         <div className="absolute inset-0 pointer-events-none">
           {SYSTEM_NODES.map((node, index) => (
@@ -77,9 +75,6 @@ const Dashboard: React.FC = () => {
           ))}
         </div>
       </div>
-
-      <BackgroundEffects />
-      <AnimationStyles />
     </div>
   );
 };
