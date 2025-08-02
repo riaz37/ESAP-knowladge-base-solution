@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { MSSQLConfigService } from "../api/services/mssql-config-service";
 import { 
   MSSQLConfigRequest, 
   MSSQLConfigResponse, 
-  MSSQLConfigsListResponse,
   MSSQLConfigData 
 } from "@/types/api";
 
@@ -52,32 +51,61 @@ export function useMSSQLConfig(): UseMSSQLConfigReturn {
     }
   };
 
-  const getConfigs = async (): Promise<MSSQLConfigData[] | null> => {
+  const getConfigs = useCallback(async (): Promise<MSSQLConfigData[] | null> => {
     setIsLoading(true);
     setError(null);
 
     try {
+      console.log("Fetching MSSQL configurations...");
       const response = await MSSQLConfigService.getMSSQLConfigs();
-      const configsData = response.data.configs;
+      console.log("Raw API response:", response);
+      
+      // Handle the expected API response structure based on MSSQLConfigsListResponse
+      if (!response) {
+        throw new Error("API response is null or undefined");
+      }
+      
+      // The API client already extracts the data, so response IS the MSSQLConfigsListResponse
+      // Check if response has the expected structure
+      let configsData: MSSQLConfigData[];
+      
+      if (response.data && response.data.configs) {
+        // If response has nested data.configs structure
+        configsData = response.data.configs;
+      } else if (Array.isArray(response)) {
+        // If response is directly an array of configs
+        configsData = response;
+      } else if (response.configs && Array.isArray(response.configs)) {
+        // If response has configs property directly
+        configsData = response.configs;
+      } else {
+        console.error("Unexpected response structure:", response);
+        throw new Error("No configs found in API response - unexpected structure");
+      }
+      
+      if (!Array.isArray(configsData)) {
+        throw new Error("Configs data is not an array");
+      }
+      
+      console.log("Extracted configs data:", configsData);
       setConfigs(configsData);
       return configsData;
     } catch (err: any) {
+      console.error("Error in getConfigs:", err);
       const errorMessage = err?.message || "Failed to fetch MSSQL configurations";
       setError(errorMessage);
+      setConfigs(null);
       return null;
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const refetch = async (): Promise<void> => {
-    await getConfigs();
-  };
-
-  // Load configs on mount
-  useEffect(() => {
-    getConfigs();
   }, []);
+
+  const refetch = useCallback(async (): Promise<void> => {
+    await getConfigs();
+  }, [getConfigs]);
+
+  // Remove automatic loading on mount - only fetch when explicitly called
 
   const getConfig = async (id: number): Promise<MSSQLConfigData | null> => {
     setIsLoading(true);

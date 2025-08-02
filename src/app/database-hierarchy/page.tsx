@@ -9,6 +9,7 @@ import {
   HierarchyVisualization,
   LoadingState,
   CreateCompanyModal,
+  CreateDatabaseModal,
   EmptyHierarchyState,
 } from "@/components/database-hierarchy";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ export default function DatabaseHierarchyPage() {
 
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDatabaseModal, setShowDatabaseModal] = useState(false);
   const [modalType, setModalType] = useState<"parent" | "sub">("parent");
   const [selectedParentName, setSelectedParentName] = useState<string>("");
   const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
@@ -26,8 +28,7 @@ export default function DatabaseHierarchyPage() {
   // Event handlers for different actions
   const handleDatabaseAdd = (nodeId: string) => {
     console.log("Add database action for:", nodeId);
-    // TODO: Implement database creation modal/form
-    toast.info("Database creation feature coming soon!");
+    setShowDatabaseModal(true);
   };
 
   const handleParentAdd = (nodeId: string) => {
@@ -77,7 +78,10 @@ export default function DatabaseHierarchyPage() {
   const handleModalSubmit = async (data: {
     name: string;
     details: string;
+    address: string;
+    contactEmail: string;
     type: "parent" | "sub";
+    databaseId?: number;
   }) => {
     try {
       setIsCreating(true);
@@ -86,9 +90,12 @@ export default function DatabaseHierarchyPage() {
       const createRequest = {
         name: data.name,
         details: data.details,
+        address: data.address,
+        contactEmail: data.contactEmail,
         type: data.type,
         parentCompanyId:
           data.type === "sub" ? selectedParentId || undefined : undefined,
+        dbId: data.databaseId,
       };
 
       const validation =
@@ -130,6 +137,25 @@ export default function DatabaseHierarchyPage() {
     }
   };
 
+  const handleDatabaseModalClose = () => {
+    setShowDatabaseModal(false);
+  };
+
+  const handleDatabaseSuccess = async () => {
+    try {
+      toast.success("Database configuration created successfully!");
+      setShowDatabaseModal(false);
+
+      // Wait for the refetch to complete to ensure fresh data
+      await refetch();
+
+      // Small delay to ensure the data is fully updated
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } catch (error) {
+      console.error("Error refreshing hierarchy data:", error);
+    }
+  };
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -158,7 +184,10 @@ export default function DatabaseHierarchyPage() {
 
         {/* Show empty state if no hierarchy data */}
         {!hierarchyData || hierarchyData.length === 0 ? (
-          <EmptyHierarchyState onCreateFirst={handleCreateFirst} />
+          <EmptyHierarchyState
+            onCreateFirst={handleCreateFirst}
+            onCreateDatabase={() => setShowDatabaseModal(true)}
+          />
         ) : (
           <HierarchyVisualization
             hierarchyData={hierarchyData}
@@ -177,6 +206,13 @@ export default function DatabaseHierarchyPage() {
         onSubmit={handleModalSubmit}
         type={modalType}
         parentName={selectedParentName}
+      />
+
+      {/* Create Database Modal */}
+      <CreateDatabaseModal
+        isOpen={showDatabaseModal}
+        onClose={handleDatabaseModalClose}
+        onSuccess={handleDatabaseSuccess}
       />
     </>
   );

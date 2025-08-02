@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { X, Folder, Plus, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Folder, Plus, Loader2, Mail, MapPin, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useMSSQLConfig } from "@/lib/hooks/use-mssql-config";
 
 interface CreateCompanyModalProps {
   isOpen: boolean;
@@ -10,7 +11,10 @@ interface CreateCompanyModalProps {
   onSubmit: (data: {
     name: string;
     details: string;
+    address: string;
+    contactEmail: string;
     type: "parent" | "sub";
+    databaseId?: number;
   }) => Promise<void>;
   type: "parent" | "sub";
   parentName?: string;
@@ -25,23 +29,66 @@ export function CreateCompanyModal({
 }: CreateCompanyModalProps) {
   const [name, setName] = useState("");
   const [details, setDetails] = useState("");
+  const [address, setAddress] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(
+    null
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch available database configurations
+  const {
+    configs: databases,
+    getConfigs,
+    isLoading: loadingDatabases,
+    error: databaseError,
+  } = useMSSQLConfig();
+
+  // Load databases when modal opens
+  useEffect(() => {
+    if (isOpen && type === "parent") {
+      console.log("Modal opened for parent company, fetching databases...");
+      getConfigs()
+        .then(() => {
+          console.log("Database configs fetched:", databases);
+        })
+        .catch((error) => {
+          console.error("Error fetching database configs:", error);
+        });
+    }
+  }, [isOpen, type, getConfigs]);
+
+  // Debug log when databases change
+  useEffect(() => {
+    console.log("Databases updated:", databases);
+    console.log("Database loading:", loadingDatabases);
+    console.log("Database error:", databaseError);
+  }, [databases, loadingDatabases, databaseError]);
 
   const handleSubmit = async () => {
     if (!name.trim() || isSubmitting) return;
 
+    // For parent companies, require database selection
+    if (type === "parent" && !selectedDatabaseId) return;
+
     try {
       setIsSubmitting(true);
-      
+
       await onSubmit({
         name: name.trim(),
         details: details.trim(),
+        address: address.trim(),
+        contactEmail: contactEmail.trim(),
         type,
+        databaseId: selectedDatabaseId || undefined,
       });
 
       // Reset form only on successful submission
       setName("");
       setDetails("");
+      setAddress("");
+      setContactEmail("");
+      setSelectedDatabaseId(null);
     } catch (error) {
       // Error handling is done in the parent component
       console.error("Error in modal submit:", error);
@@ -54,6 +101,9 @@ export function CreateCompanyModal({
     if (isSubmitting) return; // Prevent closing during submission
     setName("");
     setDetails("");
+    setAddress("");
+    setContactEmail("");
+    setSelectedDatabaseId(null);
     onClose();
   };
 
@@ -134,6 +184,79 @@ export function CreateCompanyModal({
               className="bg-gray-800/50 border-gray-600/50 text-white placeholder-gray-400 focus:border-green-400/50 focus:ring-green-400/20 resize-none disabled:opacity-50"
             />
           </div>
+
+          {/* Address Field */}
+          <div>
+            <label className=" text-white text-sm font-medium mb-2 flex items-center">
+              <MapPin className="w-4 h-4 mr-2" />
+              Address
+            </label>
+            <Input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter company address (optional)"
+              disabled={isSubmitting}
+              className="bg-gray-800/50 border-gray-600/50 text-white placeholder-gray-400 focus:border-green-400/50 focus:ring-green-400/20 disabled:opacity-50"
+            />
+          </div>
+
+          {/* Contact Email Field */}
+          <div>
+            <label className=" text-white text-sm font-medium mb-2 flex items-center">
+              <Mail className="w-4 h-4 mr-2" />
+              Contact Email
+            </label>
+            <Input
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+              placeholder="Enter contact email (optional)"
+              disabled={isSubmitting}
+              className="bg-gray-800/50 border-gray-600/50 text-white placeholder-gray-400 focus:border-green-400/50 focus:ring-green-400/20 disabled:opacity-50"
+            />
+          </div>
+
+          {/* Database Selection Field - Only for Parent Companies */}
+          {type === "parent" && (
+            <div>
+              <label className=" text-white text-sm font-medium mb-2 flex items-center">
+                <Database className="w-4 h-4 mr-2" />
+                Database Configuration
+              </label>
+              {loadingDatabases ? (
+                <div className="bg-gray-800/50 border border-gray-600/50 rounded-md px-3 py-2 text-gray-400 flex items-center">
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Loading database configurations...
+                </div>
+              ) : databaseError ? (
+                <div className="bg-red-900/20 border border-red-400/30 rounded-md px-3 py-2 text-red-400">
+                  Error loading databases: {databaseError}
+                </div>
+              ) : databases && databases.length > 0 ? (
+                <select
+                  value={selectedDatabaseId || ""}
+                  onChange={(e) =>
+                    setSelectedDatabaseId(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  disabled={isSubmitting}
+                  className="w-full bg-gray-800/50 border border-gray-600/50 text-white rounded-md px-3 py-2 focus:border-green-400/50 focus:ring-green-400/20 focus:ring-1 focus:outline-none disabled:opacity-50"
+                >
+                  <option value="">Select a database configuration</option>
+                  {databases.map((db) => (
+                    <option key={db.db_id} value={db.db_id}>
+                      {db.db_name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="bg-gray-800/50 border border-gray-600/50 rounded-md px-3 py-2 text-gray-400">
+                  No database configurations available. Please create one first.
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -148,7 +271,11 @@ export function CreateCompanyModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!name.trim() || isSubmitting}
+            disabled={
+              !name.trim() ||
+              isSubmitting ||
+              (type === "parent" && !selectedDatabaseId)
+            }
             className="bg-green-400 hover:bg-green-300 text-gray-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (

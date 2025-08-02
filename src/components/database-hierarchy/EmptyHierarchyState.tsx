@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 
 interface EmptyHierarchyStateProps {
   onCreateFirst: () => void;
+  onCreateDatabase?: () => void;
 }
 
-export function EmptyHierarchyState({ onCreateFirst }: EmptyHierarchyStateProps) {
+export function EmptyHierarchyState({ onCreateFirst, onCreateDatabase }: EmptyHierarchyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
       {/* Large Plus Button */}
@@ -38,10 +39,23 @@ export function EmptyHierarchyState({ onCreateFirst }: EmptyHierarchyStateProps)
         <p className="text-gray-400 max-w-lg text-lg leading-relaxed">
           Create your first parent company to begin organizing your database structure and manage your business hierarchy
         </p>
-        <div className="pt-2">
+        <div className="pt-4 space-y-3">
           <p className="text-green-400/80 text-sm font-medium">
             Click the + button above to get started
           </p>
+          {onCreateDatabase && (
+            <div className="flex flex-col items-center space-y-2">
+              <p className="text-gray-500 text-xs">or</p>
+              <Button
+                onClick={onCreateDatabase}
+                variant="outline"
+                size="sm"
+                className="border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400"
+              >
+                Create Database Configuration First
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

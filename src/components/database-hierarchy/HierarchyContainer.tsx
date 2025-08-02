@@ -12,7 +12,7 @@ export function HierarchyContainer({ children, className = "" }: HierarchyContai
       <HierarchyBackground />
       
       {/* Main Content */}
-      <div className="relative z-10 pt-[124px] px-8 pb-8">
+      <div className="relative z-10 pt-[140px] px-8 pb-8">
         <div className="max-w-7xl mx-auto">
           {children}
         </div>

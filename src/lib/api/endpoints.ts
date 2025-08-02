@@ -1,8 +1,6 @@
 const baseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://176.9.16.194:8902";
 
-const mssqlConfigBaseUrl = "https://176.9.16.194:8200";
-
 /**
  * API endpoint definitions
  */
@@ -30,24 +28,26 @@ export const API_ENDPOINTS = {
   UPDATE_BUSINESS_RULES: `${baseUrl}/mssql/update_business-rules`,
 
   // MSSQL Configuration endpoints
-  CREATE_MSSQL_CONFIG: `${mssqlConfigBaseUrl}/mssql-config/mssql-config`,
-  GET_MSSQL_CONFIGS: `${mssqlConfigBaseUrl}/mssql-config/mssql-config`,
-  GET_MSSQL_CONFIG: (id: number) => `${mssqlConfigBaseUrl}/mssql-config/mssql-config/${id}`,
+  CREATE_MSSQL_CONFIG: `${baseUrl}/mssql-config/mssql-config`,
+  GET_MSSQL_CONFIGS: `${baseUrl}/mssql-config/mssql-config`,
+  GET_MSSQL_CONFIG: (id: number) => `${baseUrl}/mssql-config/mssql-config/${id}`,
 
   // Parent Companies endpoints
-  CREATE_PARENT_COMPANY: `${mssqlConfigBaseUrl}/mssql-config/parent-companies`,
-  GET_PARENT_COMPANIES: `${mssqlConfigBaseUrl}/mssql-config/parent-companies`,
-  GET_PARENT_COMPANY: (id: number) => `${mssqlConfigBaseUrl}/mssql-config/parent-companies/${id}`,
+  CREATE_PARENT_COMPANY: `${baseUrl}/mssql-config/parent-companies`,
+  GET_PARENT_COMPANIES: `${baseUrl}/mssql-config/parent-companies`,
+  GET_PARENT_COMPANY: (id: number) =>
+    `${baseUrl}/mssql-config/parent-companies/${id}`,
 
   // Sub Companies endpoints
-  CREATE_SUB_COMPANY: `${mssqlConfigBaseUrl}/mssql-config/sub-companies`,
-  GET_SUB_COMPANIES: `${mssqlConfigBaseUrl}/mssql-config/sub-companies`,
-  GET_SUB_COMPANY: (id: number) => `${mssqlConfigBaseUrl}/mssql-config/sub-companies/${id}`,
+  CREATE_SUB_COMPANY: `${baseUrl}/mssql-config/sub-companies`,
+  GET_SUB_COMPANIES: `${baseUrl}/mssql-config/sub-companies`,
+  GET_SUB_COMPANY: (id: number) => `${baseUrl}/mssql-config/sub-companies/${id}`,
 
   // User Access endpoints
-  CREATE_USER_ACCESS: `${mssqlConfigBaseUrl}/mssql-config/user-access`,
-  GET_USER_ACCESS_CONFIGS: `${mssqlConfigBaseUrl}/mssql-config/user-access`,
-  GET_USER_ACCESS: (userId: string) => `${mssqlConfigBaseUrl}/mssql-config/user-access/${encodeURIComponent(userId)}`,
+  CREATE_USER_ACCESS: `${baseUrl}/mssql-config/user-access`,
+  GET_USER_ACCESS_CONFIGS: `${baseUrl}/mssql-config/user-access`,
+  GET_USER_ACCESS: (userId: string) =>
+    `${baseUrl}/mssql-config/user-access/${encodeURIComponent(userId)}`,
 };
 
 /**

@@ -8,6 +8,7 @@ export { CompanyNode } from "./CompanyNode";
 export { ConnectionLine } from "./ConnectionLine";
 export { LoadingState } from "./LoadingState";
 export { CreateCompanyModal } from "./CreateCompanyModal";
+export { CreateDatabaseModal } from "./CreateDatabaseModal";
 export { EmptyHierarchyState } from "./EmptyHierarchyState";
 
 // Export types

@@ -13,6 +13,8 @@ import { HierarchyNode } from "@/components/database-hierarchy";
 export interface CreateCompanyRequest {
   name: string;
   details: string;
+  address: string;
+  contactEmail: string;
   type: "parent" | "sub";
   parentCompanyId?: number;
   dbId?: number;
@@ -35,18 +37,9 @@ export class HierarchyService {
         let dbId = request.dbId;
 
         if (!dbId) {
-          // Get the first available database configuration
-          const configsResponse = await MSSQLConfigService.getMSSQLConfigs();
-          if (
-            configsResponse?.data?.configs &&
-            configsResponse.data.configs.length > 0
-          ) {
-            dbId = configsResponse.data.configs[0].db_id;
-          } else {
-            throw new Error(
-              "No database configurations available. Please create a database configuration first."
-            );
-          }
+          throw new Error(
+            "Database selection is required for parent companies. Please select a database configuration."
+          );
         }
 
         const parentCompanyRequest: ParentCompanyCreateRequest = {
@@ -54,8 +47,8 @@ export class HierarchyService {
           description:
             request.details || "Company created through hierarchy interface",
           db_id: dbId!,
-          address: "", // Optional field
-          contact_email: "", // Optional field
+          address: request.address || "",
+          contact_email: request.contactEmail || "",
         };
 
         const response = await ParentCompanyService.createParentCompany(
@@ -80,8 +73,8 @@ export class HierarchyService {
             request.details ||
             "Sub-company created through hierarchy interface",
           db_id: parentCompany.data.db_id, // Inherit from parent
-          address: "", // Optional field
-          contact_email: "", // Optional field
+          address: request.address || "",
+          contact_email: request.contactEmail || "",
         };
 
         const response = await SubCompanyService.createSubCompany(

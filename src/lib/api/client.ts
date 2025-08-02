@@ -247,8 +247,23 @@ export class ApiClient {
       // Make the request
       const response = await fetch(`${url}${queryParams}`, requestOptions);
 
+      // Debug logging for MSSQL config endpoints
+      if (url.includes('mssql-config')) {
+        console.log(`API Client - Making request to: ${url}${queryParams}`);
+        console.log(`API Client - Request options:`, requestOptions);
+        console.log(`API Client - Response status: ${response.status}`);
+        console.log(`API Client - Response headers:`, Object.fromEntries(response.headers.entries()));
+      }
+
       // Parse response
       const data = await response.json();
+
+      // Debug logging for MSSQL config endpoints
+      if (url.includes('mssql-config')) {
+        console.log(`API Client - URL: ${url}`);
+        console.log(`API Client - Status: ${response.status}`);
+        console.log(`API Client - Response data:`, data);
+      }
 
       // Check if response is successful
       if (!response.ok) {

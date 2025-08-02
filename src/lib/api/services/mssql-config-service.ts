@@ -33,10 +33,13 @@ export class MSSQLConfigService {
    */
   static async getMSSQLConfigs(): Promise<MSSQLConfigsListResponse> {
     try {
+      console.log("Making API call to:", API_ENDPOINTS.GET_MSSQL_CONFIGS);
       const response = await apiClient.get(API_ENDPOINTS.GET_MSSQL_CONFIGS);
+      console.log("API response received:", response);
       return response.data;
     } catch (error) {
       console.error("Error fetching MSSQL configurations:", error);
+      console.error("API endpoint:", API_ENDPOINTS.GET_MSSQL_CONFIGS);
       throw error;
     }
   }
