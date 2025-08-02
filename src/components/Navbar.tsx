@@ -70,13 +70,22 @@ export default function Navbar() {
         </div>
 
         {/* Robot Icon */}
-        <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center border border-gray-600/30 hover:bg-gray-600/50 transition-colors cursor-pointer">
+        <div 
+          className="flex items-center justify-center hover:bg-gray-600/30 transition-colors cursor-pointer rounded-[391.76px]"
+          style={{
+            width: '40px',
+            height: '40px',
+            opacity: 1,
+            padding: '4.85px',
+            gap: '3.03px'
+          }}
+        >
           <Image
             src="/autopilot.svg"
             alt="Robot"
-            width={24}
-            height={24}
-            className="w-6 h-6 cursor-pointer"
+            width={36}
+            height={36}
+            className="w-full h-auto cursor-pointer"
           />
         </div>
       </div>

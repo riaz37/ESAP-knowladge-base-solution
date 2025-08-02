@@ -24,3 +24,8 @@ export { default as FileService } from "./services/file-service";
 export { default as HistoryService } from "./services/history-service";
 export { default as DatabaseService } from "./services/database-service";
 export { default as BusinessRulesService } from "./services/business-rules-service";
+export { default as HierarchyService } from "./services/hierarchy-service";
+export { default as ParentCompanyService } from "./services/parent-company-service";
+export { default as SubCompanyService } from "./services/sub-company-service";
+export { default as MSSQLConfigService } from "./services/mssql-config-service";
+export { default as UserAccessService } from "./services/user-access-service";

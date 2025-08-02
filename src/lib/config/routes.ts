@@ -109,6 +109,22 @@ export const ROUTES: Record<string, RouteConfig> = {
       description: "Support documentation, FAQs, and ticket management",
     },
   },
+  databaseHierarchy: {
+    key: "database-hierarchy",
+    path: "/database-hierarchy",
+    name: "Database Hierarchy",
+    description: "Visual database and company hierarchy management",
+    category: "tools",
+    icon: "🌐",
+    sidebarIcon: DatabaseIcon,
+    showInNavigation: true,
+    showInSidebar: true,
+    order: 6,
+    metadata: {
+      title: "Database Hierarchy - KMS",
+      description: "Manage database configurations and company structure hierarchy",
+    },
+  },
 } as const;
 
 // Route constants for easy access
@@ -118,6 +134,7 @@ export const ROUTE_PATHS = {
   FILE_SYSTEM: "/file-system",
   HR_KNOWLEDGE: "/hr-knowledge",
   SUPPORT_TEAM: "/support-team",
+  DATABASE_HIERARCHY: "/database-hierarchy",
 } as const;
 
 export const ROUTE_CATEGORIES = {
