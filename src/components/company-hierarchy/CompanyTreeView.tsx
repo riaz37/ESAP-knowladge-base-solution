@@ -60,15 +60,43 @@ const CompanyNode = ({ data, selected }: { data: any; selected: boolean }) => {
         </div>
       )}
 
+      {/* Selection indicator - glowing border effect */}
+      {selected && (
+        <div className="absolute inset-0 rounded-2xl border-2 border-green-400 shadow-lg shadow-green-400/50 animate-pulse pointer-events-none" />
+      )}
+
       {/* Main Card */}
       <div
         className={`relative bg-gray-800/95 backdrop-blur-md border-2 rounded-2xl p-6 transition-all duration-300 cursor-pointer ${
           isMainCompany
             ? "w-80 h-48 border-green-400/80 shadow-2xl shadow-green-400/20"
             : "w-72 h-40 border-green-500/30 hover:border-green-400/40"
-        } ${selected ? "ring-2 ring-green-400/50" : ""}`}
+        } ${selected ? "border-green-400 bg-green-500/10 shadow-green-400/30 transform scale-105" : ""}`}
         onClick={() => data.onSelect?.(data.company.id)}
       >
+        {/* Selected state overlay with actions */}
+        {selected && isMainCompany && (
+          <div className="absolute top-2 right-2 flex gap-1">
+            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <div className="text-xs text-green-400 font-medium">SELECTED</div>
+          </div>
+        )}
+
+        {/* Add Sub-Company button when selected */}
+        {selected && isMainCompany && (
+          <div className="absolute bottom-2 right-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                data.onAddSubCompany(data.company.id);
+              }}
+              className="px-2 py-1 bg-green-500/20 border border-green-400/50 rounded text-green-400 text-xs hover:bg-green-500/30 transition-colors"
+            >
+              + Sub-Company
+            </button>
+          </div>
+        )}
+
         {/* Animated glow dots in corners */}
         <div
           className="absolute top-4 left-4 w-1 h-1 bg-emerald-400 rounded-full animate-pulse opacity-60"
@@ -178,6 +206,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
   // State management
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [selectedParentForFlow, setSelectedParentForFlow] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'parent' | 'sub'>('parent');
@@ -198,8 +227,16 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
       try {
         const parentResponse = await ParentCompanyService.getParentCompanies();
         console.log('Parent companies response:', parentResponse);
-        // The service returns response.data, so parentResponse should be {companies: [...], count: number}
-        parentCompanies = parentResponse.companies || [];
+        // Handle different possible response structures
+        if ((parentResponse as any).companies) {
+          parentCompanies = (parentResponse as any).companies;
+        } else if ((parentResponse as any).data?.companies) {
+          parentCompanies = (parentResponse as any).data.companies;
+        } else if (Array.isArray(parentResponse)) {
+          parentCompanies = parentResponse as any;
+        } else {
+          console.log('Parent response structure:', Object.keys(parentResponse as any));
+        }
       } catch (parentError) {
         console.error('Error loading parent companies:', parentError);
         // Continue with empty parent companies array
@@ -208,8 +245,16 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
       try {
         const subResponse = await SubCompanyService.getSubCompanies();
         console.log('Sub companies response:', subResponse);
-        // The service returns response.data, so subResponse should be {companies: [...], count: number}
-        subCompanies = subResponse.companies || [];
+        // Handle different possible response structures
+        if ((subResponse as any).companies) {
+          subCompanies = (subResponse as any).companies;
+        } else if ((subResponse as any).data?.companies) {
+          subCompanies = (subResponse as any).data.companies;
+        } else if (Array.isArray(subResponse)) {
+          subCompanies = subResponse as any;
+        } else {
+          console.log('Sub response structure:', Object.keys(subResponse as any));
+        }
       } catch (subError) {
         console.error('Error loading sub companies:', subError);
         // Continue with empty sub companies array
@@ -217,6 +262,8 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
 
       console.log('Extracted parent companies:', parentCompanies);
       console.log('Extracted sub companies:', subCompanies);
+      console.log('Parent companies length:', parentCompanies.length);
+      console.log('Sub companies length:', subCompanies.length);
 
       // Transform API data to our Company interface
       const transformedCompanies: Company[] = parentCompanies.map((parent: ParentCompanyData) => ({
@@ -272,72 +319,147 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
       };
     }
 
-    // Has companies - create normal flow
-    const mainCompany = companies[0];
     const flowNodes: Node[] = [];
     const flowEdges: Edge[] = [];
 
-    // Add main company node
-    flowNodes.push({
-      id: mainCompany.id,
-      type: "company",
-      position: { x: 200, y: 150 },
-      data: {
-        company: mainCompany,
-        level: 0,
-        onSelect: setSelectedCompany,
-        onAddSubCompany: (parentId: string) => {
-          setModalType('sub');
-          setParentCompanyId(parseInt(parentId));
-          setModalOpen(true);
-        },
-      },
-      draggable: false,
-    });
-
-    // Add child nodes
-    if (mainCompany.children && mainCompany.children.length > 0) {
-      const childY = 450;
-      const spacing = 320;
-      const startX = 200 - ((mainCompany.children.length - 1) * spacing) / 2;
-
-      mainCompany.children.forEach((child, index) => {
-        const childX = startX + index * spacing;
-
+    // If a parent company is selected for flow view, show only that branch
+    if (selectedParentForFlow) {
+      const selectedParent = companies.find(c => c.id === selectedParentForFlow);
+      if (selectedParent) {
+        // Add main company node (centered)
         flowNodes.push({
-          id: child.id,
+          id: selectedParent.id,
           type: "company",
-          position: { x: childX, y: childY },
+          position: { x: 400, y: 150 },
           data: {
-            company: child,
-            level: 1,
-            onSelect: setSelectedCompany,
+            company: selectedParent,
+            level: 0,
+            onSelect: (companyId: string) => {
+              setSelectedCompany(companyId === selectedCompany ? null : companyId);
+            },
             onAddSubCompany: (parentId: string) => {
               setModalType('sub');
               setParentCompanyId(parseInt(parentId));
               setModalOpen(true);
             },
           },
+          selected: selectedCompany === selectedParent.id,
           draggable: false,
         });
 
-        // Add edge from parent to child
-        flowEdges.push({
-          id: `${mainCompany.id}-${child.id}`,
-          source: mainCompany.id,
-          target: child.id,
-          type: "straight",
-          style: {
-            stroke: "rgba(34, 197, 94, 0.6)",
-            strokeWidth: 2,
+        // Add child nodes
+        if (selectedParent.children && selectedParent.children.length > 0) {
+          const childY = 450;
+          const spacing = 320;
+          const startX = 400 - ((selectedParent.children.length - 1) * spacing) / 2;
+
+          selectedParent.children.forEach((child, index) => {
+            const childX = startX + index * spacing;
+
+            flowNodes.push({
+              id: child.id,
+              type: "company",
+              position: { x: childX, y: childY },
+              data: {
+                company: child,
+                level: 1,
+                onSelect: (companyId: string) => {
+                  setSelectedCompany(companyId === selectedCompany ? null : companyId);
+                },
+                onAddSubCompany: (parentId: string) => {
+                  setModalType('sub');
+                  setParentCompanyId(parseInt(parentId));
+                  setModalOpen(true);
+                },
+              },
+              selected: selectedCompany === child.id,
+              draggable: false,
+            });
+
+            // Add edge from parent to child
+            flowEdges.push({
+              id: `${selectedParent.id}-${child.id}`,
+              source: selectedParent.id,
+              target: child.id,
+              type: "smoothstep",
+              style: { stroke: "#10b981", strokeWidth: 2 },
+              markerEnd: { type: "arrowclosed", color: "#10b981" },
+            });
+          });
+        }
+      }
+    } else {
+      // Show all companies or first company (original behavior)
+      const mainCompany = companies[0];
+
+      // Add main company node
+      flowNodes.push({
+        id: mainCompany.id,
+        type: "company",
+        position: { x: 200, y: 150 },
+        data: {
+          company: mainCompany,
+          level: 0,
+          onSelect: (companyId: string) => {
+            setSelectedCompany(companyId === selectedCompany ? null : companyId);
           },
-          animated: true,
-        });
+          onAddSubCompany: (parentId: string) => {
+            setModalType('sub');
+            setParentCompanyId(parseInt(parentId));
+            setModalOpen(true);
+          },
+        },
+        selected: selectedCompany === mainCompany.id,
+        draggable: false,
       });
+
+      // Add child nodes
+      if (mainCompany.children && mainCompany.children.length > 0) {
+        const childY = 450;
+        const spacing = 320;
+        const startX = 200 - ((mainCompany.children.length - 1) * spacing) / 2;
+
+        mainCompany.children.forEach((child, index) => {
+          const childX = startX + index * spacing;
+
+          flowNodes.push({
+            id: child.id,
+            type: "company",
+            position: { x: childX, y: childY },
+            data: {
+              company: child,
+              level: 1,
+              onSelect: (companyId: string) => {
+                setSelectedCompany(companyId === selectedCompany ? null : companyId);
+              },
+              onAddSubCompany: (parentId: string) => {
+                setModalType('sub');
+                setParentCompanyId(parseInt(parentId));
+                setModalOpen(true);
+              },
+            },
+            selected: selectedCompany === child.id,
+            draggable: false,
+          });
+
+          // Add edge from parent to child
+          flowEdges.push({
+            id: `${mainCompany.id}-${child.id}`,
+            source: mainCompany.id,
+            target: child.id,
+            type: "straight",
+            style: {
+              stroke: "rgba(34, 197, 94, 0.6)",
+              strokeWidth: 2,
+            },
+            animated: true,
+          });
+        });
+      }
     }
 
     return { nodes: flowNodes, edges: flowEdges };
-  }, [companies]);
+  }, [companies, selectedCompany, selectedParentForFlow]);
 
   const [flowNodes, setNodes, onNodesChange] = useNodesState([]);
   const [flowEdges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -436,6 +558,8 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
           </ReactFlow>
         </div>
 
+
+
         {/* Right sidebar with company tree - only show if we have companies */}
         {companies.length > 0 && (
           <div className="absolute top-20 right-6 w-80 bg-gray-900/95 backdrop-blur-md border border-green-400/30 rounded-2xl p-6 z-40 shadow-2xl shadow-green-400/10">
@@ -447,8 +571,23 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
                 </div>
                 <h3 className="text-white font-semibold text-lg">Companies</h3>
               </div>
-              <ChevronDown className="w-4 h-4 text-green-400" />
+              {selectedParentForFlow && (
+                <button
+                  onClick={() => setSelectedParentForFlow(null)}
+                  className="px-2 py-1 bg-green-500/20 border border-green-400/50 rounded text-green-400 text-xs hover:bg-green-500/30 transition-colors"
+                >
+                  Show All
+                </button>
+              )}
             </div>
+
+            {/* Selection indicator */}
+            {selectedParentForFlow && (
+              <div className="mb-4 p-2 bg-green-500/10 border border-green-400/30 rounded text-green-400 text-sm">
+                <span className="font-medium">Viewing: </span>
+                {companies.find(c => c.id === selectedParentForFlow)?.name}
+              </div>
+            )}
 
             {/* File Tree Structure */}
             <div className="space-y-0 font-mono text-sm">
@@ -457,9 +596,16 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
                   {/* Parent company - folder style */}
                   <div
                     className={`flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-800/50 transition-colors ${
-                      selectedCompany === company.id ? "bg-green-500/20" : ""
+                      selectedParentForFlow === company.id ? "bg-green-500/20 border-l-2 border-green-400" : ""
                     }`}
-                    onClick={() => setSelectedCompany(company.id)}
+                    onClick={() => {
+                      // Toggle selection - if same company is clicked, deselect
+                      if (selectedParentForFlow === company.id) {
+                        setSelectedParentForFlow(null);
+                      } else {
+                        setSelectedParentForFlow(company.id);
+                      }
+                    }}
                   >
                     {/* Folder icon */}
                     <span className="text-green-400 text-base">📁</span>
