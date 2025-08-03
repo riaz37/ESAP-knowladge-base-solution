@@ -664,3 +664,8 @@
 .top-15 {
   top: 60px;
 }
+
+/* Radial gradient utility for company hierarchy */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}

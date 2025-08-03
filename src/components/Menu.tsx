@@ -1,128 +1,179 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  BarChart3,
+  Upload,
+  User,
+  Settings,
+  History,
+  Terminal,
+  Square,
+} from "lucide-react";
 
 import { useUIStore } from "@/store/uiStore";
-import { getSidebarRoutes } from "@/lib/utils/navigation";
 import { cn } from "@/lib/utils";
-import { ChevronRight, X } from "lucide-react";
 
 export default function Menu() {
   const pathname = usePathname();
   const { setShowSidebar } = useUIStore();
 
-  // Get navigation routes
-  const menuRoutes = getSidebarRoutes();
+  // Menu items matching your image
+  const menuItems = [
+    {
+      name: "Dashboard",
+      path: "/",
+      icon: Square,
+      isActive: pathname === "/",
+    },
+    {
+      name: "Report & Analysis",
+      path: "/db-knowledge",
+      icon: BarChart3,
+      isActive: pathname === "/db-knowledge",
+    },
+    {
+      name: "File Upload",
+      path: "/file-system",
+      icon: Upload,
+      isActive: pathname === "/file-system",
+    },
+    {
+      name: "User",
+      path: "/hr-knowledge",
+      icon: User,
+      isActive: pathname === "/hr-knowledge",
+    },
+    {
+      name: "Role",
+      path: "/support-team",
+      icon: Settings,
+      isActive: pathname === "/support-team",
+    },
+    {
+      name: "History Log",
+      path: "/database-hierarchy",
+      icon: History,
+      isActive: pathname === "/database-hierarchy",
+    },
+  ];
+
+  const recentCommands = [
+    "How I can get salary",
+    "Generate previous report....",
+    "Generate previous report....",
+    "Generate previous report....",
+  ];
 
   const handleMenuItemClick = () => {
-    // Close menu when item is clicked
     setShowSidebar(false);
   };
 
   return (
-    <div className="fixed top-28 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-top-4 duration-300">
-      <div className="bg-black/90 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden min-w-[500px]">
-        {/* Menu Header */}
-        <div className="relative bg-gradient-to-r from-emerald-500/20 to-teal-500/20 p-6 border-b border-white/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-1">Navigation</h2>
-              <p className="text-emerald-300/80 text-sm">
-                Choose your destination
-              </p>
-            </div>
-            <button
-              onClick={() => setShowSidebar(false)}
-              className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all hover:scale-110 group cursor-pointer"
-            >
-              <X className="w-5 h-5 text-white group-hover:text-emerald-300" />
-            </button>
-          </div>
-        </div>
-
+    <div className="fixed top-[76px] left-[180px] z-50 animate-in slide-in-from-top-4 duration-300">
+      <div
+        className="backdrop-blur-2xl border border-green-500/30 rounded-2xl shadow-2xl overflow-hidden w-80 max-h-[80vh] overflow-y-auto"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 50, 30, 0.8) 50%, rgba(0, 0, 0, 0.9) 100%)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          boxShadow:
+            "0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(34, 197, 94, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+        }}
+      >
         {/* Menu Items */}
         <div className="p-4">
-          <div className="space-y-2">
-            {menuRoutes.map((route, index) => {
-              const isActive = pathname === route.path;
-              return (
-                <Link
-                  href={route.path}
-                  key={route.key}
-                  onClick={handleMenuItemClick}
-                  className="block group"
-                  style={{ animationDelay: `${index * 50}ms` }}
+          <div className="space-y-1">
+            {menuItems.map((item) => (
+              <Link
+                href={item.path}
+                key={item.name}
+                onClick={handleMenuItemClick}
+                className="block group"
+              >
+                <div
+                  className={cn(
+                    "flex items-center p-3 rounded-xl transition-all duration-300 cursor-pointer relative overflow-hidden",
+                    item.isActive
+                      ? "bg-gradient-to-r from-green-500/30 to-green-600/20 border border-green-400/40 shadow-lg shadow-green-500/20"
+                      : "bg-black/20 hover:bg-green-500/10 hover:border hover:border-green-500/30 border border-transparent"
+                  )}
                 >
-                  <div
-                    className={cn(
-                      "flex items-center p-4 rounded-2xl transition-all duration-300 cursor-pointer relative overflow-hidden",
-                      "hover:bg-white/10 hover:scale-[1.02] hover:shadow-lg",
-                      isActive
-                        ? "bg-gradient-to-r from-emerald-500/30 to-teal-500/20 border border-emerald-500/30"
-                        : "bg-white/5 border border-white/5 hover:border-white/20"
-                    )}
-                  >
-                    {/* Background glow effect */}
-                    <div
+                  {/* Background glow for active item */}
+                  {item.isActive && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-green-400/10 to-transparent opacity-50" />
+                  )}
+
+                  {/* Icon */}
+                  <div className="mr-3 relative z-10">
+                    <item.icon
                       className={cn(
-                        "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300",
-                        "bg-gradient-to-r from-emerald-500/10 to-transparent"
+                        "w-5 h-5 transition-colors",
+                        item.isActive
+                          ? "text-green-400"
+                          : "text-gray-300 group-hover:text-green-300"
                       )}
                     />
-
-                    {/* Icon */}
-                    <div className="relative z-10 mr-4">
-                      {route.sidebarIcon && (
-                        <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-all group-hover:scale-110">
-                          <route.sidebarIcon
-                            fill={isActive ? "#10b981" : "#ffffff"}
-                            className="w-6 h-6 transition-all"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 relative z-10">
-                      <h3
-                        className={cn(
-                          "text-lg font-semibold mb-1 transition-colors",
-                          isActive
-                            ? "text-emerald-300"
-                            : "text-white group-hover:text-emerald-200"
-                        )}
-                      >
-                        {route.name}
-                      </h3>
-                      <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">
-                        {getRouteDescription(route.key)}
-                      </p>
-                    </div>
-
-                    {/* Arrow */}
-                    <div className="relative z-10 ml-4">
-                      <ChevronRight
-                        className={cn(
-                          "w-5 h-5 transition-all duration-300 group-hover:translate-x-1",
-                          isActive
-                            ? "text-emerald-300"
-                            : "text-gray-400 group-hover:text-white"
-                        )}
-                      />
-                    </div>
-
-                    {/* Active indicator */}
-                    {isActive && (
-                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-emerald-400 rounded-r-full" />
-                    )}
                   </div>
-                </Link>
-              );
-            })}
+
+                  {/* Content */}
+                  <div className="flex-1 relative z-10">
+                    <h3
+                      className={cn(
+                        "text-sm font-medium transition-colors",
+                        item.isActive
+                          ? "text-white"
+                          : "text-gray-200 group-hover:text-white"
+                      )}
+                    >
+                      {item.name}
+                    </h3>
+                  </div>
+
+                  {/* Active indicator dot */}
+                  {item.isActive && (
+                    <div className="w-2 h-2 bg-green-400 rounded-full relative z-10 shadow-lg shadow-green-400/50" />
+                  )}
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
 
+        {/* Recent Commands Section */}
+        <div className="border-t border-green-500/20 bg-black/10 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
+              <Terminal className="w-3 h-3 text-green-400" />
+            </div>
+            <h4 className="text-white font-medium text-sm">Recent Commands</h4>
+          </div>
 
+          <div className="space-y-2">
+            {recentCommands.map((command, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-2 rounded-lg bg-black/30 hover:bg-black/40 transition-all duration-300 cursor-pointer group border border-green-500/10 hover:border-green-500/20"
+              >
+                <span className="text-gray-300 text-xs group-hover:text-white transition-colors flex-1 truncate">
+                  {command}
+                </span>
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full opacity-70 ml-2 flex-shrink-0" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* API Section */}
+        <div className="border-t border-green-500/20 bg-black/10 p-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-500/30 to-green-600/20 rounded-lg flex items-center justify-center border border-green-500/40 shadow-lg">
+              <span className="text-green-400 text-xs font-bold">API</span>
+            </div>
+            <span className="text-white text-sm font-medium">API Access</span>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -14,9 +14,8 @@ export default function Navbar() {
 
   return (
     <nav
-      className="fixed top-[30px] left-1/2 transform -translate-x-1/2 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-between shadow-2xl shadow-black/20"
+      className="fixed top-4 left-4 right-4 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-between shadow-2xl shadow-black/20 max-w-7xl mx-auto"
       style={{
-        width: "1351px",
         height: "64px",
         paddingLeft: "20px",
         paddingRight: "20px",
