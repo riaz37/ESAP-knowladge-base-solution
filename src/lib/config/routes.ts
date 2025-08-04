@@ -61,20 +61,20 @@ export const ROUTES: Record<string, RouteConfig> = {
       description: "Manage and access your database knowledge base",
     },
   },
-  fileSystem: {
-    key: "file-system",
-    path: "/file-system",
-    name: "File System",
-    description: "File management, upload, and query operations",
+  companyStructure: {
+    key: "company-structure",
+    path: "/company-structure",
+    name: "Company Structure",
+    description: "Company hierarchy and organizational structure management",
     category: "tools",
-    icon: "🗂️",
+    icon: "🏢",
     sidebarIcon: SalesKnowledgeIcon,
     showInNavigation: true,
     showInSidebar: true,
     order: 3,
     metadata: {
-      title: "File System - KMS",
-      description: "Upload, manage, and query your files and documents",
+      title: "Company Structure - KMS",
+      description: "Manage company hierarchy and organizational structure",
     },
   },
   hrKnowledge: {
@@ -125,16 +125,33 @@ export const ROUTES: Record<string, RouteConfig> = {
       description: "Manage database configurations and company structure hierarchy",
     },
   },
+  userConfig: {
+    key: "user-config",
+    path: "/user-config",
+    name: "User Config",
+    description: "User configuration and database access management",
+    category: "tools",
+    icon: "⚙️",
+    sidebarIcon: DatabaseIcon,
+    showInNavigation: true,
+    showInSidebar: true,
+    order: 7,
+    metadata: {
+      title: "User Configuration - KMS",
+      description: "Manage user configurations and database access settings",
+    },
+  },
 } as const;
 
 // Route constants for easy access
 export const ROUTE_PATHS = {
   DASHBOARD: "/",
   DB_KNOWLEDGE: "/db-knowledge",
-  FILE_SYSTEM: "/file-system",
+  COMPANY_STRUCTURE: "/company-structure",
   HR_KNOWLEDGE: "/hr-knowledge",
   SUPPORT_TEAM: "/support-team",
   DATABASE_HIERARCHY: "/database-hierarchy",
+  USER_CONFIG: "/user-config",
 } as const;
 
 export const ROUTE_CATEGORIES = {

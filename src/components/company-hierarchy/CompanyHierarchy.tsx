@@ -1,6 +1,7 @@
 "use client";
 
 import { CompanyTreeView } from "./CompanyTreeView";
+import { EnhancedBackground } from "@/components/ui/enhanced-background";
 
 export function CompanyHierarchy() {
   const handleCompanyCreated = () => {
@@ -9,8 +10,8 @@ export function CompanyHierarchy() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <EnhancedBackground intensity="medium" className="min-h-screen">
       <CompanyTreeView onCompanyCreated={handleCompanyCreated} />
-    </div>
+    </EnhancedBackground>
   );
 }

@@ -1,95 +1,170 @@
-'use client';
+"use client";
 
-import { Building2, Upload, Plus } from "lucide-react";
-import { Company } from "./CompanyHierarchy";
+import React from "react";
+import { Building2, Plus, Upload } from "lucide-react";
+import { Handle, Position } from "reactflow";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Company } from "./CompanyTreeView";
 
 interface CompanyCardProps {
   company: Company;
-  onAddSubCompany: (name: string, description: string, contactDatabase: string, parentId?: string) => void;
-  isSelected: boolean;
-  onSelect: () => void;
-  level: number;
+  onAddSubCompany?: (parentId: string) => void;
+  onUpload?: (
+    companyId: string,
+    companyName: string,
+    companyType: "parent" | "sub"
+  ) => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  level?: number;
 }
 
 export function CompanyCard({
   company,
   onAddSubCompany,
-  isSelected,
+  onUpload,
+  isSelected = false,
   onSelect,
-  level
+  level = 0,
 }: CompanyCardProps) {
+  const isMainCompany = level === 0;
+
   return (
-    <div
-      className="cursor-pointer group"
-      onClick={onSelect}
-    >
-      {/* Glow effect */}
-      <div className={`absolute inset-0 rounded-2xl transition-all duration-300 ${
-        isSelected 
-          ? 'bg-green-400/20 shadow-[0_0_30px_rgba(34,197,94,0.3)]' 
-          : 'group-hover:bg-green-400/10 group-hover:shadow-[0_0_20px_rgba(34,197,94,0.2)]'
-      }`} />
-      
-      {/* Main card */}
-      <div className={`relative bg-gray-800/90 backdrop-blur-sm border rounded-2xl p-6 w-64 transition-all duration-300 ${
-        isSelected 
-          ? 'border-green-400 shadow-lg' 
-          : 'border-green-500/30 group-hover:border-green-400/60'
-      }`}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-            isSelected ? 'bg-green-400/20' : 'bg-green-500/20'
-          }`}>
-            <Building2 className={`w-5 h-5 ${
-              isSelected ? 'text-green-400' : 'text-green-500'
-            }`} />
-          </div>
-          
-          {/* Add button for children */}
-          <button 
-            className="w-6 h-6 rounded-full border border-green-500/40 flex items-center justify-center hover:border-green-400 hover:bg-green-400/10 transition-colors"
-            onClick={(e) => {
-              e.stopPropagation();
-              // For demo purposes, add a sample sub-company
-              onAddSubCompany(`Sub-${company.name}`, 'New sub-company', 'sub_db', company.id);
-            }}
-          >
-            <Plus className="w-3 h-3 text-green-400" />
-          </button>
-        </div>
+    <div className="relative group">
+      {/* ReactFlow Handles - Render based on node's role in hierarchy */}
 
-        {/* Company name */}
-        <h3 className="text-white font-semibold text-lg mb-2">
-          {company.name}
-        </h3>
+      {/* Target handle - for receiving connections from parent (all non-root nodes) */}
+      {!isMainCompany && (
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="top"
+          style={{
+            width: "12px",
+            height: "12px",
+            background: "#10b981",
+            border: "2px solid #10b981",
+            top: "-6px",
+            left: "50%",
+            transform: "translateX(-50%)",
+          }}
+        />
+      )}
 
-        {/* Description */}
-        <p className="text-gray-400 text-sm mb-4 line-clamp-2">
-          {company.description}
-        </p>
+      {/* Source handle - for connecting to children (main companies always have this for potential children) */}
+      {isMainCompany && (
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="bottom"
+          style={{
+            width: "12px",
+            height: "12px",
+            background: "#10b981",
+            border: "2px solid #10b981",
+            bottom: "-6px",
+            left: "50%",
+            transform: "translateX(-50%)",
+          }}
+        />
+      )}
 
-        {/* Upload button */}
-        <button className="flex items-center gap-2 text-green-400 text-sm hover:text-green-300 transition-colors">
-          <Upload className="w-4 h-4" />
-          Upload
-        </button>
+      {/* Main Card */}
+      <Card
+        className={`
+          relative cursor-pointer transition-all duration-300 border-emerald-400/20
+          bg-white/5 dark:bg-white/5 backdrop-blur-sm
+          hover:bg-white/10 dark:hover:bg-white/10
+          hover:border-emerald-400/40 hover:shadow-lg hover:shadow-emerald-500/20
+          ${
+            isSelected
+              ? "ring-2 ring-emerald-400/50 shadow-lg shadow-emerald-500/30 scale-105"
+              : "hover:scale-105"
+          }
+          ${isMainCompany ? "w-96 h-48" : "w-80 h-44"}
+        `}
+        onClick={onSelect}
+      >
+        <CardContent className="p-6 h-full flex items-center gap-4">
+          {/* Company Icon */}
+          <div className="flex-shrink-0">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 border border-emerald-400/30 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+              </div>
 
-        {/* Connection points */}
-        <div className="absolute -right-2 top-1/2 transform -translate-y-1/2">
-          <div className="w-4 h-4 rounded-full border-2 border-green-500 bg-gray-800 flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          </div>
-        </div>
-        
-        {level > 0 && (
-          <div className="absolute -left-2 top-1/2 transform -translate-y-1/2">
-            <div className="w-4 h-4 rounded-full border-2 border-green-500 bg-gray-800 flex items-center justify-center">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              {/* Status Indicator */}
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white dark:border-gray-900 animate-pulse" />
             </div>
           </div>
+
+          {/* Company Info */}
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 truncate">
+              {company.name}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-2">
+              {company.description || "No description available"}
+            </p>
+            {company.address && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                📍 {company.address}
+              </p>
+            )}
+          </div>
+        </CardContent>
+
+        {/* Selected State Indicator */}
+        {isSelected && (
+          <div className="absolute top-3 right-3 flex items-center gap-2">
+            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+            <span className="text-xs font-medium text-emerald-400">ACTIVE</span>
+          </div>
         )}
-      </div>
+
+        {/* Action Buttons - Always visible for main companies */}
+        {isMainCompany && (
+          <div className="absolute bottom-3 right-3 flex gap-2">
+            {/* Add Sub-Company Button - Always visible */}
+            {onAddSubCompany && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddSubCompany(company.id);
+                }}
+                className="border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Sub-Company
+              </Button>
+            )}
+
+            {/* Upload Button */}
+            {onUpload && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const companyType = company.id.startsWith("parent-")
+                    ? "parent"
+                    : "sub";
+                  onUpload(company.id, company.name, companyType);
+                }}
+                className="border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400"
+              >
+                <Upload className="w-3 h-3 mr-1" />
+                Upload
+              </Button>
+            )}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

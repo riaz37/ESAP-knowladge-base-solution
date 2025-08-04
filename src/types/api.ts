@@ -246,3 +246,58 @@ export interface UserAccessListResponse {
     count: number;
   };
 }
+
+// User Configuration Types
+export interface DatabaseConfig {
+  DB_HOST: string;
+  DB_PORT: number;
+  DB_NAME: string;
+  DB_USER: string;
+  DB_PASSWORD: string;
+  schema: string;
+}
+
+export interface UserConfigCreateRequest {
+  user_id: string;
+  db_config: DatabaseConfig;
+  access_level: number;
+  accessible_tables: string[];
+}
+
+export interface UserConfigData {
+  config_id: number;
+  user_id: string;
+  db_config: DatabaseConfig;
+  access_level: number;
+  accessible_tables: string[];
+  is_latest: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserConfigCreateResponse {
+  status: string;
+  message: string;
+  data: {
+    config_id: number;
+    config_reused: boolean;
+    database_created: boolean;
+    database_name: string;
+    table_status: Record<string, any>;
+  };
+}
+
+export interface UserConfigResponse {
+  status: string;
+  message: string;
+  data: UserConfigData;
+}
+
+export interface UserConfigsListResponse {
+  status: string;
+  message: string;
+  data: {
+    configs: UserConfigData[];
+    count: number;
+  };
+}

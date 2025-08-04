@@ -451,6 +451,19 @@
   @apply from-gray-400 to-gray-500 cursor-not-allowed;
 }
 
+/* Grid background utilities for CompanyTreeView */
+.bg-grid-gray-200\/50 {
+  background-image: linear-gradient(rgba(229, 231, 235, 0.5) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(229, 231, 235, 0.5) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark .bg-grid-gray-800\/50 {
+  background-image: linear-gradient(rgba(31, 41, 55, 0.5) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(31, 41, 55, 0.5) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
 .btn-secondary {
   @apply bg-[#f0f9f5] hover:bg-[#e1f4ea] dark:bg-[#011f17] dark:hover:bg-[#012920] text-[#00bf6f] dark:text-[#00bf6f];
 }

@@ -48,6 +48,12 @@ export const API_ENDPOINTS = {
   GET_USER_ACCESS_CONFIGS: `${baseUrl}/mssql-config/user-access`,
   GET_USER_ACCESS: (userId: string) =>
     `${baseUrl}/mssql-config/user-access/${encodeURIComponent(userId)}`,
+
+  // User Configuration endpoints
+  CREATE_USER_CONFIG: `https://176.9.16.194:8200/user-config`,
+  GET_USER_CONFIGS: `https://176.9.16.194:8200/user-config`,
+  GET_USER_CONFIG: (userId: string) =>
+    `https://176.9.16.194:8200/user-config/${encodeURIComponent(userId)}`,
 };
 
 /**

@@ -33,10 +33,10 @@ export default function Menu() {
       isActive: pathname === "/db-knowledge",
     },
     {
-      name: "File Upload",
-      path: "/file-system",
+      name: "Company Structure",
+      path: "/company-structure",
       icon: Upload,
-      isActive: pathname === "/file-system",
+      isActive: pathname === "/company-structure",
     },
     {
       name: "User",
@@ -70,7 +70,7 @@ export default function Menu() {
   };
 
   return (
-    <div className="fixed top-[76px] left-[180px] z-50 animate-in slide-in-from-top-4 duration-300">
+    <div className="fixed top-[80px] left-[170px] z-50 animate-in slide-in-from-top-4 duration-300">
       <div
         className="backdrop-blur-2xl border border-green-500/30 rounded-2xl shadow-2xl overflow-hidden w-80 max-h-[80vh] overflow-y-auto"
         style={{

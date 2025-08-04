@@ -13,8 +13,8 @@ import {
   isActiveRoute,
   getBreadcrumbs,
   getPageTitle,
-  getPageDescription
-} from '@/lib/config/routes';
+  getPageDescription,
+} from "@/lib/config/routes";
 
 // Re-export routing utilities from the centralized config
 export {
@@ -32,7 +32,7 @@ export {
   isActiveRoute,
   getBreadcrumbs,
   getPageTitle,
-  getPageDescription
+  getPageDescription,
 };
 
 // Legacy compatibility - these functions use the new routing system

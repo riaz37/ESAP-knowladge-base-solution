@@ -11,4 +11,5 @@ export * from './use-mssql-config';
 export * from './use-parent-companies';
 export * from './use-sub-companies';
 export * from './use-user-access';
+export * from './use-user-config';
 export * from './use-hierarchy-data';

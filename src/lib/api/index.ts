@@ -29,3 +29,4 @@ export { default as ParentCompanyService } from "./services/parent-company-servi
 export { default as SubCompanyService } from "./services/sub-company-service";
 export { default as MSSQLConfigService } from "./services/mssql-config-service";
 export { default as UserAccessService } from "./services/user-access-service";
+export { default as UserConfigService } from "./services/user-config-service";

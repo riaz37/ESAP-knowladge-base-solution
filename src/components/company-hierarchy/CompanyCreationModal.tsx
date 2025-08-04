@@ -1,35 +1,37 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Building2, Database, Plus, Loader2 } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Building2, Database, Plus, Loader2, User, Settings } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MSSQLConfigService } from '@/lib/api/services/mssql-config-service';
-import { MSSQLConfigData } from '@/types/api';
-import { toast } from 'sonner';
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { MSSQLConfigService } from "@/lib/api/services/mssql-config-service";
+import { UserConfigService } from "@/lib/api/services/user-config-service";
+import { MSSQLConfigData, UserConfigData, UserConfigCreateRequest } from "@/types/api";
+import { toast } from "sonner";
 
 interface CompanyCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (companyData: CompanyFormData) => Promise<void>;
-  type: 'parent' | 'sub';
+  type: "parent" | "sub";
   parentCompanyId?: number;
 }
 
@@ -56,10 +58,10 @@ export function CompanyCreationModal({
   parentCompanyId,
 }: CompanyCreationModalProps) {
   // Form states
-  const [companyName, setCompanyName] = useState('');
-  const [description, setDescription] = useState('');
-  const [address, setAddress] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
+  const [companyName, setCompanyName] = useState("");
+  const [description, setDescription] = useState("");
+  const [address, setAddress] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [selectedDbId, setSelectedDbId] = useState<number | null>(null);
 
   // Database states
@@ -69,17 +71,35 @@ export function CompanyCreationModal({
   const [creatingCompany, setCreatingCompany] = useState(false);
 
   // New database form states
-  const [newDbUrl, setNewDbUrl] = useState('');
-  const [newDbName, setNewDbName] = useState('');
-  const [newDbBusinessRule, setNewDbBusinessRule] = useState('');
+  const [newDbUrl, setNewDbUrl] = useState("");
+  const [newDbName, setNewDbName] = useState("");
+  const [newDbBusinessRule, setNewDbBusinessRule] = useState("");
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState('existing');
+  // User Configuration states
+  const [userConfigs, setUserConfigs] = useState<UserConfigData[]>([]);
+  const [loadingUserConfigs, setLoadingUserConfigs] = useState(false);
+  const [creatingUserConfig, setCreatingUserConfig] = useState(false);
+  const [selectedUserConfigId, setSelectedUserConfigId] = useState<number | null>(null);
 
-  // Load databases when modal opens
+  // New user config form states
+  const [newUserConfigUserId, setNewUserConfigUserId] = useState("");
+  const [newUserConfigAccessLevel, setNewUserConfigAccessLevel] = useState(2);
+  const [newUserConfigDbHost, setNewUserConfigDbHost] = useState("");
+  const [newUserConfigDbPort, setNewUserConfigDbPort] = useState(1433);
+  const [newUserConfigDbName, setNewUserConfigDbName] = useState("");
+  const [newUserConfigDbUser, setNewUserConfigDbUser] = useState("");
+  const [newUserConfigDbPassword, setNewUserConfigDbPassword] = useState("");
+  const [newUserConfigDbSchema, setNewUserConfigDbSchema] = useState("public");
+
+  // Tab states
+  const [activeTab, setActiveTab] = useState("existing");
+  const [activeUserConfigTab, setActiveUserConfigTab] = useState("existing");
+
+  // Load databases and user configs when modal opens
   useEffect(() => {
     if (isOpen) {
       loadDatabases();
+      loadUserConfigs();
     }
   }, [isOpen]);
 
@@ -87,112 +107,183 @@ export function CompanyCreationModal({
     setLoadingDatabases(true);
     try {
       const response = await MSSQLConfigService.getMSSQLConfigs();
-      console.log('Database loading response:', response);
+      console.log("Database loading response:", response);
 
-      // The service returns response.data, which should be {configs: [...], count: number}
-      // But let's handle different possible structures
-      let configs = [];
+      // The service returns response.data, which could be either:
+      // 1. { configs: MSSQLConfigData[], count: number } (if service extracts .data)
+      // 2. { status, message, data: { configs: MSSQLConfigData[], count: number } } (full response)
+      let configs: MSSQLConfigData[];
 
-      if (response && response.configs && Array.isArray(response.configs)) {
-        // Expected structure: { configs: [...], count: number }
+      if (
+        response.data &&
+        response.data.configs &&
+        Array.isArray(response.data.configs)
+      ) {
+        // Case 1: Full wrapped response
+        configs = response.data.configs;
+      } else if (response.configs && Array.isArray(response.configs)) {
+        // Case 2: Direct data object
         configs = response.configs;
-      } else if (response && Array.isArray(response)) {
-        // Direct array
-        configs = response;
-      } else if (response && response.data) {
-        // If there's still a nested data property
-        if (Array.isArray(response.data)) {
-          configs = response.data;
-        } else if (response.data.configs && Array.isArray(response.data.configs)) {
-          configs = response.data.configs;
-        } else {
-          // Check if the response.data has any array property
-          const dataKeys = Object.keys(response.data);
-          console.log('Available data keys:', dataKeys);
-
-          for (const key of dataKeys) {
-            if (Array.isArray(response.data[key])) {
-              console.log(`Found array in key: ${key}`);
-              configs = response.data[key];
-              break;
-            }
-          }
-        }
+      } else {
+        console.error("Invalid response structure:", response);
+        throw new Error("No database configurations found in response");
       }
 
-      if (!Array.isArray(configs)) {
-        console.error('No valid configs array found in response:', response);
-        throw new Error('No database configurations found in response');
-      }
-
-      console.log('Extracted configs:', configs);
+      console.log("Extracted configs:", configs);
       setDatabases(configs);
     } catch (error) {
-      console.error('Error loading databases:', error);
-      toast.error('Failed to load databases');
+      console.error("Error loading databases:", error);
+      toast.error("Failed to load databases");
       setDatabases([]); // Set empty array as fallback
     } finally {
       setLoadingDatabases(false);
     }
   };
 
+  const loadUserConfigs = async () => {
+    setLoadingUserConfigs(true);
+    try {
+      const response = await UserConfigService.getUserConfigs();
+      console.log("User configs loading response:", response);
+
+      let configs: UserConfigData[];
+      if (response.data && response.data.configs && Array.isArray(response.data.configs)) {
+        configs = response.data.configs;
+      } else if (response.configs && Array.isArray(response.configs)) {
+        configs = response.configs;
+      } else {
+        console.error("Invalid user config response structure:", response);
+        throw new Error("No user configurations found in response");
+      }
+
+      console.log("Extracted user configs:", configs);
+      setUserConfigs(configs);
+    } catch (error) {
+      console.error("Error loading user configs:", error);
+      toast.error("Failed to load user configurations");
+      setUserConfigs([]);
+    } finally {
+      setLoadingUserConfigs(false);
+    }
+  };
+
   const handleCreateDatabase = async () => {
     if (!newDbUrl.trim() || !newDbName.trim()) {
-      toast.error('Database URL and name are required');
+      toast.error("Database URL and name are required");
       return;
     }
 
     setCreatingDatabase(true);
     try {
-      console.log('Creating database with data:', {
+      console.log("Creating database with data:", {
         db_url: newDbUrl,
         db_name: newDbName,
         business_rule: newDbBusinessRule || undefined,
       });
 
-      const databaseConfig = await MSSQLConfigService.createMSSQLConfig({
+      const response = await MSSQLConfigService.createMSSQLConfig({
         db_url: newDbUrl,
         db_name: newDbName,
         business_rule: newDbBusinessRule || undefined,
       });
 
-      console.log('Database creation response:', databaseConfig);
+      console.log("Database creation response:", response);
 
-      // The service returns the database object directly (already extracted from response.data)
-      if (!databaseConfig || !databaseConfig.db_id) {
-        console.error('Invalid response structure:', databaseConfig);
-        throw new Error('Invalid response from server');
+      // The service returns response.data, which could be either:
+      // 1. MSSQLConfigData directly (if service extracts .data)
+      // 2. MSSQLConfigResponse with { status, message, data: MSSQLConfigData }
+      let databaseConfig: MSSQLConfigData;
+
+      if (response.data && response.data.db_id) {
+        // Case 1: Response is wrapped { status, message, data: MSSQLConfigData }
+        databaseConfig = response.data;
+      } else if (response.db_id) {
+        // Case 2: Response is directly MSSQLConfigData
+        databaseConfig = response;
+      } else {
+        console.error("Invalid response structure:", response);
+        throw new Error("Invalid response from server");
       }
 
-      // Add the new database to the list (databaseConfig is the database object)
-      setDatabases(prev => [...prev, databaseConfig]);
+      // Add the new database to the list
+      setDatabases((prev) => [...prev, databaseConfig]);
       setSelectedDbId(databaseConfig.db_id);
 
       // Clear form and switch to existing tab
-      setNewDbUrl('');
-      setNewDbName('');
-      setNewDbBusinessRule('');
-      setActiveTab('existing');
+      setNewDbUrl("");
+      setNewDbName("");
+      setNewDbBusinessRule("");
+      setActiveTab("existing");
 
-      toast.success('Database created successfully');
+      toast.success("Database created successfully");
     } catch (error) {
-      console.error('Error creating database:', error);
-      toast.error('Failed to create database');
+      console.error("Error creating database:", error);
+      toast.error("Failed to create database");
     } finally {
       setCreatingDatabase(false);
     }
   };
 
+  const handleCreateUserConfig = async () => {
+    if (!newUserConfigUserId.trim() || !newUserConfigDbHost.trim() || !newUserConfigDbName.trim() || !newUserConfigDbUser.trim()) {
+      toast.error("User ID, database host, name, and user are required");
+      return;
+    }
+
+    setCreatingUserConfig(true);
+    try {
+      const userConfigRequest: UserConfigCreateRequest = {
+        user_id: newUserConfigUserId.trim(),
+        db_config: {
+          DB_HOST: newUserConfigDbHost.trim(),
+          DB_PORT: newUserConfigDbPort,
+          DB_NAME: newUserConfigDbName.trim(),
+          DB_USER: newUserConfigDbUser.trim(),
+          DB_PASSWORD: newUserConfigDbPassword.trim(),
+          schema: newUserConfigDbSchema.trim(),
+        },
+        access_level: newUserConfigAccessLevel,
+        accessible_tables: [],
+      };
+
+      console.log("Creating user config with data:", userConfigRequest);
+
+      const response = await UserConfigService.createUserConfig(userConfigRequest);
+      console.log("User config creation response:", response);
+
+      // Reload user configs to get the updated list
+      await loadUserConfigs();
+
+      // Clear form and switch to existing tab
+      setNewUserConfigUserId("");
+      setNewUserConfigDbHost("");
+      setNewUserConfigDbPort(1433);
+      setNewUserConfigDbName("");
+      setNewUserConfigDbUser("");
+      setNewUserConfigDbPassword("");
+      setNewUserConfigDbSchema("public");
+      setNewUserConfigAccessLevel(2);
+      setActiveUserConfigTab("existing");
+
+      toast.success("User configuration created successfully");
+    } catch (error) {
+      console.error("Error creating user config:", error);
+      toast.error("Failed to create user configuration");
+    } finally {
+      setCreatingUserConfig(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!companyName.trim()) {
-      toast.error('Company name is required');
+      toast.error("Company name is required");
       return;
     }
 
     if (!selectedDbId) {
-      toast.error('Please select or create a database');
+      toast.error("Please select or create a database");
       return;
     }
 
@@ -209,10 +300,12 @@ export function CompanyCreationModal({
 
       await onSubmit(companyData);
       handleClose();
-      toast.success(`${type === 'parent' ? 'Parent' : 'Sub'} company created successfully`);
+      toast.success(
+        `${type === "parent" ? "Parent" : "Sub"} company created successfully`
+      );
     } catch (error) {
-      console.error('Error creating company:', error);
-      toast.error('Failed to create company');
+      console.error("Error creating company:", error);
+      toast.error("Failed to create company");
     } finally {
       setCreatingCompany(false);
     }
@@ -220,15 +313,28 @@ export function CompanyCreationModal({
 
   const handleClose = () => {
     // Reset all form states
-    setCompanyName('');
-    setDescription('');
-    setAddress('');
-    setContactEmail('');
+    setCompanyName("");
+    setDescription("");
+    setAddress("");
+    setContactEmail("");
     setSelectedDbId(null);
-    setNewDbUrl('');
-    setNewDbName('');
-    setNewDbBusinessRule('');
-    setActiveTab('existing');
+    setNewDbUrl("");
+    setNewDbName("");
+    setNewDbBusinessRule("");
+    setActiveTab("existing");
+    
+    // Reset user config states
+    setSelectedUserConfigId(null);
+    setNewUserConfigUserId("");
+    setNewUserConfigAccessLevel(2);
+    setNewUserConfigDbHost("");
+    setNewUserConfigDbPort(1433);
+    setNewUserConfigDbName("");
+    setNewUserConfigDbUser("");
+    setNewUserConfigDbPassword("");
+    setNewUserConfigDbSchema("public");
+    setActiveUserConfigTab("existing");
+    
     onClose();
   };
 
@@ -240,21 +346,22 @@ export function CompanyCreationModal({
             <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
               <Building2 className="w-4 h-4 text-green-400" />
             </div>
-            Create {type === 'parent' ? 'Parent' : 'Sub'} Company
+            Create {type === "parent" ? "Parent" : "Sub"} Company
           </DialogTitle>
           <DialogDescription className="text-gray-400">
-            {type === 'parent' 
-              ? 'Create a new parent company and associate it with a database'
-              : 'Create a new sub-company under the selected parent company'
-            }
+            {type === "parent"
+              ? "Create a new parent company and associate it with a database"
+              : "Create a new sub-company under the selected parent company"}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Company Information */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-green-400">Company Information</h3>
-            
+            <h3 className="text-lg font-medium text-green-400">
+              Company Information
+            </h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="companyName" className="text-gray-300">
@@ -312,16 +419,251 @@ export function CompanyCreationModal({
             </div>
           </div>
 
-          {/* Database Selection */}
+          <Separator className="my-6 bg-green-400/20" />
+
+          {/* User Configuration Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-medium text-green-400">Database Configuration</h3>
-            
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <h3 className="text-lg font-medium text-green-400 flex items-center gap-2">
+              <User className="w-5 h-5" />
+              User Configuration
+            </h3>
+
+            <Tabs
+              value={activeUserConfigTab}
+              onValueChange={setActiveUserConfigTab}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-2 bg-gray-800/50">
-                <TabsTrigger value="existing" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400">
+                <TabsTrigger
+                  value="existing"
+                  className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
+                >
                   Select Existing
                 </TabsTrigger>
-                <TabsTrigger value="new" className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400">
+                <TabsTrigger
+                  value="new"
+                  className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
+                >
+                  Create New
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="existing" className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-gray-300">Select User Configuration</Label>
+                  {loadingUserConfigs ? (
+                    <div className="flex items-center gap-2 p-3 bg-gray-800/50 rounded-lg">
+                      <Loader2 className="w-4 h-4 animate-spin text-green-400" />
+                      <span className="text-gray-400">
+                        Loading user configurations...
+                      </span>
+                    </div>
+                  ) : (
+                    <Select
+                      value={selectedUserConfigId?.toString() || ""}
+                      onValueChange={(value) =>
+                        setSelectedUserConfigId(parseInt(value))
+                      }
+                    >
+                      <SelectTrigger className="bg-gray-800/50 border-green-400/30 text-white">
+                        <SelectValue placeholder="Choose a user configuration" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-green-400/30">
+                        {userConfigs.map((config) => (
+                          <SelectItem
+                            key={config.config_id}
+                            value={config.config_id.toString()}
+                          >
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-green-400" />
+                              <span>{config.user_id} - {config.db_config.DB_NAME}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {userConfigs.length === 0 && !loadingUserConfigs && (
+                    <p className="text-sm text-gray-400">
+                      No user configurations found. Create one to get started.
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="new" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="newUserConfigUserId" className="text-gray-300">
+                      User ID *
+                    </Label>
+                    <Input
+                      id="newUserConfigUserId"
+                      value={newUserConfigUserId}
+                      onChange={(e) => setNewUserConfigUserId(e.target.value)}
+                      placeholder="john_doe"
+                      className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newUserConfigAccessLevel" className="text-gray-300">
+                      Access Level *
+                    </Label>
+                    <Select
+                      value={newUserConfigAccessLevel.toString()}
+                      onValueChange={(value) => setNewUserConfigAccessLevel(parseInt(value))}
+                    >
+                      <SelectTrigger className="bg-gray-800/50 border-green-400/30 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-green-400/30">
+                        <SelectItem value="0">0 - No Access</SelectItem>
+                        <SelectItem value="1">1 - Read Only</SelectItem>
+                        <SelectItem value="2">2 - Standard</SelectItem>
+                        <SelectItem value="3">3 - Full Access</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-300">Database Connection</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserConfigDbHost" className="text-gray-300">
+                        Database Host *
+                      </Label>
+                      <Input
+                        id="newUserConfigDbHost"
+                        value={newUserConfigDbHost}
+                        onChange={(e) => setNewUserConfigDbHost(e.target.value)}
+                        placeholder="localhost"
+                        className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserConfigDbPort" className="text-gray-300">
+                        Database Port *
+                      </Label>
+                      <Input
+                        id="newUserConfigDbPort"
+                        type="number"
+                        value={newUserConfigDbPort}
+                        onChange={(e) => setNewUserConfigDbPort(parseInt(e.target.value) || 1433)}
+                        placeholder="1433"
+                        className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserConfigDbName" className="text-gray-300">
+                        Database Name *
+                      </Label>
+                      <Input
+                        id="newUserConfigDbName"
+                        value={newUserConfigDbName}
+                        onChange={(e) => setNewUserConfigDbName(e.target.value)}
+                        placeholder="MyDatabase"
+                        className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserConfigDbUser" className="text-gray-300">
+                        Database User *
+                      </Label>
+                      <Input
+                        id="newUserConfigDbUser"
+                        value={newUserConfigDbUser}
+                        onChange={(e) => setNewUserConfigDbUser(e.target.value)}
+                        placeholder="admin"
+                        className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserConfigDbPassword" className="text-gray-300">
+                        Database Password *
+                      </Label>
+                      <Input
+                        id="newUserConfigDbPassword"
+                        type="password"
+                        value={newUserConfigDbPassword}
+                        onChange={(e) => setNewUserConfigDbPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="newUserConfigDbSchema" className="text-gray-300">
+                        Database Schema
+                      </Label>
+                      <Input
+                        id="newUserConfigDbSchema"
+                        value={newUserConfigDbSchema}
+                        onChange={(e) => setNewUserConfigDbSchema(e.target.value)}
+                        placeholder="public"
+                        className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleCreateUserConfig}
+                  disabled={
+                    creatingUserConfig || 
+                    !newUserConfigUserId.trim() || 
+                    !newUserConfigDbHost.trim() || 
+                    !newUserConfigDbName.trim() || 
+                    !newUserConfigDbUser.trim()
+                  }
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {creatingUserConfig ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating User Configuration...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create User Configuration
+                    </>
+                  )}
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          <Separator className="my-6 bg-green-400/20" />
+
+          {/* Database Selection */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-green-400">
+              Database Configuration
+            </h3>
+
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2 bg-gray-800/50">
+                <TabsTrigger
+                  value="existing"
+                  className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
+                >
+                  Select Existing
+                </TabsTrigger>
+                <TabsTrigger
+                  value="new"
+                  className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
+                >
                   Create New
                 </TabsTrigger>
               </TabsList>
@@ -332,19 +674,26 @@ export function CompanyCreationModal({
                   {loadingDatabases ? (
                     <div className="flex items-center gap-2 p-3 bg-gray-800/50 rounded-lg">
                       <Loader2 className="w-4 h-4 animate-spin text-green-400" />
-                      <span className="text-gray-400">Loading databases...</span>
+                      <span className="text-gray-400">
+                        Loading databases...
+                      </span>
                     </div>
                   ) : (
                     <Select
-                      value={selectedDbId?.toString() || ''}
-                      onValueChange={(value) => setSelectedDbId(parseInt(value))}
+                      value={selectedDbId?.toString() || ""}
+                      onValueChange={(value) =>
+                        setSelectedDbId(parseInt(value))
+                      }
                     >
                       <SelectTrigger className="bg-gray-800/50 border-green-400/30 text-white">
                         <SelectValue placeholder="Choose a database" />
                       </SelectTrigger>
                       <SelectContent className="bg-gray-800 border-green-400/30">
                         {databases.map((db) => (
-                          <SelectItem key={db.db_id} value={db.db_id.toString()}>
+                          <SelectItem
+                            key={db.db_id}
+                            value={db.db_id.toString()}
+                          >
                             <div className="flex items-center gap-2">
                               <Database className="w-4 h-4 text-green-400" />
                               <span>{db.db_name}</span>
@@ -402,7 +751,9 @@ export function CompanyCreationModal({
                 <Button
                   type="button"
                   onClick={handleCreateDatabase}
-                  disabled={creatingDatabase || !newDbUrl.trim() || !newDbName.trim()}
+                  disabled={
+                    creatingDatabase || !newDbUrl.trim() || !newDbName.trim()
+                  }
                   className="w-full bg-green-600 hover:bg-green-700 text-white"
                 >
                   {creatingDatabase ? (
@@ -444,7 +795,7 @@ export function CompanyCreationModal({
               ) : (
                 <>
                   <Building2 className="w-4 h-4 mr-2" />
-                  Create {type === 'parent' ? 'Parent' : 'Sub'} Company
+                  Create {type === "parent" ? "Parent" : "Sub"} Company
                 </>
               )}
             </Button>
