@@ -125,45 +125,43 @@ export function CompanyCard({
           </div>
         )}
 
-        {/* Action Buttons - Always visible for main companies */}
-        {isMainCompany && (
-          <div className="absolute bottom-3 right-3 flex gap-2">
-            {/* Add Sub-Company Button - Always visible */}
-            {onAddSubCompany && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddSubCompany(company.id);
-                }}
-                className="border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400"
-              >
-                <Plus className="w-3 h-3 mr-1" />
-                Add Sub-Company
-              </Button>
-            )}
+        {/* Action Buttons */}
+        <div className="absolute bottom-3 right-3 flex gap-2">
+          {/* Add Sub-Company Button - Only for main companies */}
+          {isMainCompany && onAddSubCompany && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddSubCompany(company.id);
+              }}
+              className="border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400"
+            >
+              <Plus className="w-3 h-3 mr-1" />
+              Add Sub-Company
+            </Button>
+          )}
 
-            {/* Upload Button */}
-            {onUpload && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const companyType = company.id.startsWith("parent-")
-                    ? "parent"
-                    : "sub";
-                  onUpload(company.id, company.name, companyType);
-                }}
-                className="border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400"
-              >
-                <Upload className="w-3 h-3 mr-1" />
-                Upload
-              </Button>
-            )}
-          </div>
-        )}
+          {/* Upload Button - Available for both parent and sub companies */}
+          {onUpload && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                const companyType = company.id.startsWith("parent-")
+                  ? "parent"
+                  : "sub";
+                onUpload(company.id, company.name, companyType);
+              }}
+              className="border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400"
+            >
+              <Upload className="w-3 h-3 mr-1" />
+              Upload
+            </Button>
+          )}
+        </div>
       </Card>
     </div>
   );

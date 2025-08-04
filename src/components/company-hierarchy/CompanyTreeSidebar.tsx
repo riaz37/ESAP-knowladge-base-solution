@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Building2, ChevronRight, ChevronDown } from "lucide-react";
+import { Building2, ChevronRight, ChevronDown, Plus, Upload } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Company } from "./CompanyTreeView";
@@ -12,6 +12,8 @@ interface CompanyTreeSidebarProps {
   selectedCompany: string | null;
   onSelectParentForFlow: (parentId: string | null) => void;
   onSelectCompany: (companyId: string) => void;
+  onAddSubCompany?: (parentId: string) => void;
+  onUpload?: (companyId: string, companyName: string, companyType: 'parent' | 'sub') => void;
 }
 
 export function CompanyTreeSidebar({
@@ -20,6 +22,8 @@ export function CompanyTreeSidebar({
   selectedCompany,
   onSelectParentForFlow,
   onSelectCompany,
+  onAddSubCompany,
+  onUpload,
 }: CompanyTreeSidebarProps) {
   if (companies.length === 0) {
     return null;
@@ -62,6 +66,8 @@ export function CompanyTreeSidebar({
             selectedCompany={selectedCompany}
             onSelectForFlow={onSelectParentForFlow}
             onSelectCompany={onSelectCompany}
+            onAddSubCompany={onAddSubCompany}
+            onUpload={onUpload}
           />
         ))}
       </CardContent>
@@ -75,6 +81,8 @@ interface CompanyTreeItemProps {
   selectedCompany: string | null;
   onSelectForFlow: (parentId: string | null) => void;
   onSelectCompany: (companyId: string) => void;
+  onAddSubCompany?: (parentId: string) => void;
+  onUpload?: (companyId: string, companyName: string, companyType: 'parent' | 'sub') => void;
 }
 
 function CompanyTreeItem({
@@ -83,6 +91,8 @@ function CompanyTreeItem({
   selectedCompany,
   onSelectForFlow,
   onSelectCompany,
+  onAddSubCompany,
+  onUpload,
 }: CompanyTreeItemProps) {
   const [isExpanded, setIsExpanded] = React.useState(true);
   const hasChildren = company.children && company.children.length > 0;
@@ -130,9 +140,37 @@ function CompanyTreeItem({
         <div className="w-2 h-2 rounded-full bg-emerald-400" />
         
         {/* Company Name */}
-        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+        <span className="text-sm font-medium text-gray-900 dark:text-white truncate flex-1">
           {company.name}
         </span>
+        
+        {/* Upload Button */}
+        {onUpload && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpload(company.id, company.name, 'parent');
+            }}
+            className="p-1 hover:bg-emerald-400/20 rounded transition-colors opacity-70 hover:opacity-100"
+            title="Upload Files"
+          >
+            <Upload className="w-3 h-3 text-emerald-400" />
+          </button>
+        )}
+        
+        {/* Add Sub-Company Button */}
+        {onAddSubCompany && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddSubCompany(company.id);
+            }}
+            className="p-1 hover:bg-emerald-400/20 rounded transition-colors opacity-70 hover:opacity-100"
+            title="Add Sub-Company"
+          >
+            <Plus className="w-3 h-3 text-emerald-400" />
+          </button>
+        )}
       </div>
 
       {/* Sub-Companies */}
@@ -170,9 +208,23 @@ function CompanyTreeItem({
                   <div className="w-2 h-2 rounded-full bg-emerald-400/70" />
                   
                   {/* Company Name */}
-                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
+                  <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">
                     {child.name}
                   </span>
+                  
+                  {/* Upload Button for Sub-Company */}
+                  {onUpload && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onUpload(child.id, child.name, 'sub');
+                      }}
+                      className="p-1 hover:bg-emerald-400/20 rounded transition-colors opacity-70 hover:opacity-100"
+                      title="Upload Files"
+                    >
+                      <Upload className="w-3 h-3 text-emerald-400/70" />
+                    </button>
+                  )}
                 </div>
               </div>
             );

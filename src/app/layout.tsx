@@ -5,6 +5,7 @@ import { ThemeStoreProvider } from "@/components/ThemeStoreProvider";
 import { ThemeTransitionProvider } from "@/components/ThemeTransitionProvider";
 import Navbar from "@/components/Navbar";
 import Menu from "@/components/Menu";
+import { AIAssistantInterface } from "@/components/ai-assistant";
 import { Toaster } from "@/components/ui/sonner";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { useUIStore } from "@/store/uiStore";
@@ -16,7 +17,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { showSidebar, setShowSidebar } = useUIStore();
+  const { showSidebar, setShowSidebar, showAIAssistant, setShowAIAssistant } = useUIStore();
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -41,6 +42,12 @@ export default function RootLayout({
                 <Menu />
               </>
             )}
+
+            {/* AI Assistant Interface */}
+            <AIAssistantInterface
+              isOpen={showAIAssistant}
+              onClose={() => setShowAIAssistant(false)}
+            />
 
             <div className="min-h-screen w-full">
               <div className="flex-1">

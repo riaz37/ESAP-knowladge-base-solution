@@ -301,3 +301,24 @@ export interface UserConfigsListResponse {
     count: number;
   };
 }
+
+// User Current Database Types
+export interface UserCurrentDBRequest {
+  db_id: number;
+}
+
+export interface UserCurrentDBData {
+  user_id: string;
+  db_id: number;
+  business_rule: string;
+  table_info: Record<string, any>;
+  db_schema: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserCurrentDBResponse {
+  status: string;
+  message: string;
+  data: UserCurrentDBData;
+}

@@ -6,7 +6,8 @@ import { useUIStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function Navbar() {
-  const { showSidebar, setShowSidebar } = useUIStore();
+  const { showSidebar, setShowSidebar, showAIAssistant, setShowAIAssistant } =
+    useUIStore();
 
   const handleMenuClick = () => {
     setShowSidebar(!showSidebar);
@@ -69,14 +70,15 @@ export default function Navbar() {
         </div>
 
         {/* Robot Icon */}
-        <div 
+        <div
+          onClick={() => setShowAIAssistant(!showAIAssistant)}
           className="flex items-center justify-center hover:bg-gray-600/30 transition-colors cursor-pointer rounded-[391.76px]"
           style={{
-            width: '40px',
-            height: '40px',
+            width: "40px",
+            height: "40px",
             opacity: 1,
-            padding: '4.85px',
-            gap: '3.03px'
+            padding: "4.85px",
+            gap: "3.03px",
           }}
         >
           <Image
