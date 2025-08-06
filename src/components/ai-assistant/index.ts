@@ -1,1 +1,1 @@
-export { AIAssistantInterface } from './AIAssistantInterface';
+export { AIInterface } from "./AIInterface";

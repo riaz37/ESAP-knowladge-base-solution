@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { BusinessRulesService } from '../api';
 
 /**
@@ -16,25 +16,27 @@ export function useBusinessRules() {
   /**
    * Fetch business rules text
    */
-  const fetchBusinessRules = async () => {
+  const fetchBusinessRules = useCallback(async (userId?: string) => {
     setBusinessRulesLoading(true);
     setBusinessRulesError(null);
-    setBusinessRulesText('');
     
     try {
-      const text = await BusinessRulesService.getBusinessRules();
-      setBusinessRulesText(text);
+      const text = await BusinessRulesService.getBusinessRules(userId);
+      setBusinessRulesText(text || ''); // Ensure we always set a string
+      console.log('Business rules fetched successfully:', text);
     } catch (e: any) {
-      setBusinessRulesError(e.message || 'Unknown error');
+      console.error('Error in fetchBusinessRules hook:', e);
+      setBusinessRulesError(e.message || 'Failed to fetch business rules');
+      setBusinessRulesText(''); // Reset on error
     } finally {
       setBusinessRulesLoading(false);
     }
-  };
+  }, []);
 
   /**
    * Download business rules file
    */
-  const downloadBusinessRules = async () => {
+  const downloadBusinessRules = useCallback(async () => {
     setDownloadingRules(true);
     
     try {
@@ -44,31 +46,42 @@ export function useBusinessRules() {
     } finally {
       setDownloadingRules(false);
     }
-  };
+  }, []);
 
   /**
    * Update business rules
    */
-  const updateBusinessRules = async (content: string) => {
+  const updateBusinessRules = useCallback(async (content: string, userId?: string) => {
     setUploadingRules(true);
     setUploadError(null);
     setUploadSuccess(false);
     
     try {
-      await BusinessRulesService.updateBusinessRules(content);
-      setUploadSuccess(true);
-      await fetchBusinessRules(); // Reload rules after update
+      console.log('Updating business rules for user:', userId, 'Content length:', content.length);
+      await BusinessRulesService.updateBusinessRules(content, userId);
+      console.log('Business rules updated successfully');
       
-      // Reset upload success after 2 seconds
-      setTimeout(() => setUploadSuccess(false), 2000);
+      setUploadSuccess(true);
+      
+      // Reload rules after update - call the service directly to avoid dependency issues
+      try {
+        const text = await BusinessRulesService.getBusinessRules(userId);
+        setBusinessRulesText(text || '');
+      } catch (fetchError) {
+        console.warn('Failed to reload business rules after update:', fetchError);
+      }
+      
+      // Reset upload success after 3 seconds
+      setTimeout(() => setUploadSuccess(false), 3000);
       return true;
     } catch (e: any) {
+      console.error('Error in updateBusinessRules hook:', e);
       setUploadError(e.message || 'Failed to update business rules');
       return false;
     } finally {
       setUploadingRules(false);
     }
-  };
+  }, []);
 
   return {
     businessRulesText,

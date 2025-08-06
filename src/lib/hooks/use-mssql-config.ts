@@ -3,12 +3,14 @@ import { MSSQLConfigService } from "../api/services/mssql-config-service";
 import { 
   MSSQLConfigRequest, 
   MSSQLConfigResponse, 
-  MSSQLConfigData 
+  MSSQLConfigData,
+  MSSQLConfigFormRequest 
 } from "@/types/api";
 
 interface UseMSSQLConfigReturn {
   configs: MSSQLConfigData[] | null;
   createConfig: (config: MSSQLConfigRequest) => Promise<MSSQLConfigResponse | null>;
+  createConfigWithFile: (config: MSSQLConfigFormRequest) => Promise<MSSQLConfigResponse | null>;
   getConfigs: () => Promise<MSSQLConfigData[] | null>;
   getConfig: (id: number) => Promise<MSSQLConfigData | null>;
   refetch: () => Promise<void>;
@@ -44,6 +46,32 @@ export function useMSSQLConfig(): UseMSSQLConfigReturn {
       return response;
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to create MSSQL configuration";
+      setError(errorMessage);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createConfigWithFile = async (
+    config: MSSQLConfigFormRequest
+  ): Promise<MSSQLConfigResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      // Validate form config before sending
+      const validation = MSSQLConfigService.validateFormConfig(config);
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(", "));
+      }
+
+      const response = await MSSQLConfigService.createMSSQLConfigWithFile(config);
+      setSuccess(true);
+      return response;
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to create MSSQL configuration with file";
       setError(errorMessage);
       return null;
     } finally {
@@ -129,6 +157,7 @@ export function useMSSQLConfig(): UseMSSQLConfigReturn {
   return {
     configs,
     createConfig,
+    createConfigWithFile,
     getConfigs,
     getConfig,
     refetch,

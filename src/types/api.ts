@@ -82,6 +82,13 @@ export interface MSSQLConfigRequest {
   dbPath?: string;
 }
 
+export interface MSSQLConfigFormRequest {
+  db_url: string;
+  db_name: string;
+  business_rule?: string;
+  file?: File;
+}
+
 export interface MSSQLConfigData {
   db_id: number;
   db_url: string;
@@ -321,4 +328,78 @@ export interface UserCurrentDBResponse {
   status: string;
   message: string;
   data: UserCurrentDBData;
+}
+
+// Table Info Generation Types
+export interface GenerateTableInfoRequest {
+  user_id: string;
+}
+
+export interface TaskData {
+  task_id: string;
+  status: "pending" | "running" | "completed" | "failed";
+  db_id: number;
+  user_id: string;
+}
+
+export interface GenerateTableInfoResponse {
+  status: string;
+  message: string;
+  data: TaskData;
+}
+
+export interface TaskStatusData {
+  task_id: string;
+  user_id: string;
+  db_id: number;
+  status: "pending" | "running" | "completed" | "failed";
+  progress: number;
+  result: any;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskStatusResponse {
+  status: string;
+  message: string;
+  data: TaskStatusData;
+}
+
+// Matched Tables Generation Types
+export interface GenerateMatchedTablesRequest {
+  user_id: string;
+}
+
+export interface MatchedTablesMetadata {
+  user_id: string;
+  db_id: number;
+  db_name: string;
+  generated_at: string;
+  total_business_rules_tables: number;
+  total_schema_tables: number;
+  total_matches: number;
+}
+
+export interface MatchedTablesData {
+  status: string;
+  message: string;
+  metadata: MatchedTablesMetadata;
+  matched_tables: any[];
+  matched_tables_details: any[];
+  business_rules_tables: any[];
+  schema_tables: any[];
+  unmatched_business_rules: any[];
+  unmatched_schema: any[];
+}
+
+export interface GenerateMatchedTablesResponse {
+  status: string;
+  message: string;
+  data: {
+    db_id: number;
+    user_id: string;
+    matched_tables_data: MatchedTablesData;
+    updated_config: MSSQLConfigData;
+  };
 }

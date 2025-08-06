@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,18 +15,16 @@ import { getSidebarRoutes, isRouteActive, SPECIAL_ROUTES } from "@/lib/utils/nav
 
 // Import custom hooks
 import {
-  useBusinessRulesModal,
   useDatabaseOperations,
   useUserSettings,
 } from "@/lib/hooks";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const theme = useTheme();
-  const { showBusinessRulesModal, setShowBusinessRulesModal } = useUIStore();
 
   // Custom hooks
-  const businessRulesModal = useBusinessRulesModal();
   const databaseOps = useDatabaseOperations();
   const userSettings = useUserSettings();
 
@@ -35,12 +33,7 @@ export default function Sidebar() {
     databaseOps.fetchQueryHistory(userSettings.userId);
   }, [userSettings.userId]);
 
-  // Handle business rules modal
-  useEffect(() => {
-    if (showBusinessRulesModal) {
-      businessRulesModal.openModal();
-    }
-  }, [showBusinessRulesModal]);
+
 
   const handleClearHistory = async () => {
     await databaseOps.clearHistory(userSettings.userId);
@@ -156,7 +149,7 @@ export default function Sidebar() {
                 {/* Business Rules Button Row */}
                 <div className="flex gap-4 mt-6">
                   <Button
-                    onClick={() => setShowBusinessRulesModal(true)}
+                    onClick={() => router.push('/business-rules')}
                     variant="outline"
                     className="flex-1 h-12 cursor-pointer"
                   >
@@ -164,7 +157,7 @@ export default function Sidebar() {
                     Business Rules
                   </Button>
                   <Button
-                    onClick={() => setShowBusinessRulesModal(true)}
+                    onClick={() => router.push('/business-rules')}
                     size="icon"
                     className="h-12 w-12 rounded-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 cursor-pointer"
                   >

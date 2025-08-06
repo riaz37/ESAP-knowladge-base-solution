@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Building2, Database, Plus, Loader2, User, Settings } from "lucide-react";
+import {
+  Building2,
+  Database,
+  Plus,
+  Loader2,
+  User,
+  Settings,
+  Upload,
+  X,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +33,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { MSSQLConfigService } from "@/lib/api/services/mssql-config-service";
 import { UserConfigService } from "@/lib/api/services/user-config-service";
-import { MSSQLConfigData, UserConfigData, UserConfigCreateRequest } from "@/types/api";
+import {
+  MSSQLConfigData,
+  UserConfigData,
+  UserConfigCreateRequest,
+} from "@/types/api";
 import { toast } from "sonner";
 
 interface CompanyCreationModalProps {
@@ -74,12 +87,15 @@ export function CompanyCreationModal({
   const [newDbUrl, setNewDbUrl] = useState("");
   const [newDbName, setNewDbName] = useState("");
   const [newDbBusinessRule, setNewDbBusinessRule] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // User Configuration states
   const [userConfigs, setUserConfigs] = useState<UserConfigData[]>([]);
   const [loadingUserConfigs, setLoadingUserConfigs] = useState(false);
   const [creatingUserConfig, setCreatingUserConfig] = useState(false);
-  const [selectedUserConfigId, setSelectedUserConfigId] = useState<number | null>(null);
+  const [selectedUserConfigId, setSelectedUserConfigId] = useState<
+    number | null
+  >(null);
 
   // New user config form states
   const [newUserConfigUserId, setNewUserConfigUserId] = useState("");
@@ -147,7 +163,11 @@ export function CompanyCreationModal({
       console.log("User configs loading response:", response);
 
       let configs: UserConfigData[];
-      if (response.data && response.data.configs && Array.isArray(response.data.configs)) {
+      if (
+        response.data &&
+        response.data.configs &&
+        Array.isArray(response.data.configs)
+      ) {
         configs = response.data.configs;
       } else if (response.configs && Array.isArray(response.configs)) {
         configs = response.configs;
@@ -179,13 +199,26 @@ export function CompanyCreationModal({
         db_url: newDbUrl,
         db_name: newDbName,
         business_rule: newDbBusinessRule || undefined,
+        file: selectedFile,
       });
 
-      const response = await MSSQLConfigService.createMSSQLConfig({
-        db_url: newDbUrl,
-        db_name: newDbName,
-        business_rule: newDbBusinessRule || undefined,
-      });
+      let response;
+
+      // Use file upload API if file is selected, otherwise use regular API
+      if (selectedFile) {
+        response = await MSSQLConfigService.createMSSQLConfigWithFile({
+          db_url: newDbUrl,
+          db_name: newDbName,
+          business_rule: newDbBusinessRule || undefined,
+          file: selectedFile,
+        });
+      } else {
+        response = await MSSQLConfigService.createMSSQLConfig({
+          db_url: newDbUrl,
+          db_name: newDbName,
+          business_rule: newDbBusinessRule || undefined,
+        });
+      }
 
       console.log("Database creation response:", response);
 
@@ -213,6 +246,7 @@ export function CompanyCreationModal({
       setNewDbUrl("");
       setNewDbName("");
       setNewDbBusinessRule("");
+      setSelectedFile(null);
       setActiveTab("existing");
 
       toast.success("Database created successfully");
@@ -225,7 +259,12 @@ export function CompanyCreationModal({
   };
 
   const handleCreateUserConfig = async () => {
-    if (!newUserConfigUserId.trim() || !newUserConfigDbHost.trim() || !newUserConfigDbName.trim() || !newUserConfigDbUser.trim()) {
+    if (
+      !newUserConfigUserId.trim() ||
+      !newUserConfigDbHost.trim() ||
+      !newUserConfigDbName.trim() ||
+      !newUserConfigDbUser.trim()
+    ) {
       toast.error("User ID, database host, name, and user are required");
       return;
     }
@@ -248,7 +287,9 @@ export function CompanyCreationModal({
 
       console.log("Creating user config with data:", userConfigRequest);
 
-      const response = await UserConfigService.createUserConfig(userConfigRequest);
+      const response = await UserConfigService.createUserConfig(
+        userConfigRequest
+      );
       console.log("User config creation response:", response);
 
       // Reload user configs to get the updated list
@@ -321,8 +362,9 @@ export function CompanyCreationModal({
     setNewDbUrl("");
     setNewDbName("");
     setNewDbBusinessRule("");
+    setSelectedFile(null);
     setActiveTab("existing");
-    
+
     // Reset user config states
     setSelectedUserConfigId(null);
     setNewUserConfigUserId("");
@@ -334,7 +376,7 @@ export function CompanyCreationModal({
     setNewUserConfigDbPassword("");
     setNewUserConfigDbSchema("public");
     setActiveUserConfigTab("existing");
-    
+
     onClose();
   };
 
@@ -450,7 +492,9 @@ export function CompanyCreationModal({
 
               <TabsContent value="existing" className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-gray-300">Select User Configuration</Label>
+                  <Label className="text-gray-300">
+                    Select User Configuration
+                  </Label>
                   {loadingUserConfigs ? (
                     <div className="flex items-center gap-2 p-3 bg-gray-800/50 rounded-lg">
                       <Loader2 className="w-4 h-4 animate-spin text-green-400" />
@@ -476,7 +520,9 @@ export function CompanyCreationModal({
                           >
                             <div className="flex items-center gap-2">
                               <User className="w-4 h-4 text-green-400" />
-                              <span>{config.user_id} - {config.db_config.DB_NAME}</span>
+                              <span>
+                                {config.user_id} - {config.db_config.DB_NAME}
+                              </span>
                             </div>
                           </SelectItem>
                         ))}
@@ -494,7 +540,10 @@ export function CompanyCreationModal({
               <TabsContent value="new" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="newUserConfigUserId" className="text-gray-300">
+                    <Label
+                      htmlFor="newUserConfigUserId"
+                      className="text-gray-300"
+                    >
                       User ID *
                     </Label>
                     <Input
@@ -507,12 +556,17 @@ export function CompanyCreationModal({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="newUserConfigAccessLevel" className="text-gray-300">
+                    <Label
+                      htmlFor="newUserConfigAccessLevel"
+                      className="text-gray-300"
+                    >
                       Access Level *
                     </Label>
                     <Select
                       value={newUserConfigAccessLevel.toString()}
-                      onValueChange={(value) => setNewUserConfigAccessLevel(parseInt(value))}
+                      onValueChange={(value) =>
+                        setNewUserConfigAccessLevel(parseInt(value))
+                      }
                     >
                       <SelectTrigger className="bg-gray-800/50 border-green-400/30 text-white">
                         <SelectValue />
@@ -528,10 +582,15 @@ export function CompanyCreationModal({
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="font-medium text-gray-300">Database Connection</h4>
+                  <h4 className="font-medium text-gray-300">
+                    Database Connection
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="newUserConfigDbHost" className="text-gray-300">
+                      <Label
+                        htmlFor="newUserConfigDbHost"
+                        className="text-gray-300"
+                      >
                         Database Host *
                       </Label>
                       <Input
@@ -544,21 +603,31 @@ export function CompanyCreationModal({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="newUserConfigDbPort" className="text-gray-300">
+                      <Label
+                        htmlFor="newUserConfigDbPort"
+                        className="text-gray-300"
+                      >
                         Database Port *
                       </Label>
                       <Input
                         id="newUserConfigDbPort"
                         type="number"
                         value={newUserConfigDbPort}
-                        onChange={(e) => setNewUserConfigDbPort(parseInt(e.target.value) || 1433)}
+                        onChange={(e) =>
+                          setNewUserConfigDbPort(
+                            parseInt(e.target.value) || 1433
+                          )
+                        }
                         placeholder="1433"
                         className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="newUserConfigDbName" className="text-gray-300">
+                      <Label
+                        htmlFor="newUserConfigDbName"
+                        className="text-gray-300"
+                      >
                         Database Name *
                       </Label>
                       <Input
@@ -571,7 +640,10 @@ export function CompanyCreationModal({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="newUserConfigDbUser" className="text-gray-300">
+                      <Label
+                        htmlFor="newUserConfigDbUser"
+                        className="text-gray-300"
+                      >
                         Database User *
                       </Label>
                       <Input
@@ -584,27 +656,37 @@ export function CompanyCreationModal({
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="newUserConfigDbPassword" className="text-gray-300">
+                      <Label
+                        htmlFor="newUserConfigDbPassword"
+                        className="text-gray-300"
+                      >
                         Database Password *
                       </Label>
                       <Input
                         id="newUserConfigDbPassword"
                         type="password"
                         value={newUserConfigDbPassword}
-                        onChange={(e) => setNewUserConfigDbPassword(e.target.value)}
+                        onChange={(e) =>
+                          setNewUserConfigDbPassword(e.target.value)
+                        }
                         placeholder="••••••••"
                         className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="newUserConfigDbSchema" className="text-gray-300">
+                      <Label
+                        htmlFor="newUserConfigDbSchema"
+                        className="text-gray-300"
+                      >
                         Database Schema
                       </Label>
                       <Input
                         id="newUserConfigDbSchema"
                         value={newUserConfigDbSchema}
-                        onChange={(e) => setNewUserConfigDbSchema(e.target.value)}
+                        onChange={(e) =>
+                          setNewUserConfigDbSchema(e.target.value)
+                        }
                         placeholder="public"
                         className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
                       />
@@ -616,10 +698,10 @@ export function CompanyCreationModal({
                   type="button"
                   onClick={handleCreateUserConfig}
                   disabled={
-                    creatingUserConfig || 
-                    !newUserConfigUserId.trim() || 
-                    !newUserConfigDbHost.trim() || 
-                    !newUserConfigDbName.trim() || 
+                    creatingUserConfig ||
+                    !newUserConfigUserId.trim() ||
+                    !newUserConfigDbHost.trim() ||
+                    !newUserConfigDbName.trim() ||
                     !newUserConfigDbUser.trim()
                   }
                   className="w-full bg-green-600 hover:bg-green-700 text-white"
@@ -746,6 +828,104 @@ export function CompanyCreationModal({
                     placeholder="Enter business rules for this database"
                     className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500 min-h-[80px]"
                   />
+                </div>
+
+                {/* File Upload Section */}
+                <div className="space-y-2">
+                  <Label className="text-gray-300">
+                    Database File (Optional)
+                  </Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <Database className="w-4 h-4" />
+                      <span>
+                        Allowed types: .bak, .sql, .mdf, .ldf, .trn, .dmp, .dump
+                      </span>
+                    </div>
+
+                    {selectedFile ? (
+                      <div className="flex items-center justify-between p-3 bg-gray-800/50 border border-green-400/30 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Upload className="w-4 h-4 text-green-400" />
+                          <span className="text-white">
+                            {selectedFile.name}
+                          </span>
+                          <span className="text-gray-400 text-sm">
+                            ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedFile(null)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <input
+                          type="file"
+                          id="databaseFile"
+                          accept=".bak,.sql,.mdf,.ldf,.trn,.dmp,.dump"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              // Validate file type
+                              const allowedTypes = [
+                                ".bak",
+                                ".sql",
+                                ".mdf",
+                                ".ldf",
+                                ".trn",
+                                ".dmp",
+                                ".dump",
+                              ];
+                              const fileName = file.name.toLowerCase();
+                              const isValidType = allowedTypes.some((type) =>
+                                fileName.endsWith(type)
+                              );
+
+                              if (!isValidType) {
+                                toast.error(
+                                  `Invalid file type. Allowed types: ${allowedTypes.join(
+                                    ", "
+                                  )}`
+                                );
+                                return;
+                              }
+
+                              // Check file size (500MB limit)
+                              const maxSizeInMB = 500;
+                              const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+                              if (file.size > maxSizeInBytes) {
+                                toast.error(
+                                  `File size exceeds ${maxSizeInMB}MB limit`
+                                );
+                                return;
+                              }
+
+                              setSelectedFile(file);
+                            }
+                          }}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        />
+                        <div className="flex items-center justify-center p-6 border-2 border-dashed border-green-400/30 rounded-lg hover:border-green-400/50 transition-colors cursor-pointer">
+                          <div className="text-center">
+                            <Upload className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                            <p className="text-gray-300 mb-1">
+                              Click to upload database file
+                            </p>
+                            <p className="text-gray-500 text-sm">
+                              Max size: 500MB
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <Button

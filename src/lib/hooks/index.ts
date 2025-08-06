@@ -2,7 +2,6 @@
 export * from './use-file-query';
 export * from './use-smart-file-upload';
 export * from './use-business-rules';
-export * from './use-business-rules-modal';
 export * from './use-database-operations';
 export * from './use-user-settings';
 export * from './use-toast';
@@ -14,3 +13,4 @@ export * from './use-user-access';
 export * from './use-user-config';
 export * from './use-user-current-db';
 export * from './use-hierarchy-data';
+export * from './use-mssql-table-operations';

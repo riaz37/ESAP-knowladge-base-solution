@@ -9,6 +9,8 @@ import {
   History,
   Terminal,
   Square,
+  FileText,
+  Bot,
 } from "lucide-react";
 
 import { useUIStore } from "@/store/uiStore";
@@ -39,16 +41,22 @@ export default function Menu() {
       isActive: pathname === "/company-structure",
     },
     {
-      name: "User",
-      path: "/hr-knowledge",
+      name: "Users",
+      path: "/users",
       icon: User,
-      isActive: pathname === "/hr-knowledge",
+      isActive: pathname === "/users",
     },
     {
-      name: "Role",
-      path: "/support-team",
-      icon: Settings,
-      isActive: pathname === "/support-team",
+      name: "Business Rules",
+      path: "/business-rules",
+      icon: FileText,
+      isActive: pathname === "/business-rules",
+    },
+    {
+      name: "AI Assistant",
+      path: "/ai-results",
+      icon: Bot,
+      isActive: pathname === "/ai-results",
     },
     {
       name: "History Log",
@@ -56,13 +64,6 @@ export default function Menu() {
       icon: History,
       isActive: pathname === "/database-hierarchy",
     },
-  ];
-
-  const recentCommands = [
-    "How I can get salary",
-    "Generate previous report....",
-    "Generate previous report....",
-    "Generate previous report....",
   ];
 
   const handleMenuItemClick = () => {
@@ -138,40 +139,6 @@ export default function Menu() {
                 </div>
               </Link>
             ))}
-          </div>
-        </div>
-
-        {/* Recent Commands Section */}
-        <div className="border-t border-green-500/20 bg-black/10 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-6 h-6 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
-              <Terminal className="w-3 h-3 text-green-400" />
-            </div>
-            <h4 className="text-white font-medium text-sm">Recent Commands</h4>
-          </div>
-
-          <div className="space-y-2">
-            {recentCommands.map((command, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-2 rounded-lg bg-black/30 hover:bg-black/40 transition-all duration-300 cursor-pointer group border border-green-500/10 hover:border-green-500/20"
-              >
-                <span className="text-gray-300 text-xs group-hover:text-white transition-colors flex-1 truncate">
-                  {command}
-                </span>
-                <div className="w-1.5 h-1.5 bg-green-400 rounded-full opacity-70 ml-2 flex-shrink-0" />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* API Section */}
-        <div className="border-t border-green-500/20 bg-black/10 p-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-500/30 to-green-600/20 rounded-lg flex items-center justify-center border border-green-500/40 shadow-lg">
-              <span className="text-green-400 text-xs font-bold">API</span>
-            </div>
-            <span className="text-white text-sm font-medium">API Access</span>
           </div>
         </div>
       </div>

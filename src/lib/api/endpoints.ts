@@ -22,15 +22,12 @@ export const API_ENDPOINTS = {
   // Database management endpoints
   RELOAD_DB: `${baseUrl}/mssql/reload-db`,
 
-  // Business rules endpoints
-  GET_BUSINESS_RULES: `${baseUrl}/mssql/get_business-rules`,
-  GET_BUSINESS_RULES_FILE: `${baseUrl}/mssql/get_business-rules_file`,
-  UPDATE_BUSINESS_RULES: `${baseUrl}/mssql/update_business-rules`,
-
   // MSSQL Configuration endpoints
   CREATE_MSSQL_CONFIG: `${baseUrl}/mssql-config/mssql-config`,
   GET_MSSQL_CONFIGS: `${baseUrl}/mssql-config/mssql-config`,
   GET_MSSQL_CONFIG: (id: number) =>
+    `${baseUrl}/mssql-config/mssql-config/${id}`,
+  UPDATE_MSSQL_CONFIG: (id: number) =>
     `${baseUrl}/mssql-config/mssql-config/${id}`,
 
   // Parent Companies endpoints
@@ -62,6 +59,14 @@ export const API_ENDPOINTS = {
     `${baseUrl}/mssql-config/user-current-db/${encodeURIComponent(userId)}`,
   GET_USER_CURRENT_DB: (userId: string) =>
     `${baseUrl}/mssql-config/user-current-db/${encodeURIComponent(userId)}`,
+
+  // MSSQL Config Advanced Operations
+  GENERATE_TABLE_INFO: (id: number) =>
+    `${baseUrl}/mssql-config/mssql-config/${id}/generate-table-info`,
+  GET_TASK_STATUS: (taskId: string) =>
+    `${baseUrl}/mssql-config/mssql-config/tasks/${taskId}`,
+  GENERATE_MATCHED_TABLES: (id: number) =>
+    `${baseUrl}/mssql-config/mssql-config/${id}/generate-matched-tables`,
 };
 
 /**

@@ -5,7 +5,7 @@ import { ThemeStoreProvider } from "@/components/ThemeStoreProvider";
 import { ThemeTransitionProvider } from "@/components/ThemeTransitionProvider";
 import Navbar from "@/components/Navbar";
 import Menu from "@/components/Menu";
-import { AIAssistantInterface } from "@/components/ai-assistant";
+import { AIInterface } from "@/components/ai-assistant";
 import { Toaster } from "@/components/ui/sonner";
 import ErrorBoundary from "@/components/ui/error-boundary";
 import { useUIStore } from "@/store/uiStore";
@@ -43,10 +43,11 @@ export default function RootLayout({
               </>
             )}
 
-            {/* AI Assistant Interface */}
-            <AIAssistantInterface
+            {/* AI Interface Dropdown */}
+            <AIInterface
               isOpen={showAIAssistant}
               onClose={() => setShowAIAssistant(false)}
+              userId="nilab"
             />
 
             <div className="min-h-screen w-full">

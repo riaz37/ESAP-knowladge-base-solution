@@ -1,7 +1,8 @@
 import { ApiRequestConfig, ApiResponse, ApiError } from "@/types/api";
 import { NetworkError } from "@/types/error";
 
-const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api';
+const baseUrl =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api";
 
 /**
  * Default request configuration
@@ -240,7 +241,16 @@ export class ApiClient {
 
     // Add body for non-GET requests
     if (processedConfig.method !== "GET" && processedConfig.body) {
-      requestOptions.body = JSON.stringify(processedConfig.body);
+      // Handle FormData differently - don't stringify it
+      if (processedConfig.body instanceof FormData) {
+        requestOptions.body = processedConfig.body;
+        // Remove Content-Type header for FormData to let browser set it with boundary
+        const headers = { ...processedConfig.headers };
+        delete headers["Content-Type"];
+        requestOptions.headers = headers as HeadersInit;
+      } else {
+        requestOptions.body = JSON.stringify(processedConfig.body);
+      }
     }
 
     try {
@@ -248,18 +258,21 @@ export class ApiClient {
       const response = await fetch(`${url}${queryParams}`, requestOptions);
 
       // Debug logging for MSSQL config endpoints
-      if (url.includes('mssql-config')) {
+      if (url.includes("mssql-config")) {
         console.log(`API Client - Making request to: ${url}${queryParams}`);
         console.log(`API Client - Request options:`, requestOptions);
         console.log(`API Client - Response status: ${response.status}`);
-        console.log(`API Client - Response headers:`, Object.fromEntries(response.headers.entries()));
+        console.log(
+          `API Client - Response headers:`,
+          Object.fromEntries(response.headers.entries())
+        );
       }
 
       // Parse response
       const data = await response.json();
 
       // Debug logging for MSSQL config endpoints
-      if (url.includes('mssql-config')) {
+      if (url.includes("mssql-config")) {
         console.log(`API Client - URL: ${url}`);
         console.log(`API Client - Status: ${response.status}`);
         console.log(`API Client - Response data:`, data);
