@@ -219,6 +219,28 @@
     transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
+/* Exclude dropdown/popover elements from global transitions to prevent conflicts */
+[data-radix-popper-content-wrapper],
+[data-radix-select-content],
+[data-radix-dropdown-menu-content],
+[data-radix-popover-content],
+[data-slot="select-content"],
+[data-slot="dropdown-content"],
+[data-slot="popover-content"] {
+  transition: none !important;
+}
+
+/* Also exclude their children to ensure smooth animations */
+[data-radix-popper-content-wrapper] *,
+[data-radix-select-content] *,
+[data-radix-dropdown-menu-content] *,
+[data-radix-popover-content] *,
+[data-slot="select-content"] *,
+[data-slot="dropdown-content"] *,
+[data-slot="popover-content"] * {
+  transition: none !important;
+}
+
 /* Prevent transition on page load */
 .no-transition * {
   transition: none !important;

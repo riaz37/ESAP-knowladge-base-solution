@@ -128,20 +128,23 @@ export function AIInterface({
         ]);
 
         // Store the result in sessionStorage to pass to the results page
-        sessionStorage.setItem('aiQueryResult', JSON.stringify({
-          query: query.trim(),
-          result,
-          timestamp: new Date().toISOString(),
-          userId
-        }));
+        sessionStorage.setItem(
+          "aiQueryResult",
+          JSON.stringify({
+            query: query.trim(),
+            result,
+            timestamp: new Date().toISOString(),
+            userId,
+          })
+        );
 
         // Clear input after successful query
         setQuery("");
 
         // Close the AI interface and navigate to results page
         onClose();
-        router.push('/ai-results');
-        
+        router.push("/ai-results");
+
         toast.success("Query executed successfully! Redirecting to results...");
       }
     } catch (error) {

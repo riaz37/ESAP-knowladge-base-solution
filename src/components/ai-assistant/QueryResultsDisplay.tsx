@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import DataTable, { TableColumn } from "@/components/ui/data-table";
 import {
@@ -20,13 +21,17 @@ import {
   Calendar,
   DollarSign,
   FileText,
+  BarChart3,
+  Table as TableIcon,
 } from "lucide-react";
+import { DataVisualization } from "./DataVisualization";
 
 interface QueryResultsDisplayProps {
   result: any;
 }
 
 export function QueryResultsDisplay({ result }: QueryResultsDisplayProps) {
+  const [viewMode, setViewMode] = useState<"table" | "chart">("table");
   // Extract the actual data from API response format
   const actualData = useMemo(() => {
     console.log("Raw result:", result);
@@ -200,18 +205,57 @@ export function QueryResultsDisplay({ result }: QueryResultsDisplayProps) {
     case "table":
       return (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm">
-            <Badge className="bg-green-500/20 text-green-400 border-green-400/30">
-              <FileText className="w-3 h-3 mr-1" />
-              {tableData.data.length} records found
-            </Badge>
+          {/* Header with view toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              <Badge className="bg-green-500/20 text-green-400 border-green-400/30">
+                <FileText className="w-3 h-3 mr-1" />
+                {tableData.data.length} records found
+              </Badge>
+            </div>
+            
+            {/* View Toggle Buttons */}
+            <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
+              <Button
+                onClick={() => setViewMode("table")}
+                variant={viewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                className={`h-8 px-3 text-xs ${
+                  viewMode === "table"
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "text-gray-400 hover:text-white hover:bg-gray-700"
+                }`}
+              >
+                <TableIcon className="w-3 h-3 mr-1" />
+                Table
+              </Button>
+              <Button
+                onClick={() => setViewMode("chart")}
+                variant={viewMode === "chart" ? "default" : "ghost"}
+                size="sm"
+                className={`h-8 px-3 text-xs ${
+                  viewMode === "chart"
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "text-gray-400 hover:text-white hover:bg-gray-700"
+                }`}
+              >
+                <BarChart3 className="w-3 h-3 mr-1" />
+                Charts
+              </Button>
+            </div>
           </div>
-          <DataTable
-            columns={tableData.columns}
-            data={tableData.data}
-            defaultPageSize={10}
-            pageSizeOptions={[5, 10, 20, 50]}
-          />
+
+          {/* Content based on view mode */}
+          {viewMode === "table" ? (
+            <DataTable
+              columns={tableData.columns}
+              data={tableData.data}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20, 50]}
+            />
+          ) : (
+            <DataVisualization data={actualData as any[]} />
+          )}
         </div>
       );
 
