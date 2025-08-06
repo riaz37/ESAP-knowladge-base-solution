@@ -49,6 +49,7 @@ export function AIInterface({
   const [queryHistory, setQueryHistory] = useState<
     Array<{ query: string; result: any; timestamp: Date }>
   >([]);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -115,20 +116,33 @@ export function AIInterface({
     try {
       const result = await databaseOps.sendDatabaseQuery(query, userId);
 
-      // Add to query history
-      setQueryHistory((prev) => [
-        {
+      if (result) {
+        // Add to query history for display in AI interface
+        setQueryHistory((prev) => [
+          {
+            query: query.trim(),
+            result,
+            timestamp: new Date(),
+          },
+          ...prev.slice(0, 4), // Keep last 5 queries for dropdown
+        ]);
+
+        // Store the result in sessionStorage to pass to the results page
+        sessionStorage.setItem('aiQueryResult', JSON.stringify({
           query: query.trim(),
           result,
-          timestamp: new Date(),
-        },
-        ...prev.slice(0, 2),
-      ]); // Keep last 3 queries for dropdown
+          timestamp: new Date().toISOString(),
+          userId
+        }));
 
-      setQuery(""); // Clear input after successful query
+        // Clear input after successful query
+        setQuery("");
 
-      if (result) {
-        toast.success("Query executed successfully");
+        // Close the AI interface and navigate to results page
+        onClose();
+        router.push('/ai-results');
+        
+        toast.success("Query executed successfully! Redirecting to results...");
       }
     } catch (error) {
       toast.error("Failed to execute query");
@@ -188,8 +202,8 @@ export function AIInterface({
 
   const quickSuggestions = [
     "Show me attendance for January 2024",
-    "Display salary information",
-    "Show profit items",
+    "How much salary did we pay last month?",
+    "Show me paid salary for March 2025",
   ];
 
   if (!isOpen) return null;
@@ -255,7 +269,7 @@ export function AIInterface({
               <Button
                 onClick={() => {
                   onClose();
-                  router.push('/business-rules');
+                  router.push("/business-rules");
                 }}
                 variant="ghost"
                 size="sm"
@@ -294,20 +308,21 @@ export function AIInterface({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {/* Main Query Input */}
               <div className="lg:col-span-2 space-y-3">
-                <div className="flex gap-2">
-                  <Input
+                <div className="flex gap-2 items-start">
+                  <textarea
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Ask about your database..."
-                    className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500 text-sm"
+                    onKeyDown={handleKeyPress}
+                    placeholder="Ask about your database... (Press Enter to submit, Shift+Enter for new line)"
+                    className="flex-1 min-h-[120px] max-h-[300px] resize-y bg-gray-800/50 border border-green-400/30 text-white placeholder:text-gray-500 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={databaseOps.loading}
+                    rows={5}
                   />
                   <Button
                     onClick={handleQuerySubmit}
                     disabled={databaseOps.loading || !query.trim()}
                     size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white px-4"
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 h-10 mt-1"
                   >
                     {databaseOps.loading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -331,7 +346,9 @@ export function AIInterface({
                       className="border-green-400/30 text-green-400 hover:bg-green-400/10 text-xs h-7 px-2"
                       disabled={databaseOps.loading}
                     >
-                      {suggestion.length > 20 ? `${suggestion.substring(0, 20)}...` : suggestion}
+                      {suggestion.length > 20
+                        ? `${suggestion.substring(0, 20)}...`
+                        : suggestion}
                     </Button>
                   ))}
                 </div>
@@ -376,7 +393,8 @@ export function AIInterface({
                   {queryHistory.map((item, index) => (
                     <div
                       key={index}
-                      className="border border-green-400/20 rounded-lg p-2"
+                      className="border border-green-400/20 rounded-lg p-2 cursor-pointer hover:bg-green-400/5 transition-colors"
+                      onClick={() => setQuery(item.query)}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <Bot className="w-3 h-3 text-green-400" />
@@ -387,10 +405,8 @@ export function AIInterface({
                           {item.timestamp.toLocaleTimeString()}
                         </span>
                       </div>
-                      <div className="bg-gray-900/50 border border-green-400/20 rounded p-2">
-                        <pre className="text-white text-xs overflow-auto max-h-20">
-                          {JSON.stringify(item.result, null, 2)}
-                        </pre>
+                      <div className="text-gray-400 text-xs">
+                        Click to reuse this query
                       </div>
                     </div>
                   ))}
@@ -412,7 +428,6 @@ export function AIInterface({
           </div>
         </div>
       </div>
-
     </>
   );
 }

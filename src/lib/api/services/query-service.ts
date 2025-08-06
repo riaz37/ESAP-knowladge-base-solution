@@ -58,10 +58,14 @@ export const QueryService = {
    */
   async query(params: DbQueryParams): Promise<ApiResponse<any>> {
     try {
-      const response = await apiClient.post(API_ENDPOINTS.QUERY, {
+      // Build the endpoint with query parameters as expected by the API
+      const endpoint = buildEndpointWithQueryParams(API_ENDPOINTS.QUERY, {
         question: params.question,
         user_id: params.userId,
       });
+      
+      // Send POST request with empty body and parameters in URL
+      const response = await apiClient.post(endpoint, {});
       return transformResponse(response);
     } catch (error) {
       throw error;

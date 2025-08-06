@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   FileText, 
   Save, 
@@ -10,7 +10,9 @@ import {
   AlertCircle, 
   CheckCircle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  Keyboard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +28,8 @@ export function BusinessRulesManager() {
   const [userId, setUserId] = useState("nilab"); // Default user ID
   const [editedContent, setEditedContent] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
 
   const {
     businessRulesText,
@@ -58,14 +62,9 @@ export function BusinessRulesManager() {
     setHasUnsavedChanges(content !== businessRulesText);
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!userId.trim()) {
       toast.error("Please enter a user ID");
-      return;
-    }
-
-    if (!editedContent.trim()) {
-      toast.error("Business rules content cannot be empty");
       return;
     }
 
@@ -73,10 +72,26 @@ export function BusinessRulesManager() {
     if (success) {
       toast.success("Business rules updated successfully");
       setHasUnsavedChanges(false);
+      setLastSaved(new Date());
     } else {
       toast.error("Failed to update business rules. Please check the console for details.");
     }
-  };
+  }, [userId, editedContent, updateBusinessRules]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        if (hasUnsavedChanges && !uploadingRules) {
+          handleSave();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleSave, hasUnsavedChanges, uploadingRules]);
 
   const handleRefresh = () => {
     if (userId.trim()) {
@@ -119,7 +134,32 @@ export function BusinessRulesManager() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Floating Save Button - Only show when there are unsaved changes */}
+      {hasUnsavedChanges && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-300">
+          <Button
+            onClick={handleSave}
+            disabled={uploadingRules || !userId.trim()}
+            size="lg"
+            className="bg-green-600 hover:bg-green-700 text-white shadow-2xl border border-green-500/50 px-6 py-3"
+          >
+            {uploadingRules ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5 mr-2" />
+                Save Changes
+                <span className="ml-2 text-xs opacity-75">(Ctrl+S)</span>
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
       {/* User Selection */}
       <Card className="bg-gray-900/50 border-green-400/30">
         <CardHeader>
@@ -193,54 +233,101 @@ export function BusinessRulesManager() {
 
       {/* Business Rules Editor */}
       <Card className="bg-gray-900/50 border-green-400/30">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-green-400">
-                <FileText className="w-5 h-5" />
-                Business Rules Editor
-              </CardTitle>
-              <CardDescription className="text-gray-400">
-                Edit business rules that will affect database queries and operations
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              {/* File Upload */}
-              <div className="relative">
-                <input
-                  type="file"
-                  accept=".md,.txt"
-                  onChange={handleFileUpload}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
+        {/* Sticky Header with Actions */}
+        <div className="sticky top-20 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-green-400/30 rounded-t-lg">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-green-400">
+                  <FileText className="w-5 h-5" />
+                  Business Rules Editor
+                </CardTitle>
+                <CardDescription className="text-gray-400 flex items-center gap-4">
+                  <span>Edit business rules that will affect database queries and operations</span>
+                  {lastSaved && (
+                    <span className="flex items-center gap-1 text-xs text-green-400">
+                      <Clock className="w-3 h-3" />
+                      Last saved: {lastSaved.toLocaleTimeString()}
+                    </span>
+                  )}
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                {/* Save Button - Always visible in header */}
                 <Button
+                  onClick={handleSave}
+                  disabled={uploadingRules || !hasUnsavedChanges || !userId.trim()}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {uploadingRules ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save
+                    </>
+                  )}
+                </Button>
+                
+                {/* File Upload */}
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept=".md,.txt"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-green-400/30 text-green-400 hover:bg-green-400/10"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload
+                  </Button>
+                </div>
+
+                {/* Download */}
+                <Button
+                  onClick={handleDownload}
+                  disabled={downloadingRules}
                   variant="outline"
                   size="sm"
                   className="border-green-400/30 text-green-400 hover:bg-green-400/10"
                 >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload
+                  {downloadingRules ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Download
                 </Button>
               </div>
-
-              {/* Download */}
-              <Button
-                onClick={handleDownload}
-                disabled={downloadingRules}
-                variant="outline"
-                size="sm"
-                className="border-green-400/30 text-green-400 hover:bg-green-400/10"
-              >
-                {downloadingRules ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4 mr-2" />
-                )}
-                Download
-              </Button>
             </div>
-          </div>
-        </CardHeader>
+            
+            {/* Status Bar */}
+            <div className="flex items-center justify-between pt-2 text-xs">
+              <div className="flex items-center gap-4">
+                <span className="text-gray-400">
+                  {editedContent.length} characters
+                </span>
+                {hasUnsavedChanges && (
+                  <span className="flex items-center gap-1 text-yellow-400">
+                    <AlertCircle className="w-3 h-3" />
+                    Unsaved changes
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1 text-gray-500">
+                <Keyboard className="w-3 h-3" />
+                <span>Press Ctrl+S to save</span>
+              </div>
+            </div>
+          </CardHeader>
+        </div>
         <CardContent>
           <div className="space-y-4">
             <div className="space-y-2">

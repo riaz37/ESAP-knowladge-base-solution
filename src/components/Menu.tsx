@@ -30,9 +30,9 @@ export default function Menu() {
     },
     {
       name: "Report & Analysis",
-      path: "/db-knowledge",
+      path: "/ai-results",
       icon: BarChart3,
-      isActive: pathname === "/db-knowledge",
+      isActive: pathname === "/ai-results",
     },
     {
       name: "Company Structure",
@@ -52,12 +52,7 @@ export default function Menu() {
       icon: FileText,
       isActive: pathname === "/business-rules",
     },
-    {
-      name: "AI Assistant",
-      path: "/ai-results",
-      icon: Bot,
-      isActive: pathname === "/ai-results",
-    },
+
     {
       name: "History Log",
       path: "/database-hierarchy",
@@ -71,7 +66,7 @@ export default function Menu() {
   };
 
   return (
-    <div className="fixed top-[80px] left-[170px] z-50 animate-in slide-in-from-top-4 duration-300">
+    <div className="fixed top-[80px] left-1/2 -translate-x-[calc(50%+300px)] z-50 animate-in slide-in-from-top-4 duration-300">
       <div
         className="backdrop-blur-2xl border border-green-500/30 rounded-2xl shadow-2xl overflow-hidden w-80 max-h-[80vh] overflow-y-auto"
         style={{
@@ -144,17 +139,4 @@ export default function Menu() {
       </div>
     </div>
   );
-}
-
-// Helper function to get route descriptions
-function getRouteDescription(routeKey: string): string {
-  const descriptions: Record<string, string> = {
-    dashboard: "Access your main dashboard and overview",
-    "db-knowledge": "Query and explore database information",
-    "hr-knowledge": "Human resources and team information",
-    "file-system": "Manage and organize your files",
-    "support-team": "Get help and contact support",
-  };
-
-  return descriptions[routeKey] || "Navigate to this section";
 }
