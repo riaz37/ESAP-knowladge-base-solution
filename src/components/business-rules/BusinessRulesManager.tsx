@@ -1,24 +1,30 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { 
-  FileText, 
-  Save, 
-  Download, 
-  Upload, 
-  User, 
-  AlertCircle, 
+import {
+  FileText,
+  Save,
+  Download,
+  Upload,
+  User,
+  AlertCircle,
   CheckCircle,
   Loader2,
   RefreshCw,
   Clock,
-  Keyboard
+  Keyboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useBusinessRules } from "@/lib/hooks/use-business-rules";
@@ -74,14 +80,16 @@ export function BusinessRulesManager() {
       setHasUnsavedChanges(false);
       setLastSaved(new Date());
     } else {
-      toast.error("Failed to update business rules. Please check the console for details.");
+      toast.error(
+        "Failed to update business rules. Please check the console for details."
+      );
     }
   }, [userId, editedContent, updateBusinessRules]);
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
         event.preventDefault();
         if (hasUnsavedChanges && !uploadingRules) {
           handleSave();
@@ -89,8 +97,8 @@ export function BusinessRulesManager() {
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleSave, hasUnsavedChanges, uploadingRules]);
 
   const handleRefresh = () => {
@@ -113,7 +121,7 @@ export function BusinessRulesManager() {
     if (!file) return;
 
     // Validate file type
-    if (!file.name.endsWith('.md') && !file.name.endsWith('.txt')) {
+    if (!file.name.endsWith(".md") && !file.name.endsWith(".txt")) {
       toast.error("Please upload a .md or .txt file");
       return;
     }
@@ -130,36 +138,11 @@ export function BusinessRulesManager() {
     reader.readAsText(file);
 
     // Reset file input
-    event.target.value = '';
+    event.target.value = "";
   };
 
   return (
     <div className="space-y-6 relative">
-      {/* Floating Save Button - Only show when there are unsaved changes */}
-      {hasUnsavedChanges && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-300">
-          <Button
-            onClick={handleSave}
-            disabled={uploadingRules || !userId.trim()}
-            size="lg"
-            className="bg-green-600 hover:bg-green-700 text-white shadow-2xl border border-green-500/50 px-6 py-3"
-          >
-            {uploadingRules ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-5 h-5 mr-2" />
-                Save Changes
-                <span className="ml-2 text-xs opacity-75">(Ctrl+S)</span>
-              </>
-            )}
-          </Button>
-        </div>
-      )}
-
       {/* User Selection */}
       <Card className="bg-gray-900/50 border-green-400/30">
         <CardHeader>
@@ -243,7 +226,10 @@ export function BusinessRulesManager() {
                   Business Rules Editor
                 </CardTitle>
                 <CardDescription className="text-gray-400 flex items-center gap-4">
-                  <span>Edit business rules that will affect database queries and operations</span>
+                  <span>
+                    Edit business rules that will affect database queries and
+                    operations
+                  </span>
                   {lastSaved && (
                     <span className="flex items-center gap-1 text-xs text-green-400">
                       <Clock className="w-3 h-3" />
@@ -256,7 +242,9 @@ export function BusinessRulesManager() {
                 {/* Save Button - Always visible in header */}
                 <Button
                   onClick={handleSave}
-                  disabled={uploadingRules || !hasUnsavedChanges || !userId.trim()}
+                  disabled={
+                    uploadingRules || !hasUnsavedChanges || !userId.trim()
+                  }
                   className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {uploadingRules ? (
@@ -271,7 +259,7 @@ export function BusinessRulesManager() {
                     </>
                   )}
                 </Button>
-                
+
                 {/* File Upload */}
                 <div className="relative">
                   <input
@@ -307,7 +295,7 @@ export function BusinessRulesManager() {
                 </Button>
               </div>
             </div>
-            
+
             {/* Status Bar */}
             <div className="flex items-center justify-between pt-2 text-xs">
               <div className="flex items-center gap-4">
@@ -348,46 +336,11 @@ export function BusinessRulesManager() {
               <Alert className="border-yellow-400/30 bg-yellow-900/20">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-300">
-                  You have unsaved changes. Don't forget to save your modifications.
+                  You have unsaved changes. Don't forget to save your
+                  modifications.
                 </AlertDescription>
               </Alert>
             )}
-
-            <Separator className="bg-green-400/20" />
-
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-400">
-                {businessRulesLoading ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading business rules...
-                  </span>
-                ) : (
-                  <span>
-                    {editedContent.length} characters
-                    {hasUnsavedChanges && " • Unsaved changes"}
-                  </span>
-                )}
-              </div>
-
-              <Button
-                onClick={handleSave}
-                disabled={uploadingRules || !hasUnsavedChanges || !userId.trim()}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {uploadingRules ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -395,20 +348,32 @@ export function BusinessRulesManager() {
       {/* Help Section */}
       <Card className="bg-gray-900/50 border-green-400/30">
         <CardHeader>
-          <CardTitle className="text-green-400">How Business Rules Work</CardTitle>
+          <CardTitle className="text-green-400">
+            How Business Rules Work
+          </CardTitle>
         </CardHeader>
         <CardContent className="text-gray-300 space-y-3">
           <p>
-            Business rules define how database queries should be processed and what constraints should be applied.
+            Business rules define how database queries should be processed and
+            what constraints should be applied.
           </p>
           <ul className="list-disc list-inside space-y-1 text-sm">
-            <li>Rules are applied automatically when users perform database queries</li>
-            <li>You can define data validation rules, access restrictions, and query modifications</li>
-            <li>Rules are user-specific and can be customized for different users</li>
+            <li>
+              Rules are applied automatically when users perform database
+              queries
+            </li>
+            <li>
+              You can define data validation rules, access restrictions, and
+              query modifications
+            </li>
+            <li>
+              Rules are user-specific and can be customized for different users
+            </li>
             <li>Changes take effect immediately after saving</li>
           </ul>
           <p className="text-sm text-gray-400">
-            Tip: Use Markdown format for better readability and organization of your business rules.
+            Tip: Use Markdown format for better readability and organization of
+            your business rules.
           </p>
         </CardContent>
       </Card>

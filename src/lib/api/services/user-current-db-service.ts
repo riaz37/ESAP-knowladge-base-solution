@@ -21,7 +21,7 @@ export class UserCurrentDBService {
         API_ENDPOINTS.SET_USER_CURRENT_DB(userId),
         request
       );
-      return response.data;
+      return response;
     } catch (error) {
       console.error(`Error setting current database for user ${userId}:`, error);
       throw error;
@@ -36,7 +36,7 @@ export class UserCurrentDBService {
       const response = await apiClient.get(
         API_ENDPOINTS.GET_USER_CURRENT_DB(userId)
       );
-      return response.data;
+      return response;
     } catch (error) {
       console.error(`Error fetching current database for user ${userId}:`, error);
       throw error;

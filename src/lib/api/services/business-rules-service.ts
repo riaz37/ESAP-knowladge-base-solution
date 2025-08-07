@@ -1,6 +1,7 @@
 import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../endpoints";
 import { MSSQLConfigResponse } from "@/types/api";
+import { UserCurrentDBService } from "./user-current-db-service";
 
 /**
  * Service for managing business rules through MSSQL configuration
@@ -8,12 +9,16 @@ import { MSSQLConfigResponse } from "@/types/api";
 export class BusinessRulesService {
   /**
    * Get business rules for a user by fetching from MSSQL config
-   * For now, we'll use db_id = 1 as default, but this could be made configurable
    */
-  static async getBusinessRules(_userId?: string): Promise<string> {
+  static async getBusinessRules(userId?: string): Promise<string> {
     try {
-      // Default to db_id = 1 for now
-      const dbId = 1;
+      if (!userId) {
+        throw new Error("User ID is required to fetch business rules");
+      }
+
+      // Get the user's current database
+      const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
+      const dbId = userCurrentDB.data.db_id;
       const response = await apiClient.get<MSSQLConfigResponse>(
         API_ENDPOINTS.GET_MSSQL_CONFIG(dbId)
       );
@@ -53,11 +58,16 @@ export class BusinessRulesService {
    */
   static async updateBusinessRules(
     content: string,
-    _userId?: string
+    userId?: string
   ): Promise<void> {
     try {
-      // Default to db_id = 1 for now
-      const dbId = 1;
+      if (!userId) {
+        throw new Error("User ID is required to update business rules");
+      }
+
+      // Get the user's current database
+      const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
+      const dbId = userCurrentDB.data.db_id;
 
       // First, get the current config to preserve other fields
       const currentConfigResponse = await apiClient.get<MSSQLConfigResponse>(
@@ -115,9 +125,13 @@ export class BusinessRulesService {
   /**
    * Download business rules as a file
    */
-  static async downloadBusinessRulesFileToDevice(): Promise<void> {
+  static async downloadBusinessRulesFileToDevice(userId?: string): Promise<void> {
     try {
-      const businessRules = await this.getBusinessRules();
+      if (!userId) {
+        throw new Error("User ID is required to download business rules");
+      }
+
+      const businessRules = await this.getBusinessRules(userId);
 
       if (!businessRules.trim()) {
         throw new Error("No business rules to download");
@@ -146,13 +160,16 @@ export class BusinessRulesService {
   }
 
   /**
-   * Get the database ID for a user (for future enhancement)
-   * For now, returns default db_id = 1
+   * Get the database ID for a user
    */
   static async getDatabaseIdForUser(userId: string): Promise<number> {
-    // TODO: Implement user-specific database mapping
-    // For now, return default database ID
-    return 1;
+    try {
+      const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
+      return userCurrentDB.data.db_id;
+    } catch (error) {
+      console.error("Error fetching user's current database:", error);
+      throw new Error("Failed to get database ID for user");
+    }
   }
 
   /**

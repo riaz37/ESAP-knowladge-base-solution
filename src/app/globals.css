@@ -241,6 +241,25 @@
   transition: none !important;
 }
 
+/* Fix dropdown z-index and positioning issues */
+[data-radix-select-content] {
+  z-index: 100 !important;
+  position: fixed !important;
+}
+
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
+/* Ensure navbar has proper z-index but below dropdowns */
+nav {
+  z-index: 50 !important;
+  position: fixed !important;
+  will-change: auto !important;
+  transform: translateZ(0) !important; /* Force hardware acceleration */
+  backface-visibility: hidden !important; /* Prevent flickering */
+}
+
 /* Prevent transition on page load */
 .no-transition * {
   transition: none !important;

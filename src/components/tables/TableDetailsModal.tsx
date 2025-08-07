@@ -9,33 +9,45 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Database, 
-  Key, 
-  Link, 
-  Eye, 
-  EyeOff, 
+import {
+  Database,
+  Key,
+  Link,
+  Eye,
+  EyeOff,
   Hash,
   Type,
   Calendar,
-  ToggleLeft
+  ToggleLeft,
 } from "lucide-react";
 
 interface TableData {
   id: string;
   name: string;
+  fullName: string;
+  schema: string;
+  primaryKeys: string[];
   columns: Array<{
     name: string;
     type: string;
-    isPrimaryKey?: boolean;
-    isForeignKey?: boolean;
-    isNullable?: boolean;
+    isPrimary: boolean;
+    isForeign: boolean;
+    isRequired: boolean;
+    maxLength?: number;
+    references?: {
+      table: string;
+      column: string;
+      constraint: string;
+    };
   }>;
-  relationships?: Array<{
-    targetTable: string;
-    type: "one-to-one" | "one-to-many" | "many-to-many";
-    foreignKey: string;
+  relationships: Array<{
+    type: string;
+    viaColumn: string;
+    viaRelated: string;
+    relatedTable: string;
   }>;
+  sampleData?: Array<Record<string, any>>;
+  rowCount?: number;
 }
 
 interface TableDetailsModalProps {
@@ -44,12 +56,16 @@ interface TableDetailsModalProps {
   onClose: () => void;
 }
 
-export function TableDetailsModal({ table, isOpen, onClose }: TableDetailsModalProps) {
+export function TableDetailsModal({
+  table,
+  isOpen,
+  onClose,
+}: TableDetailsModalProps) {
   const getColumnIcon = (column: any) => {
-    if (column.isPrimaryKey) {
+    if (column.isPrimary) {
       return <Key className="w-4 h-4 text-yellow-400" />;
     }
-    if (column.isForeignKey) {
+    if (column.isForeign) {
       return <Link className="w-4 h-4 text-blue-400" />;
     }
     return <Hash className="w-4 h-4 text-gray-400" />;
@@ -57,16 +73,20 @@ export function TableDetailsModal({ table, isOpen, onClose }: TableDetailsModalP
 
   const getTypeIcon = (type: string) => {
     const lowerType = type.toLowerCase();
-    if (lowerType.includes('int') || lowerType.includes('number')) {
+    if (lowerType.includes("int") || lowerType.includes("number")) {
       return <Hash className="w-4 h-4 text-blue-400" />;
     }
-    if (lowerType.includes('varchar') || lowerType.includes('text') || lowerType.includes('string')) {
+    if (
+      lowerType.includes("varchar") ||
+      lowerType.includes("text") ||
+      lowerType.includes("string")
+    ) {
       return <Type className="w-4 h-4 text-green-400" />;
     }
-    if (lowerType.includes('date') || lowerType.includes('time')) {
+    if (lowerType.includes("date") || lowerType.includes("time")) {
       return <Calendar className="w-4 h-4 text-purple-400" />;
     }
-    if (lowerType.includes('bool')) {
+    if (lowerType.includes("bool")) {
       return <ToggleLeft className="w-4 h-4 text-orange-400" />;
     }
     return <Type className="w-4 h-4 text-gray-400" />;
@@ -74,31 +94,35 @@ export function TableDetailsModal({ table, isOpen, onClose }: TableDetailsModalP
 
   const getTypeColor = (type: string) => {
     const lowerType = type.toLowerCase();
-    if (lowerType.includes('int') || lowerType.includes('number')) {
-      return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+    if (lowerType.includes("int") || lowerType.includes("number")) {
+      return "bg-blue-500/20 text-blue-400 border-blue-500/30";
     }
-    if (lowerType.includes('varchar') || lowerType.includes('text') || lowerType.includes('string')) {
-      return 'bg-green-500/20 text-green-400 border-green-500/30';
+    if (
+      lowerType.includes("varchar") ||
+      lowerType.includes("text") ||
+      lowerType.includes("string")
+    ) {
+      return "bg-green-500/20 text-green-400 border-green-500/30";
     }
-    if (lowerType.includes('date') || lowerType.includes('time')) {
-      return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+    if (lowerType.includes("date") || lowerType.includes("time")) {
+      return "bg-purple-500/20 text-purple-400 border-purple-500/30";
     }
-    if (lowerType.includes('bool')) {
-      return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+    if (lowerType.includes("bool")) {
+      return "bg-orange-500/20 text-orange-400 border-orange-500/30";
     }
-    return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+    return "bg-gray-500/20 text-gray-400 border-gray-500/30";
   };
 
   const getRelationshipColor = (type: string) => {
     switch (type) {
-      case 'one-to-one':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'one-to-many':
-        return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'many-to-many':
-        return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+      case "one-to-one":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "one-to-many":
+        return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "many-to-many":
+        return "bg-purple-500/20 text-purple-400 border-purple-500/30";
       default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
   };
 
@@ -108,8 +132,16 @@ export function TableDetailsModal({ table, isOpen, onClose }: TableDetailsModalP
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl text-white">
             <Database className="w-6 h-6 text-emerald-400" />
-            {table.name}
-            <Badge variant="outline" className="ml-auto border-emerald-500/30 text-emerald-400">
+            <div className="flex flex-col items-start">
+              <span>{table.name}</span>
+              <span className="text-sm text-gray-400 font-normal">
+                {table.fullName}
+              </span>
+            </div>
+            <Badge
+              variant="outline"
+              className="ml-auto border-emerald-500/30 text-emerald-400"
+            >
               {table.columns.length} columns
             </Badge>
           </DialogTitle>
@@ -122,7 +154,7 @@ export function TableDetailsModal({ table, isOpen, onClose }: TableDetailsModalP
               <Hash className="w-5 h-5 text-emerald-400" />
               Columns
             </h3>
-            
+
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-3">
                 {table.columns.map((column, index) => (
@@ -133,46 +165,75 @@ export function TableDetailsModal({ table, isOpen, onClose }: TableDetailsModalP
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
                         {getColumnIcon(column)}
-                        <h4 className="font-medium text-white">{column.name}</h4>
+                        <h4 className="font-medium text-white">
+                          {column.name}
+                        </h4>
                       </div>
                       <div className="flex items-center gap-2">
-                        {column.isNullable ? (
-                          <Eye className="w-4 h-4 text-gray-400" title="Nullable" />
+                        {!column.isRequired ? (
+                          <Eye
+                            className="w-4 h-4 text-gray-400"
+                            title="Nullable"
+                          />
                         ) : (
-                          <EyeOff className="w-4 h-4 text-red-400" title="Not Null" />
+                          <EyeOff
+                            className="w-4 h-4 text-red-400"
+                            title="Required"
+                          />
                         )}
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 mb-3">
                       {getTypeIcon(column.type)}
-                      <Badge 
-                        variant="outline" 
-                        className={`font-mono text-xs ${getTypeColor(column.type)}`}
+                      <Badge
+                        variant="outline"
+                        className={`font-mono text-xs ${getTypeColor(
+                          column.type
+                        )}`}
                       >
                         {column.type}
                       </Badge>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      {column.isPrimaryKey && (
+                      {column.isPrimary && (
                         <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
                           Primary Key
                         </Badge>
                       )}
-                      {column.isForeignKey && (
+                      {column.isForeign && (
                         <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
                           Foreign Key
                         </Badge>
                       )}
-                      {column.isNullable && (
-                        <Badge variant="outline" className="border-gray-500/30 text-gray-400">
+                      {column.references && (
+                        <Badge
+                          variant="outline"
+                          className="border-blue-500/30 text-blue-400"
+                        >
+                          → {column.references.table}.{column.references.column}
+                        </Badge>
+                      )}
+                      {!column.isRequired && (
+                        <Badge
+                          variant="outline"
+                          className="border-gray-500/30 text-gray-400"
+                        >
                           Nullable
                         </Badge>
                       )}
-                      {!column.isNullable && (
+                      {column.isRequired && (
                         <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
                           Required
+                        </Badge>
+                      )}
+                      {column.maxLength && (
+                        <Badge
+                          variant="outline"
+                          className="border-gray-500/30 text-gray-400"
+                        >
+                          Max: {column.maxLength}
                         </Badge>
                       )}
                     </div>
@@ -187,7 +248,10 @@ export function TableDetailsModal({ table, isOpen, onClose }: TableDetailsModalP
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <Link className="w-5 h-5 text-emerald-400" />
               Relationships
-              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400">
+              <Badge
+                variant="outline"
+                className="border-emerald-500/30 text-emerald-400"
+              >
                 {table.relationships?.length || 0}
               </Badge>
             </h3>
@@ -203,23 +267,35 @@ export function TableDetailsModal({ table, isOpen, onClose }: TableDetailsModalP
                       <div className="flex items-center gap-2 mb-2">
                         <Link className="w-4 h-4 text-emerald-400" />
                         <h4 className="font-medium text-white text-sm">
-                          {relationship.targetTable}
+                          {relationship.relatedTable}
                         </h4>
                       </div>
 
-                      <Badge 
-                        variant="outline" 
-                        className={`mb-2 text-xs ${getRelationshipColor(relationship.type)}`}
+                      <Badge
+                        variant="outline"
+                        className={`mb-2 text-xs ${getRelationshipColor(
+                          relationship.type
+                        )}`}
                       >
                         {relationship.type}
                       </Badge>
 
-                      <div className="text-xs text-gray-400">
-                        <span className="font-medium">Foreign Key:</span>
-                        <br />
-                        <span className="font-mono text-gray-300">
-                          {relationship.foreignKey}
-                        </span>
+                      <div className="text-xs text-gray-400 space-y-1">
+                        <div>
+                          <span className="font-medium">Via Column:</span>
+                          <br />
+                          <span className="font-mono text-gray-300">
+                            {relationship.viaColumn}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Related Column:</span>
+                          <br />
+                          <span className="font-mono text-gray-300">
+                            {relationship.relatedTable}.
+                            {relationship.viaRelated}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -240,24 +316,32 @@ export function TableDetailsModal({ table, isOpen, onClose }: TableDetailsModalP
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Total Columns:</span>
-                  <span className="text-emerald-400">{table.columns.length}</span>
+                  <span className="text-emerald-400">
+                    {table.columns.length}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Primary Keys:</span>
                   <span className="text-yellow-400">
-                    {table.columns.filter(col => col.isPrimaryKey).length}
+                    {table.columns.filter((col) => col.isPrimary).length}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Foreign Keys:</span>
                   <span className="text-blue-400">
-                    {table.columns.filter(col => col.isForeignKey).length}
+                    {table.columns.filter((col) => col.isForeign).length}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Nullable Columns:</span>
                   <span className="text-gray-400">
-                    {table.columns.filter(col => col.isNullable).length}
+                    {table.columns.filter((col) => !col.isRequired).length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Row Count:</span>
+                  <span className="text-emerald-400">
+                    {table.rowCount ? table.rowCount.toLocaleString() : "N/A"}
                   </span>
                 </div>
                 <div className="flex justify-between">

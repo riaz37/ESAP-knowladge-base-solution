@@ -9,18 +9,30 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface TableData {
   id: string;
   name: string;
+  fullName: string;
+  schema: string;
+  primaryKeys: string[];
   columns: Array<{
     name: string;
     type: string;
-    isPrimaryKey?: boolean;
-    isForeignKey?: boolean;
-    isNullable?: boolean;
+    isPrimary: boolean;
+    isForeign: boolean;
+    isRequired: boolean;
+    maxLength?: number;
+    references?: {
+      table: string;
+      column: string;
+      constraint: string;
+    };
   }>;
-  relationships?: Array<{
-    targetTable: string;
-    type: "one-to-one" | "one-to-many" | "many-to-many";
-    foreignKey: string;
+  relationships: Array<{
+    type: string;
+    viaColumn: string;
+    viaRelated: string;
+    relatedTable: string;
   }>;
+  sampleData?: Array<Record<string, any>>;
+  rowCount?: number;
 }
 
 interface TablesSidebarProps {
@@ -39,16 +51,16 @@ export function TablesSidebar({ tables, onTableSelect, currentDB }: TablesSideba
     
     const matchesFilter = 
       filterType === "all" ||
-      (filterType === "with-relations" && table.relationships && table.relationships.length > 0) ||
-      (filterType === "no-relations" && (!table.relationships || table.relationships.length === 0));
+      (filterType === "with-relations" && table.relationships.length > 0) ||
+      (filterType === "no-relations" && table.relationships.length === 0);
 
     return matchesSearch && matchesFilter;
   });
 
   const getTableStats = (table: TableData) => {
-    const primaryKeys = table.columns.filter(col => col.isPrimaryKey).length;
-    const foreignKeys = table.columns.filter(col => col.isForeignKey).length;
-    const relationships = table.relationships?.length || 0;
+    const primaryKeys = table.columns.filter(col => col.isPrimary).length;
+    const foreignKeys = table.columns.filter(col => col.isForeign).length;
+    const relationships = table.relationships.length;
 
     return { primaryKeys, foreignKeys, relationships };
   };
@@ -178,8 +190,8 @@ export function TablesSidebar({ tables, onTableSelect, currentDB }: TablesSideba
                     {table.columns.slice(0, 3).map((column, index) => (
                       <div key={index} className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1">
-                          {column.isPrimaryKey && <Key className="w-2 h-2 text-yellow-400" />}
-                          {column.isForeignKey && <Link className="w-2 h-2 text-blue-400" />}
+                          {column.isPrimary && <Key className="w-2 h-2 text-yellow-400" />}
+                          {column.isForeign && <Link className="w-2 h-2 text-blue-400" />}
                           <span className="text-gray-300 truncate">{column.name}</span>
                         </div>
                         <span className="text-gray-500 font-mono">{column.type}</span>
@@ -212,7 +224,7 @@ export function TablesSidebar({ tables, onTableSelect, currentDB }: TablesSideba
           <div className="flex justify-between">
             <span>With Relations:</span>
             <span className="text-emerald-400">
-              {tables.filter(t => t.relationships && t.relationships.length > 0).length}
+              {tables.filter(t => t.relationships.length > 0).length}
             </span>
           </div>
         </div>

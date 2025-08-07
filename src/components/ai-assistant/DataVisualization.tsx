@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   BarChart,
   Bar,
@@ -31,6 +31,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   BarChart3,
   LineChart as LineChartIcon,
   PieChart as PieChartIcon,
@@ -40,6 +46,10 @@ import {
   TrendingUp,
   Calendar,
   Hash,
+  Download,
+  Image as ImageIcon,
+  FileText,
+  File,
 } from "lucide-react";
 
 interface DataVisualizationProps {
@@ -70,6 +80,7 @@ const CHART_COLORS = [
 ];
 
 export function DataVisualization({ data }: DataVisualizationProps) {
+  const chartRef = useRef<HTMLDivElement>(null);
   const [chartConfig, setChartConfig] = useState<ChartConfig>({
     type: "bar",
     xAxis: "",
@@ -133,29 +144,30 @@ export function DataVisualization({ data }: DataVisualizationProps) {
 
     return Object.entries(grouped)
       .map(([key, values]) => {
+        const numericValues = values as number[];
         let aggregatedValue: number;
 
         switch (chartConfig.aggregation) {
           case "sum":
-            aggregatedValue = values.reduce(
+            aggregatedValue = numericValues.reduce(
               (sum: number, val: number) => sum + val,
               0
             );
             break;
           case "avg":
             aggregatedValue =
-              values.reduce((sum: number, val: number) => sum + val, 0) /
-              values.length;
+              numericValues.reduce((sum: number, val: number) => sum + val, 0) /
+              numericValues.length;
             break;
           case "max":
-            aggregatedValue = Math.max(...values);
+            aggregatedValue = Math.max(...numericValues);
             break;
           case "min":
-            aggregatedValue = Math.min(...values);
+            aggregatedValue = Math.min(...numericValues);
             break;
           case "count":
           default:
-            aggregatedValue = values.length;
+            aggregatedValue = numericValues.length;
             break;
         }
 
@@ -222,6 +234,102 @@ export function DataVisualization({ data }: DataVisualizationProps) {
     { value: "max", label: "Maximum", description: "Highest value" },
     { value: "min", label: "Minimum", description: "Lowest value" },
   ];
+
+  // Export functions
+  const exportAsPNG = async () => {
+    if (!chartRef.current) return;
+
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const canvas = await html2canvas(chartRef.current, {
+        backgroundColor: "#1F2937",
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      const link = document.createElement("a");
+      link.download = `chart-${chartConfig.type}-${Date.now()}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (error) {
+      console.error("Error exporting PNG:", error);
+    }
+  };
+
+  const exportAsSVG = async () => {
+    if (!chartRef.current) return;
+
+    try {
+      const svgElement = chartRef.current.querySelector("svg");
+      if (!svgElement) return;
+
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgData], {
+        type: "image/svg+xml;charset=utf-8",
+      });
+      const svgUrl = URL.createObjectURL(svgBlob);
+
+      const link = document.createElement("a");
+      link.download = `chart-${chartConfig.type}-${Date.now()}.svg`;
+      link.href = svgUrl;
+      link.click();
+
+      URL.revokeObjectURL(svgUrl);
+    } catch (error) {
+      console.error("Error exporting SVG:", error);
+    }
+  };
+
+  const exportAsJSON = () => {
+    try {
+      const exportData = {
+        chartConfig,
+        data: processedData,
+        metadata: {
+          exportDate: new Date().toISOString(),
+          chartType: chartConfig.type,
+          dataPoints: processedData.length,
+        },
+      };
+
+      const jsonBlob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
+      const jsonUrl = URL.createObjectURL(jsonBlob);
+
+      const link = document.createElement("a");
+      link.download = `chart-data-${chartConfig.type}-${Date.now()}.json`;
+      link.href = jsonUrl;
+      link.click();
+
+      URL.revokeObjectURL(jsonUrl);
+    } catch (error) {
+      console.error("Error exporting JSON:", error);
+    }
+  };
+
+  const exportAsCSV = () => {
+    try {
+      const headers = ["Name", "Value"];
+      const csvContent = [
+        headers.join(","),
+        ...processedData.map((row) => `"${row.name}",${row.value}`),
+      ].join("\n");
+
+      const csvBlob = new Blob([csvContent], { type: "text/csv" });
+      const csvUrl = URL.createObjectURL(csvBlob);
+
+      const link = document.createElement("a");
+      link.download = `chart-data-${chartConfig.type}-${Date.now()}.csv`;
+      link.href = csvUrl;
+      link.click();
+
+      URL.revokeObjectURL(csvUrl);
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+    }
+  };
 
   const renderChart = () => {
     if (!processedData.length) {
@@ -597,14 +705,63 @@ export function DataVisualization({ data }: DataVisualizationProps) {
       {/* Chart Display */}
       <Card className="bg-gray-800/50 border-green-400/30">
         <CardHeader>
-          <CardTitle className="text-green-400 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            {chartTypes.find((c) => c.type === chartConfig.type)?.label} -{" "}
-            {formatColumnLabel(chartConfig.yAxis)} by{" "}
-            {formatColumnLabel(chartConfig.xAxis)}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-green-400 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              {
+                chartTypes.find((c) => c.type === chartConfig.type)?.label
+              } - {formatColumnLabel(chartConfig.yAxis)} by{" "}
+              {formatColumnLabel(chartConfig.xAxis)}
+            </CardTitle>
+
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-gray-800 border-gray-600">
+                <DropdownMenuItem
+                  onClick={exportAsPNG}
+                  className="text-white hover:bg-gray-700 cursor-pointer"
+                >
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  Export as PNG
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={exportAsSVG}
+                  className="text-white hover:bg-gray-700 cursor-pointer"
+                >
+                  <File className="w-4 h-4 mr-2" />
+                  Export as SVG
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={exportAsJSON}
+                  className="text-white hover:bg-gray-700 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export as JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={exportAsCSV}
+                  className="text-white hover:bg-gray-700 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </CardHeader>
-        <CardContent>{renderChart()}</CardContent>
+        <CardContent>
+          <div ref={chartRef}>{renderChart()}</div>
+        </CardContent>
       </Card>
     </div>
   );

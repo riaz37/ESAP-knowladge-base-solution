@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useMemo } from "react";
 import {
   ReactFlow,
-  Node,
   Edge,
   Controls,
   Background,
@@ -22,28 +21,42 @@ import { TableDetailsModal } from "./TableDetailsModal";
 import { useMSSQLTableOperations } from "@/lib/hooks/use-mssql-table-operations";
 import { useUserCurrentDB } from "@/lib/hooks/use-user-current-db";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Layout, ZoomIn, ZoomOut } from "lucide-react";
+import { RefreshCw, Layout } from "lucide-react";
 
-// Custom node types
+// Define nodeTypes outside component to prevent recreation on every render
 const nodeTypes = {
   tableNode: TableNode,
 };
 
+
+
 interface TableData {
   id: string;
   name: string;
+  fullName: string;
+  schema: string;
+  primaryKeys: string[];
   columns: Array<{
     name: string;
     type: string;
-    isPrimaryKey?: boolean;
-    isForeignKey?: boolean;
-    isNullable?: boolean;
+    isPrimary: boolean;
+    isForeign: boolean;
+    isRequired: boolean;
+    maxLength?: number;
+    references?: {
+      table: string;
+      column: string;
+      constraint: string;
+    };
   }>;
-  relationships?: Array<{
-    targetTable: string;
-    type: "one-to-one" | "one-to-many" | "many-to-many";
-    foreignKey: string;
+  relationships: Array<{
+    type: string;
+    viaColumn: string;
+    viaRelated: string;
+    relatedTable: string;
   }>;
+  sampleData?: Array<Record<string, any>>;
+  rowCount?: number;
 }
 
 export function TablesManager() {
@@ -53,8 +66,13 @@ export function TablesManager() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { currentDB, isLoading: isLoadingDB, getCurrentDB } = useUserCurrentDB();
-  const { generateTableInfo, isGeneratingTableInfo } = useMSSQLTableOperations();
+  const {
+    currentDB,
+    isLoading: isLoadingDB,
+    getCurrentDB,
+  } = useUserCurrentDB();
+  const { generateTableInfo, isGeneratingTableInfo } =
+    useMSSQLTableOperations();
 
   // Load current database on component mount
   React.useEffect(() => {
@@ -63,160 +81,58 @@ export function TablesManager() {
     getCurrentDB("nilab");
   }, [getCurrentDB]);
 
-  // Sample data for demonstration
-  const sampleTableData: TableData[] = [
-    {
-      id: "users",
-      name: "users",
-      columns: [
-        { name: "id", type: "int", isPrimaryKey: true, isNullable: false },
-        { name: "username", type: "varchar(50)", isNullable: false },
-        { name: "email", type: "varchar(100)", isNullable: false },
-        { name: "password_hash", type: "varchar(255)", isNullable: false },
-        { name: "created_at", type: "datetime", isNullable: false },
-        { name: "updated_at", type: "datetime", isNullable: true },
-        { name: "is_active", type: "boolean", isNullable: false },
-      ],
-      relationships: [
-        { targetTable: "orders", type: "one-to-many", foreignKey: "user_id" },
-        { targetTable: "user_profiles", type: "one-to-one", foreignKey: "user_id" },
-      ],
-    },
-    {
-      id: "orders",
-      name: "orders",
-      columns: [
-        { name: "id", type: "int", isPrimaryKey: true, isNullable: false },
-        { name: "user_id", type: "int", isForeignKey: true, isNullable: false },
-        { name: "order_number", type: "varchar(20)", isNullable: false },
-        { name: "total_amount", type: "decimal(10,2)", isNullable: false },
-        { name: "status", type: "varchar(20)", isNullable: false },
-        { name: "created_at", type: "datetime", isNullable: false },
-        { name: "shipped_at", type: "datetime", isNullable: true },
-      ],
-      relationships: [
-        { targetTable: "users", type: "many-to-one", foreignKey: "user_id" },
-        { targetTable: "order_items", type: "one-to-many", foreignKey: "order_id" },
-      ],
-    },
-    {
-      id: "products",
-      name: "products",
-      columns: [
-        { name: "id", type: "int", isPrimaryKey: true, isNullable: false },
-        { name: "name", type: "varchar(100)", isNullable: false },
-        { name: "description", type: "text", isNullable: true },
-        { name: "price", type: "decimal(10,2)", isNullable: false },
-        { name: "stock_quantity", type: "int", isNullable: false },
-        { name: "category_id", type: "int", isForeignKey: true, isNullable: false },
-        { name: "created_at", type: "datetime", isNullable: false },
-      ],
-      relationships: [
-        { targetTable: "categories", type: "many-to-one", foreignKey: "category_id" },
-        { targetTable: "order_items", type: "one-to-many", foreignKey: "product_id" },
-      ],
-    },
-    {
-      id: "order_items",
-      name: "order_items",
-      columns: [
-        { name: "id", type: "int", isPrimaryKey: true, isNullable: false },
-        { name: "order_id", type: "int", isForeignKey: true, isNullable: false },
-        { name: "product_id", type: "int", isForeignKey: true, isNullable: false },
-        { name: "quantity", type: "int", isNullable: false },
-        { name: "unit_price", type: "decimal(10,2)", isNullable: false },
-        { name: "total_price", type: "decimal(10,2)", isNullable: false },
-      ],
-      relationships: [
-        { targetTable: "orders", type: "many-to-one", foreignKey: "order_id" },
-        { targetTable: "products", type: "many-to-one", foreignKey: "product_id" },
-      ],
-    },
-    {
-      id: "categories",
-      name: "categories",
-      columns: [
-        { name: "id", type: "int", isPrimaryKey: true, isNullable: false },
-        { name: "name", type: "varchar(50)", isNullable: false },
-        { name: "description", type: "text", isNullable: true },
-        { name: "parent_id", type: "int", isForeignKey: true, isNullable: true },
-      ],
-      relationships: [
-        { targetTable: "products", type: "one-to-many", foreignKey: "category_id" },
-        { targetTable: "categories", type: "one-to-many", foreignKey: "parent_id" },
-      ],
-    },
-    {
-      id: "user_profiles",
-      name: "user_profiles",
-      columns: [
-        { name: "id", type: "int", isPrimaryKey: true, isNullable: false },
-        { name: "user_id", type: "int", isForeignKey: true, isNullable: false },
-        { name: "first_name", type: "varchar(50)", isNullable: true },
-        { name: "last_name", type: "varchar(50)", isNullable: true },
-        { name: "phone", type: "varchar(20)", isNullable: true },
-        { name: "address", type: "text", isNullable: true },
-        { name: "date_of_birth", type: "date", isNullable: true },
-      ],
-      relationships: [
-        { targetTable: "users", type: "one-to-one", foreignKey: "user_id" },
-      ],
-    },
-  ];
+
 
   // Convert database schema to table data
   const tableData = useMemo(() => {
-    // If we have real database schema, use it
-    if (currentDB?.db_schema) {
+    // Only use real database table_info
+    if (currentDB?.table_info?.tables) {
       const tables: TableData[] = [];
-      const schema = currentDB.db_schema;
-      
-      // Extract tables from schema
-      Object.entries(schema).forEach(([tableName, tableInfo]: [string, any]) => {
-        if (tableInfo && typeof tableInfo === 'object') {
-          const columns = [];
-          
-          // Extract columns information
-          if (tableInfo.columns) {
-            Object.entries(tableInfo.columns).forEach(([colName, colInfo]: [string, any]) => {
-              columns.push({
-                name: colName,
-                type: colInfo.type || 'unknown',
-                isPrimaryKey: colInfo.isPrimaryKey || false,
-                isForeignKey: colInfo.isForeignKey || false,
-                isNullable: colInfo.isNullable !== false,
-              });
-            });
-          }
+      const apiTables = currentDB.table_info.tables;
 
-          tables.push({
-            id: tableName,
-            name: tableName,
-            columns,
-            relationships: tableInfo.relationships || [],
-          });
-        }
+      apiTables.forEach((apiTable: any) => {
+        const columns = apiTable.columns.map((col: any) => ({
+          name: col.name,
+          type: col.type,
+          isPrimary: col.is_primary || false,
+          isForeign: col.is_foreign || false,
+          isRequired: col.is_required || false,
+          maxLength: col.max_length,
+          references: col.references,
+        }));
+
+        tables.push({
+          id: apiTable.full_name,
+          name: apiTable.table_name,
+          fullName: apiTable.full_name,
+          schema: apiTable.schema,
+          primaryKeys: apiTable.primary_keys || [],
+          columns,
+          relationships: apiTable.relationships || [],
+          sampleData: apiTable.sample_data,
+          rowCount: apiTable.row_count_sample,
+        });
       });
 
       return tables;
     }
-    
-    // Otherwise, use sample data for demonstration
-    return sampleTableData;
+
+    // Return empty array if no API data
+    return [];
   }, [currentDB]);
 
   // Generate nodes from table data
   const generateNodes = useCallback((tables: TableData[]) => {
     const nodeSpacing = 300;
     const nodesPerRow = Math.ceil(Math.sqrt(tables.length));
-    
+
     return tables.map((table, index) => {
       const row = Math.floor(index / nodesPerRow);
       const col = index % nodesPerRow;
-      
+
       return {
         id: table.id,
-        type: 'tableNode',
+        type: "tableNode",
         position: {
           x: col * nodeSpacing,
           y: row * nodeSpacing,
@@ -235,31 +151,35 @@ export function TablesManager() {
   // Generate edges from relationships
   const generateEdges = useCallback((tables: TableData[]) => {
     const edges: Edge[] = [];
-    
+
     tables.forEach((table) => {
-      table.relationships?.forEach((rel, index) => {
-        const targetExists = tables.some(t => t.name === rel.targetTable);
-        if (targetExists) {
+      table.relationships.forEach((rel, index) => {
+        // Find target table by name (not full name)
+        const targetTable = tables.find((t) => t.name === rel.relatedTable);
+        if (targetTable) {
           edges.push({
-            id: `${table.id}-${rel.targetTable}-${index}`,
+            id: `${table.id}-${targetTable.id}-${index}`,
             source: table.id,
-            target: rel.targetTable,
-            type: 'smoothstep',
+            sourceHandle: "bottom",
+            target: targetTable.id,
+            targetHandle: "top",
+            type: "smoothstep",
             animated: true,
-            label: rel.type,
+            label: `${rel.type}\n${rel.viaColumn} → ${rel.viaRelated}`,
             style: {
-              stroke: '#10b981',
+              stroke: "#10b981",
               strokeWidth: 2,
             },
             labelStyle: {
-              fill: '#10b981',
+              fill: "#10b981",
               fontWeight: 600,
+              fontSize: 10,
             },
           });
         }
       });
     });
-    
+
     return edges;
   }, []);
 
@@ -268,7 +188,7 @@ export function TablesManager() {
     if (tableData.length > 0) {
       const newNodes = generateNodes(tableData);
       const newEdges = generateEdges(tableData);
-      
+
       setNodes(newNodes);
       setEdges(newEdges);
     }
@@ -281,7 +201,7 @@ export function TablesManager() {
 
   const handleRefreshTables = async () => {
     if (!currentDB) return;
-    
+
     setIsLoading(true);
     try {
       await generateTableInfo(currentDB.db_id, currentDB.user_id);
@@ -298,7 +218,7 @@ export function TablesManager() {
     const newNodes = nodes.map((node, index) => {
       const angle = (index / nodes.length) * 2 * Math.PI;
       const radius = Math.max(200, nodes.length * 30);
-      
+
       return {
         ...node,
         position: {
@@ -307,13 +227,13 @@ export function TablesManager() {
         },
       };
     });
-    
+
     setNodes(newNodes);
   };
 
   if (isLoadingDB) {
     return (
-      <div className="flex items-center justify-center h-screen bg-slate-900">
+      <div className="flex items-center justify-center h-screen bg-slate-900 pt-20">
         <div className="text-center">
           <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-4" />
           <p className="text-gray-300">Loading database schema...</p>
@@ -323,7 +243,7 @@ export function TablesManager() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-900">
+    <div className="flex h-screen bg-slate-900 pt-20">
       {/* Sidebar */}
       <TablesSidebar
         tables={tableData}
@@ -349,7 +269,7 @@ export function TablesManager() {
         >
           <Background color="#1e293b" gap={20} />
           <Controls className="bg-slate-800 border-slate-700" />
-          
+
           {/* Top Panel with Controls */}
           <Panel position="top-right" className="flex gap-2">
             <Button
@@ -358,10 +278,14 @@ export function TablesManager() {
               size="sm"
               className="bg-emerald-600 hover:bg-emerald-700"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${(isLoading || isGeneratingTableInfo) ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${
+                  isLoading || isGeneratingTableInfo ? "animate-spin" : ""
+                }`}
+              />
               Refresh
             </Button>
-            
+
             <Button
               onClick={handleAutoLayout}
               size="sm"
@@ -376,11 +300,24 @@ export function TablesManager() {
           {/* Info Panel */}
           <Panel position="top-left">
             <div className="bg-slate-800/90 backdrop-blur-sm rounded-lg p-4 border border-slate-700">
-              <h3 className="text-emerald-400 font-semibold mb-2">Database Schema</h3>
+              <h3 className="text-emerald-400 font-semibold mb-2">
+                Database Schema
+              </h3>
               <div className="text-sm text-gray-300 space-y-1">
-                <p>Database: <span className="text-emerald-400">{currentDB?.db_name || 'Not selected'}</span></p>
-                <p>Tables: <span className="text-emerald-400">{tableData.length}</span></p>
-                <p>Relationships: <span className="text-emerald-400">{edges.length}</span></p>
+                <p>
+                  Database ID:{" "}
+                  <span className="text-emerald-400">
+                    {currentDB?.db_id || "Not selected"}
+                  </span>
+                </p>
+                <p>
+                  Tables:{" "}
+                  <span className="text-emerald-400">{tableData.length}</span>
+                </p>
+                <p>
+                  Relationships:{" "}
+                  <span className="text-emerald-400">{edges.length}</span>
+                </p>
               </div>
             </div>
           </Panel>
