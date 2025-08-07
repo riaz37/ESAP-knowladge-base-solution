@@ -219,6 +219,47 @@
     transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
+/* Exclude dropdown/popover elements from global transitions to prevent conflicts */
+[data-radix-popper-content-wrapper],
+[data-radix-select-content],
+[data-radix-dropdown-menu-content],
+[data-radix-popover-content],
+[data-slot="select-content"],
+[data-slot="dropdown-content"],
+[data-slot="popover-content"] {
+  transition: none !important;
+}
+
+/* Also exclude their children to ensure smooth animations */
+[data-radix-popper-content-wrapper] *,
+[data-radix-select-content] *,
+[data-radix-dropdown-menu-content] *,
+[data-radix-popover-content] *,
+[data-slot="select-content"] *,
+[data-slot="dropdown-content"] *,
+[data-slot="popover-content"] * {
+  transition: none !important;
+}
+
+/* Fix dropdown z-index and positioning issues */
+[data-radix-select-content] {
+  z-index: 100 !important;
+  position: fixed !important;
+}
+
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
+/* Ensure navbar has proper z-index but below dropdowns */
+nav {
+  z-index: 50 !important;
+  position: fixed !important;
+  will-change: auto !important;
+  transform: translateZ(0) !important; /* Force hardware acceleration */
+  backface-visibility: hidden !important; /* Prevent flickering */
+}
+
 /* Prevent transition on page load */
 .no-transition * {
   transition: none !important;
@@ -451,6 +492,19 @@
   @apply from-gray-400 to-gray-500 cursor-not-allowed;
 }
 
+/* Grid background utilities for CompanyTreeView */
+.bg-grid-gray-200\/50 {
+  background-image: linear-gradient(rgba(229, 231, 235, 0.5) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(229, 231, 235, 0.5) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.dark .bg-grid-gray-800\/50 {
+  background-image: linear-gradient(rgba(31, 41, 55, 0.5) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(31, 41, 55, 0.5) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
 .btn-secondary {
   @apply bg-[#f0f9f5] hover:bg-[#e1f4ea] dark:bg-[#011f17] dark:hover:bg-[#012920] text-[#00bf6f] dark:text-[#00bf6f];
 }
@@ -663,4 +717,9 @@
 
 .top-15 {
   top: 60px;
+}
+
+/* Radial gradient utility for company hierarchy */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
 }

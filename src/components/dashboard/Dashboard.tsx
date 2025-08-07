@@ -94,8 +94,8 @@ const Dashboard: React.FC = () => {
       <div className="absolute inset-0 flex items-center justify-center z-10">
         <div className="w-96 h-96">
           <BrainModel
-            color={theme === "dark" ? "#10b981" : "#059669"}
-            emissiveIntensity={theme === "dark" ? 0.2 : 0.15}
+            color={theme === "dark" ? "#10b981" : "#047857"}
+            emissiveIntensity={theme === "dark" ? 0.2 : 0.08}
             enableControls={true}
           />
         </div>

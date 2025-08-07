@@ -6,7 +6,8 @@ import { useUIStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 export default function Navbar() {
-  const { showSidebar, setShowSidebar } = useUIStore();
+  const { showSidebar, setShowSidebar, showAIAssistant, setShowAIAssistant } =
+    useUIStore();
 
   const handleMenuClick = () => {
     setShowSidebar(!showSidebar);
@@ -14,9 +15,8 @@ export default function Navbar() {
 
   return (
     <nav
-      className="fixed top-[30px] left-1/2 transform -translate-x-1/2 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-between shadow-2xl shadow-black/20"
+      className="fixed top-4 left-4 right-4 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-between shadow-2xl shadow-black/20 max-w-7xl mx-auto"
       style={{
-        width: "1351px",
         height: "64px",
         paddingLeft: "20px",
         paddingRight: "20px",
@@ -70,13 +70,23 @@ export default function Navbar() {
         </div>
 
         {/* Robot Icon */}
-        <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center border border-gray-600/30 hover:bg-gray-600/50 transition-colors cursor-pointer">
+        <div
+          onClick={() => setShowAIAssistant(!showAIAssistant)}
+          className="flex items-center justify-center hover:bg-gray-600/30 transition-colors cursor-pointer rounded-[391.76px]"
+          style={{
+            width: "40px",
+            height: "40px",
+            opacity: 1,
+            padding: "4.85px",
+            gap: "3.03px",
+          }}
+        >
           <Image
             src="/autopilot.svg"
             alt="Robot"
-            width={24}
-            height={24}
-            className="w-6 h-6 cursor-pointer"
+            width={36}
+            height={36}
+            className="w-full h-auto cursor-pointer"
           />
         </div>
       </div>

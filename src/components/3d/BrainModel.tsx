@@ -1,17 +1,17 @@
 "use client";
-import React, { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { BrainMesh } from './BrainMesh';
-import { LoadingFallback } from './LoadingFallback';
-import { SceneLighting } from './SceneLighting';
-import { BrainModelProps } from './types';
+import React, { Suspense } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
+import { BrainMesh } from "./BrainMesh";
+import { LoadingFallback } from "./LoadingFallback";
+import { SceneLighting } from "./SceneLighting";
+import { BrainModelProps } from "./types";
 
 export const BrainModel: React.FC<BrainModelProps> = ({
   className = "",
   color = "#10b981",
   emissiveIntensity = 0.1,
-  enableControls = false
+  enableControls = false,
 }) => {
   return (
     <div className={`w-full h-full ${className}`}>
@@ -19,17 +19,17 @@ export const BrainModel: React.FC<BrainModelProps> = ({
         camera={{ position: [0, 0, 8], fov: 45 }}
         gl={{ antialias: true, alpha: true }}
         style={{
-          background: 'transparent',
-          cursor: enableControls ? 'grab' : 'default'
+          background: "transparent",
+          cursor: enableControls ? "grab" : "default",
         }}
         onPointerDown={(e) => {
           if (enableControls) {
-            e.currentTarget.style.cursor = 'grabbing';
+            e.currentTarget.style.cursor = "grabbing";
           }
         }}
         onPointerUp={(e) => {
           if (enableControls) {
-            e.currentTarget.style.cursor = 'grab';
+            e.currentTarget.style.cursor = "grab";
           }
         }}
       >

@@ -1,101 +1,198 @@
-import { ApiResponse } from "@/types/api";
+//@ts-nocheck
 import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../endpoints";
+import { MSSQLConfigResponse } from "@/types/api";
+import { UserCurrentDBService } from "./user-current-db-service";
 
 /**
- * Service for handling business rules API calls
+ * Service for managing business rules through MSSQL configuration
  */
-export const BusinessRulesService = {
+export class BusinessRulesService {
   /**
-   * Get business rules as text
+   * Get business rules for a user by fetching from MSSQL config
    */
-  async getBusinessRules(): Promise<string> {
+  static async getBusinessRules(userId?: string): Promise<string> {
     try {
-      // Use centralized API client with text response handling
-      const response = await apiClient.request<string>(
-        API_ENDPOINTS.GET_BUSINESS_RULES,
-        {
-          headers: {
-            accept: "text/plain",
-            "Content-Type": "text/plain",
-          },
-        }
+      if (!userId) {
+        throw new Error("User ID is required to fetch business rules");
+      }
+
+      // Get the user's current database
+      const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
+      const dbId = userCurrentDB.data.db_id;
+      const response = await apiClient.get<MSSQLConfigResponse>(
+        API_ENDPOINTS.GET_MSSQL_CONFIG(dbId)
       );
 
-      // Extract the actual text content from the response
-      return typeof response.data === "string"
-        ? response.data
-        : JSON.stringify(response.data);
-    } catch (error) {
-      throw error;
-    }
-  },
+      console.log("Business Rules Service - Full response:", response);
 
-  /**
-   * Download business rules file
-   */
-  async downloadBusinessRulesFile(): Promise<Blob> {
-    try {
-      // For blob responses, we still need to use fetch directly
-      // as the centralized client is designed for JSON responses
-      const response = await fetch(API_ENDPOINTS.GET_BUSINESS_RULES_FILE);
-
-      if (!response.ok) {
-        throw new Error("Failed to download business rules file");
+      // The API returns the MSSQLConfigResponse directly
+      // Structure: { status: "success", message: "...", data: { db_id, business_rule, ... } }
+      if (response && response.status === "success" && response.data) {
+        console.log(
+          "Business Rules Service - Found business rule:",
+          response.data.business_rule
+        );
+        return response.data.business_rule || "";
       }
 
-      return await response.blob();
-    } catch (error) {
-      throw error;
+      console.error(
+        "Business Rules Service - Unexpected response structure:",
+        response
+      );
+      throw new Error(
+        "Failed to fetch business rules - unexpected response structure"
+      );
+    } catch (error: any) {
+      console.error("Error fetching business rules:", error);
+      if (error.response?.status === 404) {
+        throw new Error("Business rules configuration not found");
+      }
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch business rules"
+      );
     }
-  },
+  }
 
   /**
-   * Update business rules
+   * Update business rules by updating the MSSQL config
    */
-  async updateBusinessRules(content: string): Promise<ApiResponse<any>> {
+  static async updateBusinessRules(
+    content: string,
+    userId?: string
+  ): Promise<void> {
     try {
-      // Convert text to Blob and FormData
-      const blob = new Blob([content], { type: "text/markdown" });
-      const formData = new FormData();
-      formData.append("file", blob, "business_rules.md");
+      if (!userId) {
+        throw new Error("User ID is required to update business rules");
+      }
 
-      // For FormData uploads, we need to use fetch directly
-      // as the centralized client doesn't handle FormData properly
-      const response = await fetch(API_ENDPOINTS.UPDATE_BUSINESS_RULES, {
-        method: "PUT",
-        body: formData,
+      // Get the user's current database
+      const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
+      const dbId = userCurrentDB.data.db_id;
+
+      // First, get the current config to preserve other fields
+      const currentConfigResponse = await apiClient.get<MSSQLConfigResponse>(
+        API_ENDPOINTS.GET_MSSQL_CONFIG(dbId)
+      );
+
+      console.log("Update Business Rules - Current config response:", currentConfigResponse);
+
+      if (
+        currentConfigResponse.status !== "success" ||
+        !currentConfigResponse.data
+      ) {
+        throw new Error("Failed to fetch current configuration");
+      }
+
+      const currentConfig = currentConfigResponse.data;
+
+      // Create form data for the update
+      const formData = new FormData();
+      formData.append("db_url", currentConfig.db_url);
+      formData.append("db_name", currentConfig.db_name);
+      formData.append("business_rule", content);
+
+      console.log("Update Business Rules - Sending form data:", {
+        db_url: currentConfig.db_url,
+        db_name: currentConfig.db_name,
+        business_rule: content
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to update business rules");
-      }
+      // Update the configuration
+      const response = await apiClient.put(
+        API_ENDPOINTS.UPDATE_MSSQL_CONFIG(dbId),
+        formData
+      );
 
-      const data = await response.json();
-      return { success: true, data, timestamp: new Date().toISOString() };
-    } catch (error) {
-      throw error;
+      console.log("Update Business Rules - Update response:", response);
+
+      // The response should be an MSSQLConfigResponse
+      if (response.status !== "success") {
+        throw new Error(
+          response.message || "Failed to update business rules"
+        );
+      }
+    } catch (error: any) {
+      console.error("Error updating business rules:", error);
+      if (error.response?.status === 404) {
+        throw new Error("Business rules configuration not found");
+      }
+      throw new Error(
+        error.response?.data?.message || "Failed to update business rules"
+      );
     }
-  },
+  }
 
   /**
-   * Download business rules file and trigger browser download
+   * Download business rules as a file
    */
-  async downloadBusinessRulesFileToDevice(): Promise<void> {
+  static async downloadBusinessRulesFileToDevice(userId?: string): Promise<void> {
     try {
-      const blob = await this.downloadBusinessRulesFile();
+      if (!userId) {
+        throw new Error("User ID is required to download business rules");
+      }
+
+      const businessRules = await this.getBusinessRules(userId);
+
+      if (!businessRules.trim()) {
+        throw new Error("No business rules to download");
+      }
+
+      // Create a blob with the business rules content
+      const blob = new Blob([businessRules], { type: "text/markdown" });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "business_rules.md";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+
+      // Create a temporary download link
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `business-rules-${
+        new Date().toISOString().split("T")[0]
+      }.md`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      console.error("Error downloading business rules file:", error);
+      throw new Error("Failed to download business rules file");
     }
-  },
-};
+  }
+
+  /**
+   * Get the database ID for a user
+   */
+  static async getDatabaseIdForUser(userId: string): Promise<number> {
+    try {
+      const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
+      return userCurrentDB.data.db_id;
+    } catch (error) {
+      console.error("Error fetching user's current database:", error);
+      throw new Error("Failed to get database ID for user");
+    }
+  }
+
+  /**
+   * Validate business rules content
+   */
+  static validateBusinessRules(content: string): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+
+    // Basic validation - you can extend this as needed
+    if (content.length > 50000) {
+      // 50KB limit
+      errors.push("Business rules content is too large (max 50KB)");
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+}
 
 export default BusinessRulesService;
