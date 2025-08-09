@@ -56,7 +56,10 @@ export function useParentCompanies(): UseParentCompaniesReturn {
 
     try {
       const response = await ParentCompanyService.getParentCompanies();
-      return response.data.companies;
+      // With the API client interceptor, response now contains just the data portion
+      // The response structure is: {companies: ParentCompanyData[], count: number}
+      console.log("Hook: Parent companies response:", response);
+      return (response as any).companies || null;
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to fetch parent companies";
       setError(errorMessage);
@@ -74,7 +77,9 @@ export function useParentCompanies(): UseParentCompaniesReturn {
 
     try {
       const response = await ParentCompanyService.getParentCompany(id);
-      return response.data;
+      // With the API client interceptor, response now contains just the data portion
+      // Cast to ParentCompanyData since the interceptor extracts the data
+      return (response as any) || null;
     } catch (err: any) {
       const errorMessage =
         err?.message || `Failed to fetch parent company ${id}`;

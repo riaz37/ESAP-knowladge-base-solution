@@ -101,13 +101,14 @@ export interface MSSQLConfigData {
   updated_at: string;
 }
 
-export interface MSSQLConfigResponse {
+// Full API response structure (what the API actually returns)
+export interface MSSQLConfigApiResponse {
   status: string;
   message: string;
   data: MSSQLConfigData;
 }
 
-export interface MSSQLConfigsListResponse {
+export interface MSSQLConfigsListApiResponse {
   status: string;
   message: string;
   data: {
@@ -115,6 +116,13 @@ export interface MSSQLConfigsListResponse {
     count: number;
   };
 }
+
+// Service response types (what services return after API client interceptor)
+export type MSSQLConfigResponse = MSSQLConfigData;
+export type MSSQLConfigsListResponse = {
+  configs: MSSQLConfigData[];
+  count: number;
+};
 
 // Parent Company Types
 export interface ParentCompanyCreateRequest {
@@ -136,13 +144,14 @@ export interface ParentCompanyData {
   updated_at: string;
 }
 
-export interface ParentCompanyResponse {
+// Full API response structure (what the API actually returns)
+export interface ParentCompanyApiResponse {
   status: string;
   message: string;
   data: ParentCompanyData;
 }
 
-export interface ParentCompaniesListResponse {
+export interface ParentCompaniesListApiResponse {
   status: string;
   message: string;
   data: {
@@ -150,6 +159,13 @@ export interface ParentCompaniesListResponse {
     count: number;
   };
 }
+
+// Service response types (what services return after API client interceptor)
+export type ParentCompanyResponse = ParentCompanyData;
+export type ParentCompaniesListResponse = {
+  companies: ParentCompanyData[];
+  count: number;
+};
 //Sub Company Types
 export interface SubCompanyCreateRequest {
   parent_company_id: number;
@@ -173,13 +189,14 @@ export interface SubCompanyData {
   parent_company_name?: string; // Only available in GET responses
 }
 
-export interface SubCompanyResponse {
+// Full API response structure (what the API actually returns)
+export interface SubCompanyApiResponse {
   status: string;
   message: string;
   data: SubCompanyData;
 }
 
-export interface SubCompaniesListResponse {
+export interface SubCompaniesListApiResponse {
   status: string;
   message: string;
   data: {
@@ -187,6 +204,13 @@ export interface SubCompaniesListResponse {
     count: number;
   };
 }
+
+// Service response types (what services return after API client interceptor)
+export type SubCompanyResponse = SubCompanyData;
+export type SubCompaniesListResponse = {
+  companies: SubCompanyData[];
+  count: number;
+};
 
 //User Access Management Types
 export interface DatabaseAccess {
@@ -224,7 +248,8 @@ export interface UserAccessData {
   parent_company_name?: string; // Only available in GET responses
 }
 
-export interface UserAccessCreateResponse {
+// Full API response structure (what the API actually returns)
+export interface UserAccessCreateApiResponse {
   status: string;
   message: string;
   data: {
@@ -235,7 +260,7 @@ export interface UserAccessCreateResponse {
   };
 }
 
-export interface UserAccessResponse {
+export interface UserAccessApiResponse {
   status: string;
   message: string;
   data: {
@@ -245,7 +270,7 @@ export interface UserAccessResponse {
   };
 }
 
-export interface UserAccessListResponse {
+export interface UserAccessListApiResponse {
   status: string;
   message: string;
   data: {
@@ -253,6 +278,25 @@ export interface UserAccessListResponse {
     count: number;
   };
 }
+
+// Service response types (what services return after API client interceptor)
+export type UserAccessCreateResponse = {
+  user_id: string;
+  parent_company_id: number;
+  sub_companies_count: number;
+  databases_count: number;
+};
+
+export type UserAccessResponse = {
+  user_id: string;
+  access_configs: UserAccessData[];
+  count: number;
+};
+
+export type UserAccessListResponse = {
+  access_configs: UserAccessData[];
+  count: number;
+};
 
 // User Configuration Types
 export interface DatabaseConfig {
@@ -282,7 +326,8 @@ export interface UserConfigData {
   updated_at: string;
 }
 
-export interface UserConfigCreateResponse {
+// Full API response structure (what the API actually returns)
+export interface UserConfigCreateApiResponse {
   status: string;
   message: string;
   data: {
@@ -294,13 +339,13 @@ export interface UserConfigCreateResponse {
   };
 }
 
-export interface UserConfigResponse {
+export interface UserConfigApiResponse {
   status: string;
   message: string;
   data: UserConfigData;
 }
 
-export interface UserConfigsListResponse {
+export interface UserConfigsListApiResponse {
   status: string;
   message: string;
   data: {
@@ -308,6 +353,22 @@ export interface UserConfigsListResponse {
     count: number;
   };
 }
+
+// Service response types (what services return after API client interceptor)
+export type UserConfigCreateResponse = {
+  config_id: number;
+  config_reused: boolean;
+  database_created: boolean;
+  database_name: string;
+  table_status: Record<string, any>;
+};
+
+export type UserConfigResponse = UserConfigData;
+
+export type UserConfigsListResponse = {
+  configs: UserConfigData[];
+  count: number;
+};
 
 // User Current Database Types
 export interface UserCurrentDBRequest {
@@ -324,11 +385,15 @@ export interface UserCurrentDBData {
   updated_at: string;
 }
 
-export interface UserCurrentDBResponse {
+// Full API response structure (what the API actually returns)
+export interface UserCurrentDBApiResponse {
   status: string;
   message: string;
   data: UserCurrentDBData;
 }
+
+// Service response types (what services return after API client interceptor)
+export type UserCurrentDBResponse = UserCurrentDBData;
 
 // Table Info Generation Types
 export interface GenerateTableInfoRequest {
@@ -342,11 +407,15 @@ export interface TaskData {
   user_id: string;
 }
 
-export interface GenerateTableInfoResponse {
+// Full API response structure (what the API actually returns)
+export interface GenerateTableInfoApiResponse {
   status: string;
   message: string;
   data: TaskData;
 }
+
+// Service response types (what services return after API client interceptor)
+export type GenerateTableInfoResponse = TaskData;
 
 export interface TaskStatusData {
   task_id: string;
@@ -360,11 +429,15 @@ export interface TaskStatusData {
   updated_at: string;
 }
 
-export interface TaskStatusResponse {
+// Full API response structure (what the API actually returns)
+export interface TaskStatusApiResponse {
   status: string;
   message: string;
   data: TaskStatusData;
 }
+
+// Service response types (what services return after API client interceptor)
+export type TaskStatusResponse = TaskStatusData;
 
 // Matched Tables Generation Types
 export interface GenerateMatchedTablesRequest {
@@ -393,7 +466,8 @@ export interface MatchedTablesData {
   unmatched_schema: any[];
 }
 
-export interface GenerateMatchedTablesResponse {
+// Full API response structure (what the API actually returns)
+export interface GenerateMatchedTablesApiResponse {
   status: string;
   message: string;
   data: {
@@ -402,4 +476,67 @@ export interface GenerateMatchedTablesResponse {
     matched_tables_data: MatchedTablesData;
     updated_config: MSSQLConfigData;
   };
+}
+
+// Service response types (what services return after API client interceptor)
+export type GenerateMatchedTablesResponse = {
+  db_id: number;
+  user_id: string;
+  matched_tables_data: MatchedTablesData;
+  updated_config: MSSQLConfigData;
+};
+
+// Table Info Types for React Flow Visualization
+export interface TableColumn {
+  name: string;
+  type: string;
+  is_primary: boolean;
+  is_foreign: boolean;
+  is_required: boolean;
+  max_length?: number;
+  references?: {
+    table: string;
+    column: string;
+    constraint: string;
+  };
+}
+
+export interface TableRelationship {
+  type: string;
+  via_column: string;
+  via_related: string;
+  related_table: string;
+}
+
+export interface TableInfo {
+  schema: string;
+  table_name: string;
+  full_name: string;
+  primary_keys: string[];
+  columns: TableColumn[];
+  relationships: TableRelationship[];
+  sample_data: Record<string, any>[];
+  row_count_sample: number;
+}
+
+export interface TableMetadata {
+  extraction_date: string;
+  total_tables: number;
+  processed_tables: number;
+  failed_tables: number;
+  sample_row_count: number;
+  database_url: string;
+}
+
+export interface UserCurrentDBTableData {
+  user_id: string;
+  db_id: number;
+  business_rule: string;
+  table_info: {
+    metadata: TableMetadata;
+    tables: TableInfo[];
+    unmatched_business_rules: string[];
+  };
+  created_at: string;
+  updated_at: string;
 }

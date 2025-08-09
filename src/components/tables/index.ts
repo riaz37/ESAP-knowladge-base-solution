@@ -1,4 +1,3 @@
-export { TablesManager } from './TablesManager';
-export { TableNode } from './TableNode';
-export { TablesSidebar } from './TablesSidebar';
-export { TableDetailsModal } from './TableDetailsModal';
+export { TablesManager } from "./TablesManager";
+export { TableFlowVisualization } from "./TableFlowVisualization";
+export { TableNode } from "./TableNode";

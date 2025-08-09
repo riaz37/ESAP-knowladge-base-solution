@@ -1,339 +1,397 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
-import {
-  ReactFlow,
-  Edge,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  addEdge,
-  Connection,
-  ConnectionMode,
-  Panel,
-} from "reactflow";
-import "reactflow/dist/style.css";
-
-import { TableNode } from "./TableNode";
-import { TablesSidebar } from "./TablesSidebar";
-import { TableDetailsModal } from "./TableDetailsModal";
-import { useMSSQLTableOperations } from "@/lib/hooks/use-mssql-table-operations";
-import { useUserCurrentDB } from "@/lib/hooks/use-user-current-db";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Layout } from "lucide-react";
-
-// Define nodeTypes outside component to prevent recreation on every render
-const nodeTypes = {
-  tableNode: TableNode,
-};
-
-
-
-interface TableData {
-  id: string;
-  name: string;
-  fullName: string;
-  schema: string;
-  primaryKeys: string[];
-  columns: Array<{
-    name: string;
-    type: string;
-    isPrimary: boolean;
-    isForeign: boolean;
-    isRequired: boolean;
-    maxLength?: number;
-    references?: {
-      table: string;
-      column: string;
-      constraint: string;
-    };
-  }>;
-  relationships: Array<{
-    type: string;
-    viaColumn: string;
-    viaRelated: string;
-    relatedTable: string;
-  }>;
-  sampleData?: Array<Record<string, any>>;
-  rowCount?: number;
-}
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, Database, Search, RefreshCw, Settings } from "lucide-react";
+import { TableFlowVisualization } from "./TableFlowVisualization";
+import { UserCurrentDBService } from "@/lib/api/services/user-current-db-service";
+import { UserCurrentDBTableData } from "@/types/api";
+import { DatabaseService } from "@/lib/api/services/database-service";
 
 export function TablesManager() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const {
-    currentDB,
-    isLoading: isLoadingDB,
-    getCurrentDB,
-  } = useUserCurrentDB();
-  const { generateTableInfo, isGeneratingTableInfo } =
-    useMSSQLTableOperations();
-
-  // Load current database on component mount
-  React.useEffect(() => {
-    // For demo purposes, we'll use a sample user ID
-    // In a real app, this would come from authentication context
-    getCurrentDB("nilab");
-  }, [getCurrentDB]);
-
-
-
-  // Convert database schema to table data
-  const tableData = useMemo(() => {
-    // Only use real database table_info
-    if (currentDB?.table_info?.tables) {
-      const tables: TableData[] = [];
-      const apiTables = currentDB.table_info.tables;
-
-      apiTables.forEach((apiTable: any) => {
-        const columns = apiTable.columns.map((col: any) => ({
-          name: col.name,
-          type: col.type,
-          isPrimary: col.is_primary || false,
-          isForeign: col.is_foreign || false,
-          isRequired: col.is_required || false,
-          maxLength: col.max_length,
-          references: col.references,
-        }));
-
-        tables.push({
-          id: apiTable.full_name,
-          name: apiTable.table_name,
-          fullName: apiTable.full_name,
-          schema: apiTable.schema,
-          primaryKeys: apiTable.primary_keys || [],
-          columns,
-          relationships: apiTable.relationships || [],
-          sampleData: apiTable.sample_data,
-          rowCount: apiTable.row_count_sample,
-        });
-      });
-
-      return tables;
-    }
-
-    // Return empty array if no API data
-    return [];
-  }, [currentDB]);
-
-  // Generate nodes from table data
-  const generateNodes = useCallback((tables: TableData[]) => {
-    const nodeSpacing = 300;
-    const nodesPerRow = Math.ceil(Math.sqrt(tables.length));
-
-    return tables.map((table, index) => {
-      const row = Math.floor(index / nodesPerRow);
-      const col = index % nodesPerRow;
-
-      return {
-        id: table.id,
-        type: "tableNode",
-        position: {
-          x: col * nodeSpacing,
-          y: row * nodeSpacing,
-        },
-        data: {
-          table,
-          onTableClick: (tableData: TableData) => {
-            setSelectedTable(tableData);
-            setIsModalOpen(true);
-          },
-        },
-      };
-    });
-  }, []);
-
-  // Generate edges from relationships
-  const generateEdges = useCallback((tables: TableData[]) => {
-    const edges: Edge[] = [];
-
-    tables.forEach((table) => {
-      table.relationships.forEach((rel, index) => {
-        // Find target table by name (not full name)
-        const targetTable = tables.find((t) => t.name === rel.relatedTable);
-        if (targetTable) {
-          edges.push({
-            id: `${table.id}-${targetTable.id}-${index}`,
-            source: table.id,
-            sourceHandle: "bottom",
-            target: targetTable.id,
-            targetHandle: "top",
-            type: "smoothstep",
-            animated: true,
-            label: `${rel.type}\n${rel.viaColumn} → ${rel.viaRelated}`,
-            style: {
-              stroke: "#10b981",
-              strokeWidth: 2,
-            },
-            labelStyle: {
-              fill: "#10b981",
-              fontWeight: 600,
-              fontSize: 10,
-            },
-          });
-        }
-      });
-    });
-
-    return edges;
-  }, []);
-
-  // Update nodes and edges when table data changes
-  React.useEffect(() => {
-    if (tableData.length > 0) {
-      const newNodes = generateNodes(tableData);
-      const newEdges = generateEdges(tableData);
-
-      setNodes(newNodes);
-      setEdges(newEdges);
-    }
-  }, [tableData, generateNodes, generateEdges, setNodes, setEdges]);
-
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+  const [tableData, setTableData] = useState<UserCurrentDBTableData | null>(
+    null
   );
+  const [loading, setLoading] = useState(false);
+  const [settingDB, setSettingDB] = useState(false);
+  const [generatingTables, setGeneratingTables] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [userId, setUserId] = useState("nilab"); // Default user ID
+  const [dbId, setDbId] = useState<number>(1); // Default database ID
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const handleRefreshTables = async () => {
-    if (!currentDB) return;
+  const setCurrentDatabase = async () => {
+    if (!userId.trim()) {
+      setError("Please enter a user ID");
+      return;
+    }
 
-    setIsLoading(true);
+    if (!dbId || dbId <= 0) {
+      setError("Please enter a valid database ID");
+      return;
+    }
+
+    setSettingDB(true);
+    setError(null);
+    setSuccess(null);
+
     try {
-      await generateTableInfo(currentDB.db_id, currentDB.user_id);
-      // The data will be refreshed through the useUserCurrentDB hook
-    } catch (error) {
-      console.error("Failed to refresh tables:", error);
+      await UserCurrentDBService.setUserCurrentDB(userId, { db_id: dbId });
+      setSuccess(`Successfully set database ID ${dbId} for user ${userId}`);
+      // Auto-fetch table data after setting the database
+      setTimeout(() => {
+        fetchTableData();
+      }, 1000);
+    } catch (err) {
+      console.error("Error setting current database:", err);
+      setError(
+        "Failed to set current database. Please check the user ID and database ID."
+      );
     } finally {
-      setIsLoading(false);
+      setSettingDB(false);
     }
   };
 
-  const handleAutoLayout = () => {
-    // Simple auto-layout algorithm
-    const newNodes = nodes.map((node, index) => {
-      const angle = (index / nodes.length) * 2 * Math.PI;
-      const radius = Math.max(200, nodes.length * 30);
+  const fetchTableData = async () => {
+    if (!userId.trim()) {
+      setError("Please enter a user ID");
+      return;
+    }
 
-      return {
-        ...node,
-        position: {
-          x: Math.cos(angle) * radius + 400,
-          y: Math.sin(angle) * radius + 300,
-        },
-      };
-    });
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
 
-    setNodes(newNodes);
+    try {
+      const response = await UserCurrentDBService.getUserCurrentDB(userId);
+
+      // Check if the response has table_info and try to parse it
+      if (response.table_info && typeof response.table_info === "object") {
+        let parsedTableInfo = null;
+
+        // If table_info has a 'schema' property with JSON string, parse it
+        if (
+          "schema" in response.table_info &&
+          typeof response.table_info.schema === "string"
+        ) {
+          try {
+            parsedTableInfo = JSON.parse(response.table_info.schema);
+          } catch (parseError) {
+            console.error(
+              "Failed to parse table_info.schema JSON:",
+              parseError
+            );
+          }
+        }
+        // If table_info already has the expected structure
+        else if (
+          "tables" in response.table_info &&
+          Array.isArray(response.table_info.tables)
+        ) {
+          parsedTableInfo = response.table_info;
+        }
+
+        if (
+          parsedTableInfo &&
+          parsedTableInfo.tables &&
+          Array.isArray(parsedTableInfo.tables)
+        ) {
+          // Create the properly structured data
+          const structuredData: UserCurrentDBTableData = {
+            ...response,
+            table_info: parsedTableInfo,
+          };
+          setTableData(structuredData);
+        } else {
+          console.warn(
+            "Table info not in expected format:",
+            response.table_info
+          );
+          setError(
+            "Table information is not available or in an unexpected format. Please generate table info first."
+          );
+          setTableData(null);
+        }
+      } else {
+        console.warn("No table_info found in response:", response);
+        setError(
+          "Table information is not available. Please generate table info first."
+        );
+        setTableData(null);
+      }
+
+      // Update the dbId state with the current database ID
+      setDbId(response.db_id);
+    } catch (err) {
+      console.error("Error fetching table data:", err);
+      setError(
+        "Failed to fetch table data. Please check the user ID and try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (isLoadingDB) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-slate-900 pt-20">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-4" />
-          <p className="text-gray-300">Loading database schema...</p>
-        </div>
-      </div>
-    );
-  }
+  const generateTableInfo = async () => {
+    if (!userId.trim()) {
+      setError("Please enter a user ID");
+      return;
+    }
+
+    setGeneratingTables(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // For now, let's just reload the database to refresh table info
+      const response = await DatabaseService.reloadDatabase();
+      setSuccess(
+        `Database reloaded successfully. Please try loading tables again.`
+      );
+
+      // Auto-fetch table data after reloading
+      setTimeout(() => {
+        fetchTableData();
+      }, 2000);
+    } catch (err) {
+      console.error("Error reloading database:", err);
+      setError("Failed to reload database. Please try again.");
+    } finally {
+      setGeneratingTables(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userId) {
+      fetchTableData();
+    }
+  }, []);
+
+  const filteredTables =
+    tableData?.table_info?.tables?.filter(
+      (table) =>
+        table.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        table.table_name.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
 
   return (
-    <div className="flex h-screen bg-slate-900 pt-20">
-      {/* Sidebar */}
-      <TablesSidebar
-        tables={tableData}
-        onTableSelect={(table) => {
-          setSelectedTable(table);
-          setIsModalOpen(true);
-        }}
-        currentDB={currentDB}
-      />
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Database Tables</h1>
+          <p className="text-slate-400 mt-2">
+            Visualize table relationships and structure
+          </p>
+        </div>
+      </div>
 
-      {/* Main Flow Area */}
-      <div className="flex-1 relative">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          connectionMode={ConnectionMode.Loose}
-          fitView
-          className="bg-slate-900"
-        >
-          <Background color="#1e293b" gap={20} />
-          <Controls className="bg-slate-800 border-slate-700" />
+      {/* Error Alert */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-          {/* Top Panel with Controls */}
-          <Panel position="top-right" className="flex gap-2">
-            <Button
-              onClick={handleRefreshTables}
-              disabled={isLoading || isGeneratingTableInfo}
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700"
-            >
-              <RefreshCw
-                className={`w-4 h-4 mr-2 ${
-                  isLoading || isGeneratingTableInfo ? "animate-spin" : ""
-                }`}
+      {/* Success Alert */}
+      {success && (
+        <Alert className="border-emerald-500/50 bg-emerald-500/10">
+          <AlertDescription className="text-emerald-400">
+            {success}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Database Configuration */}
+      <Card className="bg-slate-800/50 border-slate-700">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-white">
+            <Settings className="h-5 w-5" />
+            Database Configuration
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-slate-400 whitespace-nowrap">
+                User ID:
+              </label>
+              <Input
+                placeholder="Enter User ID"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                className="w-40"
               />
-              Refresh
-            </Button>
-
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-slate-400 whitespace-nowrap">
+                Database ID:
+              </label>
+              <Input
+                type="number"
+                placeholder="Enter DB ID"
+                value={dbId}
+                onChange={(e) => setDbId(parseInt(e.target.value) || 1)}
+                className="w-32"
+                min="1"
+              />
+            </div>
             <Button
-              onClick={handleAutoLayout}
-              size="sm"
+              onClick={setCurrentDatabase}
+              disabled={settingDB}
               variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-800"
             >
-              <Layout className="w-4 h-4 mr-2" />
-              Auto Layout
+              {settingDB ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Settings className="h-4 w-4" />
+              )}
+              Set Database
             </Button>
-          </Panel>
+            <Button onClick={fetchTableData} disabled={loading}>
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Load Tables
+            </Button>
+            <Button
+              onClick={generateTableInfo}
+              disabled={generatingTables}
+              variant="secondary"
+            >
+              {generatingTables ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4" />
+              )}
+              Reload Database
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-          {/* Info Panel */}
-          <Panel position="top-left">
-            <div className="bg-slate-800/90 backdrop-blur-sm rounded-lg p-4 border border-slate-700">
-              <h3 className="text-emerald-400 font-semibold mb-2">
-                Database Schema
-              </h3>
-              <div className="text-sm text-gray-300 space-y-1">
-                <p>
-                  Database ID:{" "}
-                  <span className="text-emerald-400">
-                    {currentDB?.db_id || "Not selected"}
-                  </span>
+      {/* Database Info */}
+      {tableData && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Database className="h-5 w-5" />
+              Database Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-slate-400">Database ID</p>
+                <p className="text-white font-medium">{tableData.db_id}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Total Tables</p>
+                <p className="text-white font-medium">
+                  {tableData.table_info?.metadata?.total_tables || 0}
                 </p>
-                <p>
-                  Tables:{" "}
-                  <span className="text-emerald-400">{tableData.length}</span>
-                </p>
-                <p>
-                  Relationships:{" "}
-                  <span className="text-emerald-400">{edges.length}</span>
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Processed Tables</p>
+                <p className="text-white font-medium">
+                  {tableData.table_info?.metadata?.processed_tables || 0}
                 </p>
               </div>
             </div>
-          </Panel>
-        </ReactFlow>
-      </div>
 
-      {/* Table Details Modal */}
-      {selectedTable && (
-        <TableDetailsModal
-          table={selectedTable}
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedTable(null);
-          }}
-        />
+            {tableData.table_info?.unmatched_business_rules?.length > 0 && (
+              <div>
+                <p className="text-sm text-slate-400 mb-2">
+                  Unmatched Business Rules
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {tableData.table_info.unmatched_business_rules.map(
+                    (rule, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="bg-yellow-900/20 text-yellow-400"
+                      >
+                        {rule}
+                      </Badge>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Search */}
+      {tableData && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="pt-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search tables..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Table Flow Visualization */}
+      {tableData && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardHeader>
+            <CardTitle className="text-white">Table Relationships</CardTitle>
+            <p className="text-slate-400 text-sm">
+              Interactive visualization of table relationships and structure
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[600px] w-full">
+              <TableFlowVisualization rawData={tableData} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No Data State */}
+      {!loading && !tableData && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="text-center py-12">
+            <Database className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">
+              No Table Data
+            </h3>
+            <p className="text-slate-400 mb-4">
+              Enter a user ID and click Load to fetch table information
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No Results State */}
+      {tableData && filteredTables.length === 0 && searchTerm && (
+        <Card className="bg-slate-800/50 border-slate-700">
+          <CardContent className="text-center py-12">
+            <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">
+              No Tables Found
+            </h3>
+            <p className="text-slate-400">
+              No tables match your search criteria: "{searchTerm}"
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

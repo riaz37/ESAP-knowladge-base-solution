@@ -56,7 +56,10 @@ export function useSubCompanies(): UseSubCompaniesReturn {
 
     try {
       const response = await SubCompanyService.getSubCompanies();
-      return response.data.companies;
+      // With the API client interceptor, response now contains just the data portion
+      // The response structure is: {companies: SubCompanyData[], count: number}
+      console.log("Hook: Sub companies response:", response);
+      return (response as any).companies || null;
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to fetch sub companies";
       setError(errorMessage);
@@ -72,7 +75,8 @@ export function useSubCompanies(): UseSubCompaniesReturn {
 
     try {
       const response = await SubCompanyService.getSubCompany(id);
-      return response.data;
+      // With the API client interceptor, response now contains just the data portion
+      return (response as any) || null;
     } catch (err: any) {
       const errorMessage = err?.message || `Failed to fetch sub company ${id}`;
       setError(errorMessage);

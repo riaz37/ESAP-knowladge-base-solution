@@ -42,7 +42,8 @@ export function useUserAccess(): UseUserAccessReturn {
       setSuccess(true);
       return response;
     } catch (err: any) {
-      const errorMessage = err?.message || "Failed to create user access configuration";
+      const errorMessage =
+        err?.message || "Failed to create user access configuration";
       setError(errorMessage);
       return null;
     } finally {
@@ -56,9 +57,13 @@ export function useUserAccess(): UseUserAccessReturn {
 
     try {
       const response = await UserAccessService.getUserAccessConfigs();
-      return response.data.access_configs;
+      // With the API client interceptor, response now contains just the data portion
+      // The response structure is: {access_configs: UserAccessData[], count: number}
+      return (response as any).access_configs || null;
     } catch (err: any) {
-      const errorMessage = err?.message || "Failed to fetch user access configurations";
+      console.error("Hook: Error in getUserAccessConfigs:", err);
+      const errorMessage =
+        err?.message || "Failed to fetch user access configurations";
       setError(errorMessage);
       return null;
     } finally {
@@ -66,15 +71,20 @@ export function useUserAccess(): UseUserAccessReturn {
     }
   };
 
-  const getUserAccess = async (userId: string): Promise<UserAccessData[] | null> => {
+  const getUserAccess = async (
+    userId: string
+  ): Promise<UserAccessData[] | null> => {
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await UserAccessService.getUserAccess(userId);
-      return response.data.access_configs;
+      // With the API client interceptor, response now contains just the data portion
+      // The response structure is: {user_id: string, access_configs: UserAccessData[], count: number}
+      return (response as any).access_configs || null;
     } catch (err: any) {
-      const errorMessage = err?.message || `Failed to fetch access for user ${userId}`;
+      const errorMessage =
+        err?.message || `Failed to fetch access for user ${userId}`;
       setError(errorMessage);
       return null;
     } finally {

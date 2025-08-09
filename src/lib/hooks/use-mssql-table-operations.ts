@@ -121,7 +121,8 @@ export function useMSSQLTableOperations() {
 
         onUpdate?.(statusResponse);
 
-        const { status } = statusResponse.data;
+        // With API client interceptor, statusResponse now contains just the data portion
+        const { status } = statusResponse as any;
 
         if (status === "completed" || status === "failed") {
           return statusResponse;

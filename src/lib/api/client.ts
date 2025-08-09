@@ -392,5 +392,28 @@ export class ApiClient {
 // Create and export default API client instance
 export const apiClient = new ApiClient(baseUrl);
 
+// Add a response interceptor to ensure consistent data structure
+apiClient.addResponseInterceptor((response: any) => {
+  // Debug logging to understand response structure
+  if (process.env.NODE_ENV === 'development') {
+    console.log('API Client - Raw response:', response);
+  }
+  
+  // If the response has the expected API structure {status, message, data}
+  // return just the data portion for consistency
+  if (response && typeof response === 'object' && response.data !== undefined) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('API Client - Extracting data portion:', response.data);
+    }
+    return response.data;
+  }
+  
+  // Otherwise return the response as-is
+  if (process.env.NODE_ENV === 'development') {
+    console.log('API Client - Returning response as-is:', response);
+  }
+  return response;
+});
+
 // Export default instance
 export default apiClient;

@@ -27,12 +27,12 @@ export function useSmartFileUpload() {
       const response = await FileService.uploadFiles(files);
       console.log('Upload response:', response);
       
-      // Add safety checks for response structure
-      if (!response || !response.data) {
+      // With API client interceptor, response now contains just the data portion
+      if (!response) {
         throw new Error('Invalid response from upload service');
       }
       
-      const data = response.data;
+      const data = response as any;
       console.log('Upload data:', data);
       
       // Check if bundle_id exists

@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Plus,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Shield,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,124 +19,105 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AddUserModal } from "./AddUserModal";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  department: string;
-  status: string;
-  lastActive: string;
-}
-
-// Mock data for demonstration
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@company.com",
-    role: "Admin",
-    department: "IT",
-    status: "Active",
-    lastActive: "2 hours ago",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@company.com",
-    role: "User",
-    department: "HR",
-    status: "Active",
-    lastActive: "1 day ago",
-  },
-  {
-    id: "3",
-    name: "Mike Johnson",
-    email: "mike.johnson@company.com",
-    role: "Manager",
-    department: "Sales",
-    status: "Active",
-    lastActive: "3 hours ago",
-  },
-  {
-    id: "4",
-    name: "Sarah Wilson",
-    email: "sarah.wilson@company.com",
-    role: "User",
-    department: "Marketing",
-    status: "Inactive",
-    lastActive: "1 week ago",
-  },
-  {
-    id: "5",
-    name: "David Brown",
-    email: "david.brown@company.com",
-    role: "Admin",
-    department: "IT",
-    status: "Active",
-    lastActive: "30 minutes ago",
-  },
-  {
-    id: "6",
-    name: "Lisa Davis",
-    email: "lisa.davis@company.com",
-    role: "User",
-    department: "Finance",
-    status: "Active",
-    lastActive: "5 hours ago",
-  },
-  {
-    id: "7",
-    name: "Tom Anderson",
-    email: "tom.anderson@company.com",
-    role: "Manager",
-    department: "Operations",
-    status: "Active",
-    lastActive: "2 days ago",
-  },
-  {
-    id: "8",
-    name: "Emily Taylor",
-    email: "emily.taylor@company.com",
-    role: "User",
-    department: "HR",
-    status: "Active",
-    lastActive: "1 hour ago",
-  },
-];
+import { Badge } from "@/components/ui/badge";
+import { UserAccessModal } from "./UserAccessModal";
+import { useUserAccess } from "@/lib/hooks/use-user-access";
+import { UserAccessData } from "@/types/api";
 
 export function UsersManager() {
-  const [users, setUsers] = useState<User[]>(mockUsers);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isUserAccessModalOpen, setIsUserAccessModalOpen] = useState(false);
+  const [selectedUserForAccess, setSelectedUserForAccess] =
+    useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [userAccessConfigs, setUserAccessConfigs] = useState<UserAccessData[]>(
+    []
+  );
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Filter users based on search term
-  const filteredUsers = useMemo(() => {
-    return users.filter(
-      (user) =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.department.toLowerCase().includes(searchTerm.toLowerCase())
+  const { getUserAccessConfigs } = useUserAccess();
+
+  useEffect(() => {
+    loadUserAccessConfigs();
+  }, []);
+
+  const loadUserAccessConfigs = async () => {
+    setIsLoading(true);
+    try {
+      const configs = await getUserAccessConfigs();
+      if (configs) {
+        setUserAccessConfigs(configs);
+      }
+    } catch (error) {
+      console.error("Error loading user access configs:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateAccess = () => {
+    setSelectedUserForAccess("");
+    setIsUserAccessModalOpen(true);
+  };
+
+  const handleEditAccess = (userEmail: string) => {
+    setSelectedUserForAccess(userEmail);
+    setIsUserAccessModalOpen(true);
+  };
+
+  const handleAccessSuccess = () => {
+    loadUserAccessConfigs();
+  };
+
+  const extractNameFromEmail = (email: string): string => {
+    const localPart = email.split("@")[0];
+    return localPart
+      .split(/[._-]/)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  const getAccessSummary = (config: UserAccessData): string => {
+    const parentDbCount = config.database_access?.parent_databases?.length || 0;
+    const subDbCount =
+      config.database_access?.sub_databases?.reduce(
+        (total, subDb) => total + (subDb.databases?.length || 0),
+        0
+      ) || 0;
+    const totalDbs = parentDbCount + subDbCount;
+    return `${totalDbs} database${totalDbs !== 1 ? "s" : ""}, ${
+      config.sub_company_ids?.length || 0
+    } sub-companies`;
+  };
+
+  // Filter user access configs based on search term
+  const filteredConfigs = useMemo(() => {
+    return userAccessConfigs.filter(
+      (config) =>
+        config.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        extractNameFromEmail(config.user_id)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (config.parent_company_name &&
+          config.parent_company_name
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()))
     );
-  }, [users, searchTerm]);
+  }, [userAccessConfigs, searchTerm]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
+  const totalPages = Math.ceil(filteredConfigs.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
-  const paginatedUsers = filteredUsers.slice(
+  const paginatedConfigs = filteredConfigs.slice(
     startIndex,
     startIndex + rowsPerPage
   );
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedUsers(paginatedUsers.map((user) => user.id));
+      setSelectedUsers(paginatedConfigs.map((config) => config.user_id));
     } else {
       setSelectedUsers([]);
     }
@@ -148,24 +131,11 @@ export function UsersManager() {
     }
   };
 
-  const handleAddUser = (userData: { name: string; role: string }) => {
-    const newUser: User = {
-      id: (users.length + 1).toString(),
-      name: userData.name,
-      email: `${userData.name.toLowerCase().replace(" ", ".")}@company.com`,
-      role: userData.role,
-      department: "General",
-      status: "Active",
-      lastActive: "Just now",
-    };
-    setUsers((prev) => [...prev, newUser]);
-    setIsAddUserModalOpen(false);
-  };
-
   const isAllSelected =
-    paginatedUsers.length > 0 && selectedUsers.length === paginatedUsers.length;
+    paginatedConfigs.length > 0 &&
+    selectedUsers.length === paginatedConfigs.length;
   const isIndeterminate =
-    selectedUsers.length > 0 && selectedUsers.length < paginatedUsers.length;
+    selectedUsers.length > 0 && selectedUsers.length < paginatedConfigs.length;
 
   return (
     <div className="w-full min-h-screen pt-24">
@@ -173,7 +143,12 @@ export function UsersManager() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-white mb-2">User</h1>
+            <h1 className="text-2xl font-bold text-white mb-2">
+              User Access Management
+            </h1>
+            <p className="text-gray-400">
+              Manage database access permissions for users
+            </p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -181,7 +156,7 @@ export function UsersManager() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search..."
+                placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 w-64 bg-slate-800 border-slate-600 text-white placeholder-gray-400"
@@ -191,25 +166,11 @@ export function UsersManager() {
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
-                size="sm"
-                className="border-emerald-500 text-emerald-400 hover:bg-emerald-500/10"
-              >
-                Import
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-emerald-500 text-emerald-400 hover:bg-emerald-500/10"
-              >
-                Export
-              </Button>
-              <Button
-                onClick={() => setIsAddUserModalOpen(true)}
+                onClick={handleCreateAccess}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" />
-                Add
+                Create Access
               </Button>
             </div>
           </div>
@@ -233,68 +194,149 @@ export function UsersManager() {
                         onChange={(e) => handleSelectAll(e.target.checked)}
                         className="rounded border-gray-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500"
                       />
-                      <span>TABLE HEADER</span>
+                      <span>User</span>
                       <ChevronDown className="w-4 h-4" />
                     </div>
                   </th>
                   <th className="text-left p-4 text-gray-300 font-medium">
                     <div className="flex items-center gap-2">
-                      TABLE HEADER
+                      Parent Company
                       <ChevronDown className="w-4 h-4" />
                     </div>
                   </th>
                   <th className="text-left p-4 text-gray-300 font-medium">
                     <div className="flex items-center gap-2">
-                      TABLE HEADER
+                      Access Summary
                       <ChevronDown className="w-4 h-4" />
                     </div>
                   </th>
                   <th className="text-left p-4 text-gray-300 font-medium">
                     <div className="flex items-center gap-2">
-                      TABLE HEADER
+                      Created
                       <ChevronDown className="w-4 h-4" />
                     </div>
                   </th>
                   <th className="text-left p-4 text-gray-300 font-medium">
                     <div className="flex items-center gap-2">
-                      TABLE HEADER
+                      Updated
                       <ChevronDown className="w-4 h-4" />
                     </div>
                   </th>
                   <th className="text-left p-4 text-gray-300 font-medium">
-                    <div className="flex items-center gap-2">
-                      TABLE HEADER
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
+                    Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {paginatedUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="border-b border-slate-700 hover:bg-slate-700/30"
-                  >
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.includes(user.id)}
-                          onChange={(e) =>
-                            handleSelectUser(user.id, e.target.checked)
-                          }
-                          className="rounded border-gray-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500"
-                        />
-                        <span className="text-gray-300">Table Data</span>
-                      </div>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-gray-400">
+                      Loading user access configurations...
                     </td>
-                    <td className="p-4 text-gray-300">Table Data</td>
-                    <td className="p-4 text-gray-300">Table Data</td>
-                    <td className="p-4 text-gray-300">Table Data</td>
-                    <td className="p-4 text-gray-300">Table Data</td>
-                    <td className="p-4 text-gray-300">Table Data</td>
                   </tr>
-                ))}
+                ) : paginatedConfigs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-gray-400">
+                      {searchTerm
+                        ? "No user access configurations found matching your search."
+                        : "No user access configurations found. Create one to get started."}
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedConfigs.map((config) => (
+                    <tr
+                      key={config.user_id}
+                      className="border-b border-slate-700 hover:bg-slate-700/30"
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.includes(config.user_id)}
+                            onChange={(e) =>
+                              handleSelectUser(config.user_id, e.target.checked)
+                            }
+                            className="rounded border-gray-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500"
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-white font-medium">
+                              {extractNameFromEmail(config.user_id)}
+                            </span>
+                            <span className="text-gray-400 text-sm">
+                              {config.user_id}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col">
+                          <span className="text-gray-300">
+                            {config.parent_company_name ||
+                              `Company ${config.parent_company_id}`}
+                          </span>
+                          <span className="text-gray-500 text-sm">
+                            ID: {config.parent_company_id}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-gray-300 text-sm">
+                            {getAccessSummary(config)}
+                          </span>
+                          <div className="flex gap-1">
+                            <Badge
+                              variant="secondary"
+                              className="bg-blue-600/20 text-blue-400 text-xs"
+                            >
+                              {config.database_access?.parent_databases
+                                ?.length || 0}{" "}
+                              parent DBs
+                            </Badge>
+                            <Badge
+                              variant="secondary"
+                              className="bg-purple-600/20 text-purple-400 text-xs"
+                            >
+                              {config.database_access?.sub_databases?.length ||
+                                0}{" "}
+                              sub DBs
+                            </Badge>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-gray-400 text-sm">
+                          {new Date(config.created_at).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-gray-400 text-sm">
+                          {new Date(config.updated_at).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditAccess(config.user_id)}
+                            className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+                          >
+                            <Shield className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -302,7 +344,7 @@ export function UsersManager() {
           {/* Footer */}
           <div className="flex items-center justify-between p-4 bg-slate-700/30 border-t border-slate-600">
             <div className="text-sm text-gray-400">
-              {selectedUsers.length} of {filteredUsers.length} Row(s) Selected
+              {selectedUsers.length} of {filteredConfigs.length} Row(s) Selected
             </div>
 
             <div className="flex items-center gap-4">
@@ -381,11 +423,12 @@ export function UsersManager() {
           </div>
         </div>
 
-        {/* Add User Modal */}
-        <AddUserModal
-          isOpen={isAddUserModalOpen}
-          onClose={() => setIsAddUserModalOpen(false)}
-          onAddUser={handleAddUser}
+        {/* User Access Modal */}
+        <UserAccessModal
+          isOpen={isUserAccessModalOpen}
+          onClose={() => setIsUserAccessModalOpen(false)}
+          userId={selectedUserForAccess}
+          onSuccess={handleAccessSuccess}
         />
       </div>
     </div>

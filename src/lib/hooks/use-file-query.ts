@@ -22,7 +22,8 @@ export function useFileQuery() {
     try {
       const result = await QueryService.search(params);
       setRawResponse(result);
-      setResponse(result.data.answer);
+      // With API client interceptor, result now contains just the data portion
+      setResponse((result as any).answer || result);
     } catch (err: any) {
       setError(err.message || "Failed to process query");
     } finally {

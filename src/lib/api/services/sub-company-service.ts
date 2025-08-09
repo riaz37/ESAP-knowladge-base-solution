@@ -21,7 +21,8 @@ export class SubCompanyService {
         API_ENDPOINTS.CREATE_SUB_COMPANY,
         company
       );
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error("Error creating sub company:", error);
       throw error;
@@ -34,7 +35,8 @@ export class SubCompanyService {
   static async getSubCompanies(): Promise<SubCompaniesListResponse> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_SUB_COMPANIES);
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error("Error fetching sub companies:", error);
       throw error;
@@ -47,7 +49,8 @@ export class SubCompanyService {
   static async getSubCompany(id: number): Promise<SubCompanyResponse> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_SUB_COMPANY(id));
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error(`Error fetching sub company ${id}:`, error);
       throw error;

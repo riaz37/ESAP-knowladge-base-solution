@@ -65,7 +65,9 @@ export const useUserConfig = (): UseUserConfigReturn => {
 
     try {
       const response = await UserConfigService.getUserConfigs();
-      setUserConfigs(response.data.configs);
+      // With API client interceptor, response now contains just the data portion
+      // The response structure is: {configs: UserConfigData[], count: number}
+      setUserConfigs((response as any).configs || []);
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to fetch user configurations";
       setError(errorMessage);
@@ -84,7 +86,8 @@ export const useUserConfig = (): UseUserConfigReturn => {
 
     try {
       const response = await UserConfigService.getUserConfig(userId);
-      setCurrentUserConfig(response.data);
+      // With API client interceptor, response now contains just the data portion
+      setCurrentUserConfig(response || null);
     } catch (err: any) {
       const errorMessage = err?.message || "Failed to fetch user configuration";
       setError(errorMessage);

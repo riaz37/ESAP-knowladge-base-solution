@@ -97,9 +97,9 @@ export function useMSSQLConfig(): UseMSSQLConfigReturn {
       // Check if response has the expected structure
       let configsData: MSSQLConfigData[];
       
-      if (response.data && response.data.configs) {
-        // If response has nested data.configs structure
-        configsData = response.data.configs;
+      // With API client interceptor, response now contains just the data portion
+      if (response.configs && Array.isArray(response.configs)) {
+        configsData = response.configs;
       } else if (Array.isArray(response)) {
         // If response is directly an array of configs
         configsData = response;
@@ -141,7 +141,8 @@ export function useMSSQLConfig(): UseMSSQLConfigReturn {
 
     try {
       const response = await MSSQLConfigService.getMSSQLConfig(id);
-      return response.data;
+      // With the API client interceptor, response now contains just the data portion
+      return response || null;
     } catch (err: any) {
       const errorMessage = err?.message || `Failed to fetch MSSQL configuration ${id}`;
       setError(errorMessage);

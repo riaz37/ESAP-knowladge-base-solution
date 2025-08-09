@@ -41,12 +41,9 @@ export function useUserCurrentDB(): UseUserCurrentDBReturn {
 
       try {
         const response = await UserCurrentDBService.setUserCurrentDB(userId, request);
-        
-        if (response.status === "success") {
-          setCurrentDBState(response.data);
-        } else {
-          setError(response.message || "Failed to set current database");
-        }
+        // With API client interceptor, response now contains just the data portion
+        // Cast to UserCurrentDBData since the interceptor extracts the data
+        setCurrentDBState((response as any) || null);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
         setError(errorMessage);
@@ -64,12 +61,9 @@ export function useUserCurrentDB(): UseUserCurrentDBReturn {
 
     try {
       const response = await UserCurrentDBService.getUserCurrentDB(userId);
-      
-      if (response.status === "success") {
-        setCurrentDBState(response.data);
-      } else {
-        setError(response.message || "Failed to fetch current database");
-      }
+      // With API client interceptor, response now contains just the data portion
+      // Cast to UserCurrentDBData since the interceptor extracts the data
+      setCurrentDBState((response as any) || null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
       setError(errorMessage);
