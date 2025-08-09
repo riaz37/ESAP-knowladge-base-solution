@@ -22,7 +22,8 @@ export class UserAccessService {
         API_ENDPOINTS.CREATE_USER_ACCESS,
         accessConfig
       );
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error("Error creating user access:", error);
       throw error;
@@ -35,7 +36,8 @@ export class UserAccessService {
   static async getUserAccessConfigs(): Promise<UserAccessListResponse> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_USER_ACCESS_CONFIGS);
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error("Error fetching user access configurations:", error);
       throw error;
@@ -48,7 +50,8 @@ export class UserAccessService {
   static async getUserAccess(userId: string): Promise<UserAccessResponse> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_USER_ACCESS(userId));
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error(`Error fetching user access for ${userId}:`, error);
       throw error;
@@ -64,14 +67,9 @@ export class UserAccessService {
   } {
     const errors: string[] = [];
 
-    // Validate user_id (should be email format)
+    // Validate user_id
     if (!config.user_id || config.user_id.trim() === "") {
       errors.push("User ID is required");
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(config.user_id)) {
-        errors.push("User ID should be a valid email address");
-      }
     }
 
     // Validate parent company ID

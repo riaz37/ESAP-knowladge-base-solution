@@ -32,8 +32,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { MSSQLConfigService } from "@/lib/api/services/mssql-config-service";
-import { UserConfigService } from "@/lib/api/services/user-config-service";
+import { useMSSQLConfig } from "@/lib/hooks/use-mssql-config";
+import { useUserConfig } from "@/lib/hooks/use-user-config";
 import {
   MSSQLConfigData,
   UserConfigData,
@@ -71,6 +71,20 @@ export function CompanyCreationModal({
   type,
   parentCompanyId,
 }: CompanyCreationModalProps) {
+  // Use hooks for consistent API calls
+  const { 
+    getMSSQLConfigs, 
+    createMSSQLConfig, 
+    createMSSQLConfigWithFile,
+    isLoading: mssqlLoading 
+  } = useMSSQLConfig();
+  
+  const { 
+    getUserConfigs, 
+    createUserConfig, 
+    isLoading: userConfigLoading 
+  } = useUserConfig();
+
   // Form states
   const [companyName, setCompanyName] = useState("");
   const [description, setDescription] = useState("");
@@ -80,9 +94,8 @@ export function CompanyCreationModal({
 
   // Database states
   const [databases, setDatabases] = useState<MSSQLConfigData[]>([]);
-  const [loadingDatabases, setLoadingDatabases] = useState(false);
-  const [creatingDatabase, setCreatingDatabase] = useState(false);
   const [creatingCompany, setCreatingCompany] = useState(false);
+  const [creatingDatabase, setCreatingDatabase] = useState(false);
 
   // New database form states
   const [newDbUrl, setNewDbUrl] = useState("");
@@ -121,64 +134,35 @@ export function CompanyCreationModal({
   }, [isOpen]);
 
   const loadDatabases = async () => {
-    setLoadingDatabases(true);
     try {
-      const response = await MSSQLConfigService.getMSSQLConfigs();
-      console.log("Database loading response:", response);
+      const configs = await getMSSQLConfigs();
+      console.log("Database loading response:", configs);
 
-      // The service returns response.data, which could be either:
-      // 1. { configs: MSSQLConfigData[], count: number } (if service extracts .data)
-      // 2. { status, message, data: { configs: MSSQLConfigData[], count: number } } (full response)
-      let configs: MSSQLConfigData[];
-
-      if (
-        response.data &&
-        response.data.configs &&
-        Array.isArray(response.data.configs)
-      ) {
-        // Case 1: Full wrapped response
-        configs = response.data.configs;
-      } else if (response.configs && Array.isArray(response.configs)) {
-        // Case 2: Direct data object
-        configs = response.configs;
+      if (configs && Array.isArray(configs)) {
+        setDatabases(configs);
       } else {
-        console.error("Invalid response structure:", response);
-        throw new Error("No database configurations found in response");
+        console.error("Invalid response structure:", configs);
+        setDatabases([]);
       }
-
-      console.log("Extracted configs:", configs);
-      setDatabases(configs);
     } catch (error) {
       console.error("Error loading databases:", error);
       toast.error("Failed to load databases");
       setDatabases([]); // Set empty array as fallback
-    } finally {
-      setLoadingDatabases(false);
     }
   };
 
   const loadUserConfigs = async () => {
     setLoadingUserConfigs(true);
     try {
-      const response = await UserConfigService.getUserConfigs();
-      console.log("User configs loading response:", response);
+      const configs = await getUserConfigs();
+      console.log("User configs loading response:", configs);
 
-      let configs: UserConfigData[];
-      if (
-        response.data &&
-        response.data.configs &&
-        Array.isArray(response.data.configs)
-      ) {
-        configs = response.data.configs;
-      } else if (response.configs && Array.isArray(response.configs)) {
-        configs = response.configs;
+      if (configs && Array.isArray(configs)) {
+        setUserConfigs(configs);
       } else {
-        console.error("Invalid user config response structure:", response);
-        throw new Error("No user configurations found in response");
+        console.error("Invalid user config response structure:", configs);
+        setUserConfigs([]);
       }
-
-      console.log("Extracted user configs:", configs);
-      setUserConfigs(configs);
     } catch (error) {
       console.error("Error loading user configs:", error);
       toast.error("Failed to load user configurations");
@@ -205,16 +189,16 @@ export function CompanyCreationModal({
 
       let response;
 
-      // Use file upload API if file is selected, otherwise use regular API
+      // Use hooks for consistent API calls
       if (selectedFile) {
-        response = await MSSQLConfigService.createMSSQLConfigWithFile({
+        response = await createMSSQLConfigWithFile({
           db_url: newDbUrl,
           db_name: newDbName,
           business_rule: newDbBusinessRule || undefined,
           file: selectedFile,
         });
       } else {
-        response = await MSSQLConfigService.createMSSQLConfig({
+        response = await createMSSQLConfig({
           db_url: newDbUrl,
           db_name: newDbName,
           business_rule: newDbBusinessRule || undefined,
@@ -223,16 +207,10 @@ export function CompanyCreationModal({
 
       console.log("Database creation response:", response);
 
-      // The service returns response.data, which could be either:
-      // 1. MSSQLConfigData directly (if service extracts .data)
-      // 2. MSSQLConfigResponse with { status, message, data: MSSQLConfigData }
+      // With API client interceptor, response now contains just the data portion
       let databaseConfig: MSSQLConfigData;
 
-      if (response.data && response.data.db_id) {
-        // Case 1: Response is wrapped { status, message, data: MSSQLConfigData }
-        databaseConfig = response.data;
-      } else if (response.db_id) {
-        // Case 2: Response is directly MSSQLConfigData
+      if (response.db_id) {
         databaseConfig = response;
       } else {
         console.error("Invalid response structure:", response);
@@ -288,7 +266,7 @@ export function CompanyCreationModal({
 
       console.log("Creating user config with data:", userConfigRequest);
 
-      const response = await UserConfigService.createUserConfig(
+      const response = await createUserConfig(
         userConfigRequest
       );
       console.log("User config creation response:", response);
@@ -754,7 +732,7 @@ export function CompanyCreationModal({
               <TabsContent value="existing" className="space-y-4">
                 <div className="space-y-2">
                   <Label className="text-gray-300">Select Database *</Label>
-                  {loadingDatabases ? (
+                  {mssqlLoading ? (
                     <div className="flex items-center gap-2 p-3 bg-gray-800/50 rounded-lg">
                       <Loader2 className="w-4 h-4 animate-spin text-green-400" />
                       <span className="text-gray-400">

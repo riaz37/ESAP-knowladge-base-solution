@@ -8,7 +8,15 @@ import {
   SubCompanyData,
   MSSQLConfigData,
 } from "@/types/api";
-import { HierarchyNode } from "@/components/database-hierarchy";
+// Define HierarchyNode type locally since the component doesn't exist
+interface HierarchyNode {
+  id: string;
+  name: string;
+  description: string;
+  type: "parent" | "sub" | "database";
+  data: any;
+  children?: HierarchyNode[];
+}
 
 export interface CreateCompanyRequest {
   name: string;
@@ -54,7 +62,8 @@ export class HierarchyService {
         const response = await ParentCompanyService.createParentCompany(
           parentCompanyRequest
         );
-        return response.data;
+        // With API client interceptor, response is already the data portion
+        return response;
       } else {
         // For sub companies
         if (!request.parentCompanyId) {
@@ -72,7 +81,7 @@ export class HierarchyService {
           description:
             request.details ||
             "Sub-company created through hierarchy interface",
-          db_id: parentCompany.data.db_id, // Inherit from parent
+          db_id: parentCompany.db_id, // With API client interceptor, no .data needed
           address: request.address || "",
           contact_email: request.contactEmail || "",
         };
@@ -80,7 +89,8 @@ export class HierarchyService {
         const response = await SubCompanyService.createSubCompany(
           subCompanyRequest
         );
-        return response.data;
+        // With API client interceptor, response is already the data portion
+        return response;
       }
     } catch (error) {
       console.error("Error creating company:", error);
@@ -100,10 +110,11 @@ export class HierarchyService {
           SubCompanyService.getSubCompanies(),
         ]);
 
+      // With the API client interceptor, responses now contain just the data portion
       return this.buildHierarchy(
-        databasesResponse?.data?.configs || [],
-        parentCompanies?.data?.companies || [],
-        subCompanies?.data?.companies || []
+        databasesResponse?.configs || [],
+        parentCompanies?.companies || [],
+        subCompanies?.companies || []
       );
     } catch (error) {
       console.error("Error fetching hierarchy data:", error);
@@ -191,7 +202,8 @@ export class HierarchyService {
 
       const parentId = parseInt(nodeId.replace("parent-", ""));
       const response = await ParentCompanyService.getParentCompany(parentId);
-      return response.data;
+      // With API client interceptor, response is already the data portion
+      return response;
     } catch (error) {
       console.error("Error getting parent company by node ID:", error);
       return null;

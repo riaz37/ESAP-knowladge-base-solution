@@ -17,8 +17,8 @@ import { EmptyState } from "./EmptyState";
 import { CompanyTreeSidebar } from "./CompanyTreeSidebar";
 import { CompanyCreationModal, CompanyFormData } from "./CompanyCreationModal";
 import { CompanyUploadModal } from "./CompanyUploadModal";
-import { ParentCompanyService } from "@/lib/api/services/parent-company-service";
-import { SubCompanyService } from "@/lib/api/services/sub-company-service";
+import { useParentCompanies } from "@/lib/hooks/use-parent-companies";
+import { useSubCompanies } from "@/lib/hooks/use-sub-companies";
 import { ParentCompanyData, SubCompanyData } from "@/types/api";
 import { toast } from "sonner";
 import { AnimatedGridBackground } from "./AnimatedGridBackground";
@@ -80,21 +80,40 @@ const defaultEdgeOptions = {
 };
 
 export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
+  // Use hooks for consistent API calls and state management
+  const {
+    getParentCompanies,
+    createParentCompany,
+    isLoading: parentLoading,
+    error: parentError,
+  } = useParentCompanies();
+
+  const {
+    getSubCompanies,
+    createSubCompany,
+    isLoading: subLoading,
+    error: subError,
+  } = useSubCompanies();
+
   // State management
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [selectedParentForFlow, setSelectedParentForFlow] = useState<
     string | null
   >(null);
-  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"parent" | "sub">("parent");
   const [parentCompanyId, setParentCompanyId] = useState<number | undefined>();
-  
+
   // Upload modal state
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [uploadCompanyName, setUploadCompanyName] = useState('');
-  const [uploadCompanyType, setUploadCompanyType] = useState<'parent' | 'sub'>('parent');
+  const [uploadCompanyName, setUploadCompanyName] = useState("");
+  const [uploadCompanyType, setUploadCompanyType] = useState<"parent" | "sub">(
+    "parent"
+  );
+
+  // Derived loading state
+  const loading = parentLoading || subLoading;
 
   // Load companies on mount
   useEffect(() => {
@@ -102,68 +121,32 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
   }, []);
 
   // Handle upload modal
-  const handleUpload = useCallback((companyId: string, companyName: string, companyType: 'parent' | 'sub') => {
-    setUploadCompanyName(companyName);
-    setUploadCompanyType(companyType);
-    setUploadModalOpen(true);
-  }, []);
+  const handleUpload = useCallback(
+    (companyId: string, companyName: string, companyType: "parent" | "sub") => {
+      setUploadCompanyName(companyName);
+      setUploadCompanyType(companyType);
+      setUploadModalOpen(true);
+    },
+    []
+  );
 
   const loadCompanies = async () => {
-    setLoading(true);
     try {
-      // Load parent companies and sub companies separately to handle errors better
-      let parentCompanies: ParentCompanyData[] = [];
-      let subCompanies: SubCompanyData[] = [];
+      // Use hooks for consistent API calls - no more response structure guessing!
+      const [parentCompanies, subCompanies] = await Promise.all([
+        getParentCompanies(),
+        getSubCompanies(),
+      ]);
 
-      try {
-        const parentResponse = await ParentCompanyService.getParentCompanies();
-        console.log("Parent companies response:", parentResponse);
-        // Handle different possible response structures
-        if ((parentResponse as any).companies) {
-          parentCompanies = (parentResponse as any).companies;
-        } else if ((parentResponse as any).data?.companies) {
-          parentCompanies = (parentResponse as any).data.companies;
-        } else if (Array.isArray(parentResponse)) {
-          parentCompanies = parentResponse as any;
-        } else {
-          console.log(
-            "Parent response structure:",
-            Object.keys(parentResponse as any)
-          );
-        }
-      } catch (parentError) {
-        console.error("Error loading parent companies:", parentError);
-        // Continue with empty parent companies array
-      }
+      console.log("Parent companies from hook:", parentCompanies);
+      console.log("Sub companies from hook:", subCompanies);
 
-      try {
-        const subResponse = await SubCompanyService.getSubCompanies();
-        console.log("Sub companies response:", subResponse);
-        // Handle different possible response structures
-        if ((subResponse as any).companies) {
-          subCompanies = (subResponse as any).companies;
-        } else if ((subResponse as any).data?.companies) {
-          subCompanies = (subResponse as any).data.companies;
-        } else if (Array.isArray(subResponse)) {
-          subCompanies = subResponse as any;
-        } else {
-          console.log(
-            "Sub response structure:",
-            Object.keys(subResponse as any)
-          );
-        }
-      } catch (subError) {
-        console.error("Error loading sub companies:", subError);
-        // Continue with empty sub companies array
-      }
-
-      console.log("Extracted parent companies:", parentCompanies);
-      console.log("Extracted sub companies:", subCompanies);
-      console.log("Parent companies length:", parentCompanies.length);
-      console.log("Sub companies length:", subCompanies.length);
+      // Handle null responses gracefully
+      const safeParentCompanies = parentCompanies || [];
+      const safeSubCompanies = subCompanies || [];
 
       // Transform API data to our Company interface
-      const transformedCompanies: Company[] = parentCompanies.map(
+      const transformedCompanies: Company[] = safeParentCompanies.map(
         (parent: ParentCompanyData) => ({
           id: `parent-${parent.parent_company_id}`,
           name: parent.company_name,
@@ -171,7 +154,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
           address: parent.address,
           contactEmail: parent.contact_email,
           dbId: parent.db_id,
-          children: subCompanies
+          children: safeSubCompanies
             .filter(
               (sub: SubCompanyData) =>
                 sub.parent_company_id === parent.parent_company_id
@@ -190,12 +173,17 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
 
       console.log("Transformed companies:", transformedCompanies);
       setCompanies(transformedCompanies);
+
+      // Show success message if we have data
+      if (transformedCompanies.length > 0) {
+        toast.success(
+          `Loaded ${transformedCompanies.length} companies successfully`
+        );
+      }
     } catch (error) {
       console.error("Error loading companies:", error);
       toast.error("Failed to load companies");
       setCompanies([]); // Set empty array as fallback
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -227,7 +215,11 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
     const flowEdges: Edge[] = [];
 
     // Helper function to create a company node
-    const createCompanyNode = (company: Company, position: { x: number; y: number }, level: number) => {
+    const createCompanyNode = (
+      company: Company,
+      position: { x: number; y: number },
+      level: number
+    ) => {
       const node = {
         id: company.id,
         type: "company",
@@ -236,12 +228,14 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
           company,
           level,
           onSelect: (companyId: string) => {
-            setSelectedCompany(companyId === selectedCompany ? null : companyId);
+            setSelectedCompany(
+              companyId === selectedCompany ? null : companyId
+            );
           },
           onAddSubCompany: (parentId: string) => {
             setModalType("sub");
             // Extract the numeric ID from the prefixed ID (e.g., "parent-1" -> 1)
-            const numericId = parseInt(parentId.replace('parent-', ''));
+            const numericId = parseInt(parentId.replace("parent-", ""));
             setParentCompanyId(numericId);
             setModalOpen(true);
           },
@@ -251,7 +245,14 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         draggable: true,
       };
 
-      console.log("Creating node:", node.id, "level:", level, "hasChildren:", company.children?.length || 0);
+      console.log(
+        "Creating node:",
+        node.id,
+        "level:",
+        level,
+        "hasChildren:",
+        company.children?.length || 0
+      );
       return node;
     };
 
@@ -281,7 +282,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
 
     // Get the company to display (selected parent or first company)
     const displayCompany = selectedParentForFlow
-      ? companies.find(c => c.id === selectedParentForFlow)
+      ? companies.find((c) => c.id === selectedParentForFlow)
       : companies[0];
 
     if (!displayCompany) return { nodes: [], edges: [] };
@@ -303,7 +304,12 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         flowNodes.push(createCompanyNode(child, childPosition, 1));
 
         // Add edge from parent to child
-        console.log("Adding edge from parent:", displayCompany.id, "to child:", child.id);
+        console.log(
+          "Adding edge from parent:",
+          displayCompany.id,
+          "to child:",
+          child.id
+        );
         flowEdges.push(createEdge(displayCompany.id, child.id));
       });
     }
@@ -325,24 +331,33 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
     [setEdges]
   );
 
-  // Handle company creation
+  // Handle company creation using hooks consistently
   const handleCompanySubmit = async (companyData: CompanyFormData) => {
     try {
       if (modalType === "parent") {
-        await ParentCompanyService.createParentCompany({
+        const result = await createParentCompany({
           company_name: companyData.name,
           description: companyData.description,
           address: companyData.address,
           contact_email: companyData.contactEmail,
           db_id: companyData.dbId,
         });
+
+        if (!result) {
+          throw new Error("Failed to create parent company");
+        }
+
+        toast.success(
+          `Parent company "${companyData.name}" created successfully`
+        );
       } else {
         if (!parentCompanyId) {
           throw new Error(
             "Parent company ID is required for sub-company creation"
           );
         }
-        await SubCompanyService.createSubCompany({
+
+        const result = await createSubCompany({
           company_name: companyData.name,
           description: companyData.description,
           address: companyData.address,
@@ -350,13 +365,23 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
           db_id: companyData.dbId,
           parent_company_id: parentCompanyId,
         });
+
+        if (!result) {
+          throw new Error("Failed to create sub company");
+        }
+
+        toast.success(`Sub company "${companyData.name}" created successfully`);
       }
 
       // Reload companies after creation
       await loadCompanies();
       onCompanyCreated?.();
+      setModalOpen(false); // Close modal on success
     } catch (error) {
       console.error("Error creating company:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create company"
+      );
       throw error; // Re-throw to let modal handle the error
     }
   };
@@ -407,7 +432,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
             onAddSubCompany={(parentId: string) => {
               setModalType("sub");
               // Extract the numeric ID from the prefixed ID (e.g., "parent-1" -> 1)
-              const numericId = parseInt(parentId.replace('parent-', ''));
+              const numericId = parseInt(parentId.replace("parent-", ""));
               setParentCompanyId(numericId);
               setModalOpen(true);
             }}

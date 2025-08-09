@@ -1,7 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParentCompanies, useSubCompanies } from "@/lib/hooks";
 import { ParentCompanyData, SubCompanyData } from "@/types/api";
-import { HierarchyNode } from "@/components/database-hierarchy";
+// Define HierarchyNode type locally since the component doesn't exist
+interface HierarchyNode {
+  id: string;
+  name: string;
+  description: string;
+  type: "parent" | "sub" | "database";
+  data: any;
+  children?: HierarchyNode[];
+}
 
 interface UseHierarchyDataReturn {
   hierarchyData: HierarchyNode[];
@@ -35,7 +43,8 @@ export function useHierarchyData(): UseHierarchyDataReturn {
         .map((sub) => ({
           id: `sub-${sub.sub_company_id}`,
           name: sub.company_name,
-          description: sub.description || "Sub-company under " + parent.company_name,
+          description:
+            sub.description || "Sub-company under " + parent.company_name,
           type: "sub" as const,
           data: sub,
         }));
@@ -43,7 +52,8 @@ export function useHierarchyData(): UseHierarchyDataReturn {
       return {
         id: `parent-${parent.parent_company_id}`,
         name: parent.company_name,
-        description: parent.description || "Parent company with business operations",
+        description:
+          parent.description || "Parent company with business operations",
         type: "parent" as const,
         data: parent,
         children: parentSubCompanies,
@@ -79,9 +89,12 @@ export function useHierarchyData(): UseHierarchyDataReturn {
       // Instead, just set empty hierarchy data
       console.warn("Could not load hierarchy data, showing empty state:", err);
       setHierarchyData([]);
-      
+
       // Only set error for actual API failures, not empty data
-      if (err?.message && !err.message.includes("Failed to load hierarchy data")) {
+      if (
+        err?.message &&
+        !err.message.includes("Failed to load hierarchy data")
+      ) {
         const errorMessage = err?.message || "Error loading hierarchy data";
         setError(errorMessage);
       }

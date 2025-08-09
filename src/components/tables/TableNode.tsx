@@ -1,188 +1,186 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import { Handle, Position, NodeProps } from "reactflow";
-import { Database, Key, Link, Eye } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
-interface TableData {
-  id: string;
-  name: string;
-  fullName: string;
-  schema: string;
-  primaryKeys: string[];
-  columns: Array<{
-    name: string;
-    type: string;
-    isPrimary: boolean;
-    isForeign: boolean;
-    isRequired: boolean;
-    maxLength?: number;
-    references?: {
-      table: string;
-      column: string;
-      constraint: string;
-    };
-  }>;
-  relationships: Array<{
-    type: string;
-    viaColumn: string;
-    viaRelated: string;
-    relatedTable: string;
-  }>;
-  sampleData?: Array<Record<string, any>>;
-  rowCount?: number;
-}
+import { Database, Users, FileText, DollarSign, Calendar, Settings, Folder, Link } from "lucide-react";
 
 interface TableNodeData {
-  table: TableData;
-  onTableClick: (table: TableData) => void;
+  table: {
+    name: string;
+    full_name: string;
+    columns?: any[];
+    relationships?: any[];
+  };
+  label: string;
 }
 
-export function TableNode({ data }: NodeProps<TableNodeData>) {
-  const { table, onTableClick } = data;
-  
-  // Limit displayed columns to prevent node from being too large
-  const displayColumns = table.columns.slice(0, 5);
-  const hasMoreColumns = table.columns.length > 5;
+// Get appropriate icon based on table name
+const getTableIcon = (tableName: string) => {
+  const name = tableName.toLowerCase();
+  if (name.includes('user') || name.includes('employee') || name.includes('person')) {
+    return Users;
+  }
+  if (name.includes('transaction') || name.includes('payment') || name.includes('salary') || name.includes('expense')) {
+    return DollarSign;
+  }
+  if (name.includes('report') || name.includes('document') || name.includes('file')) {
+    return FileText;
+  }
+  if (name.includes('attendance') || name.includes('time') || name.includes('date')) {
+    return Calendar;
+  }
+  if (name.includes('config') || name.includes('setting') || name.includes('permission')) {
+    return Settings;
+  }
+  if (name.includes('project') || name.includes('department') || name.includes('company')) {
+    return Folder;
+  }
+  return Database;
+};
 
-  const getColumnIcon = (column: any) => {
-    if (column.isPrimary) {
-      return <Key className="w-3 h-3 text-yellow-400" />;
-    }
-    if (column.isForeign) {
-      return <Link className="w-3 h-3 text-blue-400" />;
-    }
-    return null;
+// Get color scheme based on table type
+const getTableColors = (tableName: string) => {
+  const name = tableName.toLowerCase();
+  if (name.includes('user') || name.includes('employee') || name.includes('person')) {
+    return {
+      bg: 'bg-blue-900/20',
+      border: 'border-blue-500/40',
+      icon: 'text-blue-400',
+      title: 'text-blue-100',
+      subtitle: 'text-blue-300/60',
+      dots: 'bg-blue-400/60',
+      relationships: 'text-blue-300/60'
+    };
+  }
+  if (name.includes('transaction') || name.includes('payment') || name.includes('salary') || name.includes('expense')) {
+    return {
+      bg: 'bg-green-900/20',
+      border: 'border-green-500/40',
+      icon: 'text-green-400',
+      title: 'text-green-100',
+      subtitle: 'text-green-300/60',
+      dots: 'bg-green-400/60',
+      relationships: 'text-green-300/60'
+    };
+  }
+  if (name.includes('report') || name.includes('document') || name.includes('file')) {
+    return {
+      bg: 'bg-purple-900/20',
+      border: 'border-purple-500/40',
+      icon: 'text-purple-400',
+      title: 'text-purple-100',
+      subtitle: 'text-purple-300/60',
+      dots: 'bg-purple-400/60',
+      relationships: 'text-purple-300/60'
+    };
+  }
+  if (name.includes('attendance') || name.includes('time') || name.includes('date')) {
+    return {
+      bg: 'bg-orange-900/20',
+      border: 'border-orange-500/40',
+      icon: 'text-orange-400',
+      title: 'text-orange-100',
+      subtitle: 'text-orange-300/60',
+      dots: 'bg-orange-400/60',
+      relationships: 'text-orange-300/60'
+    };
+  }
+  if (name.includes('project') || name.includes('department') || name.includes('company')) {
+    return {
+      bg: 'bg-indigo-900/20',
+      border: 'border-indigo-500/40',
+      icon: 'text-indigo-400',
+      title: 'text-indigo-100',
+      subtitle: 'text-indigo-300/60',
+      dots: 'bg-indigo-400/60',
+      relationships: 'text-indigo-300/60'
+    };
+  }
+  // Default emerald theme
+  return {
+    bg: 'bg-emerald-900/20',
+    border: 'border-emerald-500/40',
+    icon: 'text-emerald-400',
+    title: 'text-emerald-100',
+    subtitle: 'text-emerald-300/60',
+    dots: 'bg-emerald-400/60',
+    relationships: 'text-emerald-300/60'
   };
+};
 
-  const getTypeColor = (type: string) => {
-    const lowerType = type.toLowerCase();
-    if (lowerType.includes('int') || lowerType.includes('number')) {
-      return 'text-blue-400';
-    }
-    if (lowerType.includes('varchar') || lowerType.includes('text') || lowerType.includes('string')) {
-      return 'text-green-400';
-    }
-    if (lowerType.includes('date') || lowerType.includes('time')) {
-      return 'text-purple-400';
-    }
-    if (lowerType.includes('bool')) {
-      return 'text-orange-400';
-    }
-    return 'text-gray-400';
-  };
+export const TableNode = memo(({ data }: NodeProps<TableNodeData>) => {
+  const { table, label } = data;
+  const Icon = getTableIcon(table.name);
+  const colors = getTableColors(table.name);
 
   return (
-    <div className="bg-slate-800 border-2 border-slate-600 rounded-lg shadow-lg min-w-[250px] max-w-[300px]">
+    <div className="relative group">
       {/* Connection handles */}
       <Handle
-        id="top"
-        type="target"
-        position={Position.Top}
-        className="w-3 h-3 bg-emerald-500 border-2 border-slate-800"
-      />
-      <Handle
-        id="bottom"
-        type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 bg-emerald-500 border-2 border-slate-800"
-      />
-      <Handle
-        id="left"
         type="target"
         position={Position.Left}
-        className="w-3 h-3 bg-emerald-500 border-2 border-slate-800"
+        className="w-3 h-3 bg-gray-600 border-2 border-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"
       />
       <Handle
-        id="right"
         type="source"
         position={Position.Right}
-        className="w-3 h-3 bg-emerald-500 border-2 border-slate-800"
+        className="w-3 h-3 bg-gray-600 border-2 border-gray-800 opacity-0 group-hover:opacity-100 transition-opacity"
       />
 
-      {/* Table Header */}
-      <div className="bg-emerald-600 text-white p-3 rounded-t-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Database className="w-4 h-4 flex-shrink-0" />
-            <div className="min-w-0">
-              <h3 className="font-semibold text-sm truncate">{table.name}</h3>
-              <p className="text-xs text-emerald-100 truncate">{table.fullName}</p>
-            </div>
+      {/* Enhanced table card */}
+      <div className={`${colors.bg} ${colors.border} border-2 rounded-xl p-4 min-w-[200px] backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105`}>
+        {/* Header with icon and title */}
+        <div className="flex items-start gap-3 mb-3">
+          <div className={`${colors.icon} p-2 rounded-lg bg-black/20`}>
+            <Icon className="h-5 w-5" />
           </div>
-          <Button
-            onClick={() => onTableClick(table)}
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-emerald-700 flex-shrink-0"
-          >
-            <Eye className="w-3 h-3" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Columns List */}
-      <div className="p-3">
-        <div className="space-y-1">
-          {displayColumns.map((column, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between text-xs py-1 px-2 rounded bg-slate-700/50"
-            >
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                {getColumnIcon(column)}
-                <span className="text-gray-200 truncate font-medium">
-                  {column.name}
-                </span>
-              </div>
-              <span className={`text-xs font-mono ${getTypeColor(column.type)} ml-2`}>
-                {column.type}
-              </span>
-            </div>
-          ))}
-          
-          {hasMoreColumns && (
-            <div className="text-xs text-gray-400 text-center py-1">
-              +{table.columns.length - 5} more columns
-            </div>
-          )}
+          <div className="flex-1 min-w-0">
+            <h3 className={`${colors.title} font-semibold text-sm leading-tight`}>
+              {label}
+            </h3>
+            <p className={`${colors.subtitle} text-xs font-mono mt-1 truncate`}>
+              {table.full_name}
+            </p>
+          </div>
         </div>
 
-        {/* Relationships indicator */}
+        {/* Column indicators */}
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex flex-wrap gap-1">
+            {Array.from({ length: Math.min(table.columns?.length || 0, 8) }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 ${colors.dots} rounded-full`}
+              />
+            ))}
+          </div>
+          <span className={`${colors.subtitle} text-xs`}>
+            {table.columns?.length || 0} columns
+          </span>
+        </div>
+
+        {/* Relationship indicator */}
         {table.relationships && table.relationships.length > 0 && (
-          <div className="mt-3 pt-2 border-t border-slate-600">
-            <div className="flex items-center gap-2 text-xs text-gray-400 mb-2">
-              <Link className="w-3 h-3" />
-              <span>{table.relationships.length} relationship{table.relationships.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="space-y-1">
-              {table.relationships.slice(0, 2).map((rel, index) => (
-                <div key={index} className="text-xs text-gray-300 bg-slate-600/30 rounded px-2 py-1">
-                  <div className="font-medium text-emerald-400">{rel.type}</div>
-                  <div className="text-gray-400">
-                    {rel.viaColumn} → {rel.relatedTable}.{rel.viaRelated}
-                  </div>
-                </div>
-              ))}
-              {table.relationships.length > 2 && (
-                <div className="text-xs text-gray-400 text-center">
-                  +{table.relationships.length - 2} more
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            <Link className={`${colors.icon} h-3 w-3`} />
+            <span className={`${colors.relationships} text-xs`}>
+              {table.relationships.length} relationship{table.relationships.length > 1 ? 's' : ''}
+            </span>
           </div>
         )}
 
-        {/* Row count indicator */}
-        {table.rowCount && (
-          <div className="mt-2 pt-2 border-t border-slate-600">
-            <div className="text-xs text-gray-400 text-center">
-              ~{table.rowCount.toLocaleString()} rows
-            </div>
+        {/* No relationships indicator */}
+        {(!table.relationships || table.relationships.length === 0) && (
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-gray-600/40 rounded-full" />
+            <span className="text-gray-400/60 text-xs">
+              Isolated table
+            </span>
           </div>
         )}
       </div>
     </div>
   );
-}
+});
+
+TableNode.displayName = "TableNode";

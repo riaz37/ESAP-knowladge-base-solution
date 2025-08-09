@@ -11,6 +11,7 @@ import {
   Square,
   FileText,
   Bot,
+  Database,
 } from "lucide-react";
 
 import { useUIStore } from "@/store/uiStore";
@@ -52,7 +53,12 @@ export default function Menu() {
       icon: FileText,
       isActive: pathname === "/business-rules",
     },
-
+    {
+      name: "Tables",
+      path: "/tables",
+      icon: Database,
+      isActive: pathname === "/tables",
+    },
     {
       name: "History Log",
       path: "/database-hierarchy",

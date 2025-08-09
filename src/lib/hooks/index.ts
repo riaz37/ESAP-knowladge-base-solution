@@ -14,3 +14,4 @@ export * from './use-user-config';
 export * from './use-user-current-db';
 export * from './use-hierarchy-data';
 export * from './use-mssql-table-operations';
+export * from './use-database-selector';

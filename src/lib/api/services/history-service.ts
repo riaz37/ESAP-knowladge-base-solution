@@ -17,11 +17,12 @@ export const HistoryService = {
       const response = await apiClient.get(
         API_ENDPOINTS.CONVERSATION_HISTORY(userId)
       );
-      return Array.isArray(response.data)
+      // With API client interceptor, response now contains just the data portion
+      return Array.isArray(response)
         ? response
         : transformResponse(
-            Array.isArray((response.data as any)?.payload)
-              ? (response.data as any).payload
+            Array.isArray(response?.payload)
+              ? response.payload
               : []
           );
     } catch (error) {
@@ -50,10 +51,11 @@ export const HistoryService = {
   async fetchQueryHistory(userId: string): Promise<any[]> {
     try {
       const response = await this.getConversationHistory(userId);
-      if (Array.isArray(response.data)) {
-        return response.data;
-      } else if (response.data && Array.isArray(response.data.payload)) {
-        return response.data.payload;
+      // With API client interceptor, response now contains just the data portion
+      if (Array.isArray(response)) {
+        return response;
+      } else if (response && Array.isArray(response.payload)) {
+        return response.payload;
       }
       return [];
     } catch (error) {

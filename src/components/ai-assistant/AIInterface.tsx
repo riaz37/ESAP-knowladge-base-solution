@@ -29,6 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useDatabaseOperations, useBusinessRules } from "@/lib/hooks";
+import { DatabaseSelector } from "./DatabaseSelector";
 import { toast } from "sonner";
 
 interface AIInterfaceProps {
@@ -49,6 +50,8 @@ export function AIInterface({
   const [queryHistory, setQueryHistory] = useState<
     Array<{ query: string; result: any; timestamp: Date }>
   >([]);
+  const [currentDbId, setCurrentDbId] = useState<number | undefined>();
+  const [currentDbName, setCurrentDbName] = useState<string>("");
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -64,12 +67,26 @@ export function AIInterface({
   // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        onClose();
+      const target = event.target as Node;
+      
+      // Check if the click is inside the AI interface
+      if (dropdownRef.current && dropdownRef.current.contains(target)) {
+        return;
       }
+      
+      // Check if the click is inside a dropdown menu (which is rendered in a portal)
+      const dropdownMenu = document.querySelector('[data-radix-popper-content-wrapper]');
+      if (dropdownMenu && dropdownMenu.contains(target)) {
+        return;
+      }
+      
+      // Check if the click is on any dropdown trigger or menu item
+      const isDropdownElement = (target as Element).closest('[data-radix-dropdown-menu-trigger], [data-radix-dropdown-menu-content], [data-radix-dropdown-menu-item]');
+      if (isDropdownElement) {
+        return;
+      }
+      
+      onClose();
     };
 
     if (isOpen) {
@@ -113,6 +130,11 @@ export function AIInterface({
       return;
     }
 
+    if (!currentDbId) {
+      toast.error("Please select a database first");
+      return;
+    }
+
     try {
       const result = await databaseOps.sendDatabaseQuery(query, userId);
 
@@ -135,6 +157,8 @@ export function AIInterface({
             result,
             timestamp: new Date().toISOString(),
             userId,
+            dbId: currentDbId,
+            dbName: currentDbName,
           })
         );
 
@@ -145,7 +169,7 @@ export function AIInterface({
         onClose();
         router.push("/ai-results");
 
-        toast.success("Query executed successfully! Redirecting to results...");
+        toast.success(`Query executed successfully on ${currentDbName}! Redirecting to results...`);
       }
     } catch (error) {
       toast.error("Failed to execute query");
@@ -157,6 +181,14 @@ export function AIInterface({
       e.preventDefault();
       handleQuerySubmit();
     }
+  };
+
+  const handleDatabaseChange = (dbId: number, dbName: string) => {
+    setCurrentDbId(dbId);
+    setCurrentDbName(dbName);
+    // Clear query history when switching databases
+    setQueryHistory([]);
+    toast.success(`Switched to database: ${dbName}`);
   };
 
   const handleBusinessRulesUpdated = () => {
@@ -254,6 +286,26 @@ export function AIInterface({
                 <X className="w-4 h-4" />
               </Button>
             </div>
+          </div>
+
+          {/* Database Selection */}
+          <div className="p-4 border-b border-green-500/20">
+            <DatabaseSelector
+              userId={userId}
+              currentDbId={currentDbId}
+              onDatabaseChange={handleDatabaseChange}
+              className="w-full"
+            />
+            {currentDbName && (
+              <div className="mt-2 p-2 bg-green-900/20 border border-green-400/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <Database className="w-3 h-3 text-green-400 mt-0.5" />
+                  <p className="text-green-400 text-xs">
+                    Querying database: <span className="font-medium">{currentDbName}</span>
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Business Rules Status */}

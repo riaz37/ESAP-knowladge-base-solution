@@ -19,21 +19,20 @@ export class BusinessRulesService {
 
       // Get the user's current database
       const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
-      const dbId = userCurrentDB.data.db_id;
+      const dbId = userCurrentDB.db_id; // With API client interceptor, no .data needed
       const response = await apiClient.get<MSSQLConfigResponse>(
         API_ENDPOINTS.GET_MSSQL_CONFIG(dbId)
       );
 
       console.log("Business Rules Service - Full response:", response);
 
-      // The API returns the MSSQLConfigResponse directly
-      // Structure: { status: "success", message: "...", data: { db_id, business_rule, ... } }
-      if (response && response.status === "success" && response.data) {
+      // With API client interceptor, response now contains just the data portion
+      if (response && response.business_rule !== undefined) {
         console.log(
           "Business Rules Service - Found business rule:",
-          response.data.business_rule
+          response.business_rule
         );
-        return response.data.business_rule || "";
+        return response.business_rule || "";
       }
 
       console.error(
@@ -68,7 +67,7 @@ export class BusinessRulesService {
 
       // Get the user's current database
       const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
-      const dbId = userCurrentDB.data.db_id;
+      const dbId = userCurrentDB.db_id; // With API client interceptor, no .data needed
 
       // First, get the current config to preserve other fields
       const currentConfigResponse = await apiClient.get<MSSQLConfigResponse>(
@@ -77,14 +76,12 @@ export class BusinessRulesService {
 
       console.log("Update Business Rules - Current config response:", currentConfigResponse);
 
-      if (
-        currentConfigResponse.status !== "success" ||
-        !currentConfigResponse.data
-      ) {
+      // With API client interceptor, response now contains just the data portion
+      if (!currentConfigResponse || !currentConfigResponse.db_url) {
         throw new Error("Failed to fetch current configuration");
       }
 
-      const currentConfig = currentConfigResponse.data;
+      const currentConfig = currentConfigResponse;
 
       // Create form data for the update
       const formData = new FormData();
@@ -106,12 +103,9 @@ export class BusinessRulesService {
 
       console.log("Update Business Rules - Update response:", response);
 
-      // The response should be an MSSQLConfigResponse
-      if (response.status !== "success") {
-        throw new Error(
-          response.message || "Failed to update business rules"
-        );
-      }
+      // With API client interceptor, response now contains just the data portion
+      // No need to check status since interceptor handles that
+      console.log("Business rules updated successfully");
     } catch (error: any) {
       console.error("Error updating business rules:", error);
       if (error.response?.status === 404) {
@@ -166,7 +160,8 @@ export class BusinessRulesService {
   static async getDatabaseIdForUser(userId: string): Promise<number> {
     try {
       const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
-      return userCurrentDB.data.db_id;
+      // With API client interceptor, no .data needed
+      return userCurrentDB.db_id;
     } catch (error) {
       console.error("Error fetching user's current database:", error);
       throw new Error("Failed to get database ID for user");

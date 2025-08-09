@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { DatabaseService, QueryService, HistoryService } from '../api';
-import { DbQueryParams } from '../api/services/query-service';
-import { useToast } from './use-toast';
+import { useState } from "react";
+import { DatabaseService, QueryService, HistoryService } from "../api";
+import { DbQueryParams } from "../api/services/query-service";
+import { useToast } from "./use-toast";
 
 /**
  * Hook for managing database operations
@@ -22,12 +22,12 @@ export function useDatabaseOperations() {
   const fetchQueryHistory = async (userId: string) => {
     setHistoryLoading(true);
     setHistoryError(null);
-    
+
     try {
       const historyData = await HistoryService.fetchQueryHistory(userId);
       setHistory(historyData);
     } catch (e: any) {
-      setHistoryError(e.message || 'Unknown error');
+      setHistoryError(e.message || "Unknown error");
     } finally {
       setHistoryLoading(false);
     }
@@ -39,12 +39,12 @@ export function useDatabaseOperations() {
   const clearHistory = async (userId: string) => {
     setHistoryLoading(true);
     setHistoryError(null);
-    
+
     try {
       await HistoryService.clearHistory(userId);
       setHistory([]);
     } catch (e: any) {
-      setHistoryError(e.message || 'Unknown error');
+      setHistoryError(e.message || "Unknown error");
     } finally {
       setHistoryLoading(false);
     }
@@ -67,12 +67,14 @@ export function useDatabaseOperations() {
       const response = await DatabaseService.reloadDatabase();
 
       // Show success toast
-      success('Database reloaded successfully!');
+      success("Database reloaded successfully!");
 
       return response;
     } catch (error: any) {
-      console.error('Reload DB error:', error);
-      showError(error.message || 'Failed to reload database. Please try again.');
+      console.error("Reload DB error:", error);
+      showError(
+        error.message || "Failed to reload database. Please try again."
+      );
       throw error;
     } finally {
       setReloadLoading(false);
@@ -85,23 +87,24 @@ export function useDatabaseOperations() {
    */
   const sendDatabaseQuery = async (question: string, userId: string) => {
     if (!question.trim()) return;
-    
+
     setLoading(true);
     setError(null);
     setDbResponse(null);
-    
+
     try {
       const response = await QueryService.sendDatabaseQuery(question, userId);
-      setDbResponse(response.data);
-      
+      // With API client interceptor, response now contains just the data portion
+      setDbResponse(response);
+
       // Re-fetch history after successful query if userId is set and not 'default'
-      if (userId && userId !== 'default') {
+      if (userId && userId !== "default") {
         await fetchQueryHistory(userId);
       }
-      
-      return response.data;
+
+      return response;
     } catch (e: any) {
-      setError(e.message || 'Unknown error');
+      setError(e.message || "Unknown error");
       throw e;
     } finally {
       setLoading(false);

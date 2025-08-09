@@ -21,7 +21,8 @@ export class ParentCompanyService {
         API_ENDPOINTS.CREATE_PARENT_COMPANY,
         company
       );
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error("Error creating parent company:", error);
       throw error;
@@ -34,7 +35,8 @@ export class ParentCompanyService {
   static async getParentCompanies(): Promise<ParentCompaniesListResponse> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_PARENT_COMPANIES);
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error("Error fetching parent companies:", error);
       throw error;
@@ -47,7 +49,8 @@ export class ParentCompanyService {
   static async getParentCompany(id: number): Promise<ParentCompanyResponse> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_PARENT_COMPANY(id));
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error(`Error fetching parent company ${id}:`, error);
       throw error;

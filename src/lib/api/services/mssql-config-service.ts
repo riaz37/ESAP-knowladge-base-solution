@@ -19,20 +19,29 @@ export class MSSQLConfigService {
   /**
    * Allowed database file extensions
    */
-  static readonly ALLOWED_FILE_TYPES = ['.bak', '.sql', '.mdf', '.ldf', '.trn', '.dmp', '.dump'];
+  static readonly ALLOWED_FILE_TYPES = [
+    ".bak",
+    ".sql",
+    ".mdf",
+    ".ldf",
+    ".trn",
+    ".dmp",
+    ".dump",
+  ];
 
   /**
    * Create a new MSSQL database configuration (JSON format)
    */
   static async createMSSQLConfig(
     config: MSSQLConfigRequest
-  ): Promise<MSSQLConfigResponse> {
+  ): Promise<any> {
     try {
       const response = await apiClient.post(
         API_ENDPOINTS.CREATE_MSSQL_CONFIG,
         config
       );
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error("Error creating MSSQL configuration:", error);
       throw error;
@@ -44,7 +53,7 @@ export class MSSQLConfigService {
    */
   static async createMSSQLConfigWithFile(
     config: MSSQLConfigFormRequest
-  ): Promise<MSSQLConfigResponse> {
+  ): Promise<any> {
     try {
       // Validate file type if file is provided
       if (config.file) {
@@ -55,15 +64,15 @@ export class MSSQLConfigService {
       }
 
       const formData = new FormData();
-      formData.append('db_url', config.db_url);
-      formData.append('db_name', config.db_name);
-      
+      formData.append("db_url", config.db_url);
+      formData.append("db_name", config.db_name);
+
       if (config.business_rule) {
-        formData.append('business_rule', config.business_rule);
+        formData.append("business_rule", config.business_rule);
       }
-      
+
       if (config.file) {
-        formData.append('file', config.file);
+        formData.append("file", config.file);
       }
 
       const response = await apiClient.post(
@@ -71,11 +80,12 @@ export class MSSQLConfigService {
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
         }
       );
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error("Error creating MSSQL configuration with file:", error);
       throw error;
@@ -85,12 +95,13 @@ export class MSSQLConfigService {
   /**
    * Get all MSSQL database configurations
    */
-  static async getMSSQLConfigs(): Promise<MSSQLConfigsListResponse> {
+  static async getMSSQLConfigs(): Promise<any> {
     try {
       console.log("Making API call to:", API_ENDPOINTS.GET_MSSQL_CONFIGS);
       const response = await apiClient.get(API_ENDPOINTS.GET_MSSQL_CONFIGS);
       console.log("API response received:", response);
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error("Error fetching MSSQL configurations:", error);
       console.error("API endpoint:", API_ENDPOINTS.GET_MSSQL_CONFIGS);
@@ -104,7 +115,8 @@ export class MSSQLConfigService {
   static async getMSSQLConfig(id: number): Promise<MSSQLConfigResponse> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_MSSQL_CONFIG(id));
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error(`Error fetching MSSQL configuration ${id}:`, error);
       throw error;
@@ -150,7 +162,8 @@ export class MSSQLConfigService {
         API_ENDPOINTS.GENERATE_TABLE_INFO(id),
         request
       );
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error(`Error generating table info for database ${id}:`, error);
       throw error;
@@ -162,8 +175,11 @@ export class MSSQLConfigService {
    */
   static async getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.GET_TASK_STATUS(taskId));
-      return response.data;
+      const response = await apiClient.get(
+        API_ENDPOINTS.GET_TASK_STATUS(taskId)
+      );
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
       console.error(`Error fetching task status ${taskId}:`, error);
       throw error;
@@ -182,9 +198,13 @@ export class MSSQLConfigService {
         API_ENDPOINTS.GENERATE_MATCHED_TABLES(id),
         request
       );
-      return response.data;
+      // With API client interceptor, response already contains the data portion
+      return response;
     } catch (error) {
-      console.error(`Error generating matched tables for database ${id}:`, error);
+      console.error(
+        `Error generating matched tables for database ${id}:`,
+        error
+      );
       throw error;
     }
   }
@@ -201,25 +221,27 @@ export class MSSQLConfigService {
     }
 
     const fileName = file.name.toLowerCase();
-    const hasValidExtension = this.ALLOWED_FILE_TYPES.some(ext => 
+    const hasValidExtension = this.ALLOWED_FILE_TYPES.some((ext) =>
       fileName.endsWith(ext.toLowerCase())
     );
 
     if (!hasValidExtension) {
       return {
         isValid: false,
-        error: `Invalid file type. Allowed types: ${this.ALLOWED_FILE_TYPES.join(', ')}`
+        error: `Invalid file type. Allowed types: ${this.ALLOWED_FILE_TYPES.join(
+          ", "
+        )}`,
       };
     }
 
     // Check file size (optional - you can adjust the limit as needed)
     const maxSizeInMB = 500; // 500MB limit
     const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
-    
+
     if (file.size > maxSizeInBytes) {
       return {
         isValid: false,
-        error: `File size exceeds ${maxSizeInMB}MB limit`
+        error: `File size exceeds ${maxSizeInMB}MB limit`,
       };
     }
 
