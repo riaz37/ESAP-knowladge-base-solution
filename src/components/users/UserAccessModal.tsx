@@ -316,17 +316,17 @@ export function UserAccessModal({
           {/* User ID */}
           <div className="space-y-2">
             <Label htmlFor="user_id" className="text-gray-300">
-              User Email
+              User ID
             </Label>
             <Input
               id="user_id"
-              type="email"
+              type="text"
               value={formData.user_id}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, user_id: e.target.value }))
               }
               className="bg-slate-700 border-slate-600 text-white"
-              placeholder="user@company.com"
+              placeholder="Enter user ID"
               required
             />
           </div>

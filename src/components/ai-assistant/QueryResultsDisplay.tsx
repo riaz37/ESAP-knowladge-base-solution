@@ -32,37 +32,90 @@ interface QueryResultsDisplayProps {
 
 export function QueryResultsDisplay({ result }: QueryResultsDisplayProps) {
   const [viewMode, setViewMode] = useState<"table" | "chart">("table");
-  // Extract the actual data from API response format
+
+  // Extract the actual data from the result, handling multiple possible structures
   const actualData = useMemo(() => {
-    console.log("Raw result:", result);
+    console.log("QueryResultsDisplay - Raw result:", result);
+    console.log("QueryResultsDisplay - Result type:", typeof result);
+    console.log(
+      "QueryResultsDisplay - Result keys:",
+      result && typeof result === "object" ? Object.keys(result) : "N/A"
+    );
 
-    // Handle API response format with statusCode and payload
-    if (result && typeof result === "object" && "payload" in result) {
-      console.log("Found payload:", result.payload);
-      const payload = result.payload;
-
-      // Check if payload has a data property (which contains the actual records)
-      if (payload && typeof payload === "object" && "data" in payload) {
-        console.log("Found data in payload.data:", payload.data);
-        return payload.data;
-      }
-
-      return payload;
+    // If result is null or undefined, return as-is
+    if (result === null || result === undefined) {
+      return result;
     }
 
-    // Handle case where result is an object with data properties
-    if (result && typeof result === "object") {
-      // Look for common data property names
-      const dataKeys = ["data", "Data", "results", "rows", "items"];
-      for (const key of dataKeys) {
-        if (key in result && result[key]) {
-          console.log(`Found data in ${key}:`, result[key]);
-          return result[key];
+    // If result is not an object, return as-is (primitive values)
+    if (typeof result !== "object") {
+      return result;
+    }
+
+    // If result is an array, return as-is
+    if (Array.isArray(result)) {
+      return result;
+    }
+
+    // Handle API response format with success/data structure
+    if ("success" in result && "data" in result) {
+      console.log("Found ApiResponse format, extracting data:", result.data);
+      const data = result.data;
+
+      // Check if the data has a payload property (nested structure)
+      if (data && typeof data === "object" && "payload" in data) {
+        console.log(
+          "Found nested payload in data, extracting payload:",
+          data.payload
+        );
+        console.log("Payload type:", typeof data.payload);
+        console.log("Payload is array:", Array.isArray(data.payload));
+        if (data.payload && typeof data.payload === "object") {
+          console.log("Payload keys:", Object.keys(data.payload));
+          console.log("Payload JSON:", JSON.stringify(data.payload, null, 2));
+
+          // Check if payload has common data properties
+          const payloadKeys = Object.keys(data.payload);
+          console.log("Checking payload keys for data:", payloadKeys);
+
+          // Look for data in the payload
+          for (const key of ["data", "results", "rows", "items", "records"]) {
+            if (key in data.payload) {
+              console.log(`Found ${key} in payload:`, data.payload[key]);
+              console.log(`Returning ${key} from payload for display`);
+              return data.payload[key];
+            }
+          }
         }
+        return data.payload;
+      }
+
+      return data;
+    }
+
+    // Handle response format with status/message/data structure
+    if ("status" in result && "data" in result) {
+      console.log("Found status/data format, extracting data:", result.data);
+      return result.data;
+    }
+
+    // Handle response format with payload
+    if ("payload" in result) {
+      console.log("Found payload format, extracting payload:", result.payload);
+      return result.payload;
+    }
+
+    // Look for common data property names
+    const dataKeys = ["data", "results", "rows", "items", "records"];
+    for (const key of dataKeys) {
+      if (key in result && result[key] !== undefined) {
+        console.log(`Found data in ${key}:`, result[key]);
+        return result[key];
       }
     }
 
-    console.log("Using result as-is:", result);
+    // If no data structure found, return the result as-is
+    console.log("No data structure found, using result as-is:", result);
     return result;
   }, [result]);
 
@@ -213,7 +266,7 @@ export function QueryResultsDisplay({ result }: QueryResultsDisplayProps) {
                 {tableData.data.length} records found
               </Badge>
             </div>
-            
+
             {/* View Toggle Buttons */}
             <div className="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
               <Button

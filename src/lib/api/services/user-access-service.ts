@@ -67,14 +67,9 @@ export class UserAccessService {
   } {
     const errors: string[] = [];
 
-    // Validate user_id (should be email format)
+    // Validate user_id
     if (!config.user_id || config.user_id.trim() === "") {
       errors.push("User ID is required");
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(config.user_id)) {
-        errors.push("User ID should be a valid email address");
-      }
     }
 
     // Validate parent company ID
