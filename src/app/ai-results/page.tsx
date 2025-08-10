@@ -21,8 +21,11 @@ import {
   Download,
   ChevronDown,
   FileSpreadsheet,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 import { QueryResultsDisplay } from "@/components/ai-assistant/QueryResultsDisplay";
+import { toast } from "sonner";
 
 export default function AIResultsPage() {
   const [currentQuery, setCurrentQuery] = useState<any>(null);
@@ -68,31 +71,60 @@ export default function AIResultsPage() {
   // Extract data helper function
   const extractDataForExport = () => {
     if (!currentQuery || !currentQuery.result) {
+      console.log("No query or result found");
       return null;
     }
 
     let dataToExport = currentQuery.result;
+    console.log("Initial data to export:", dataToExport);
 
+    // Handle API response format with success/data structure
+    if (dataToExport && typeof dataToExport === "object" && "success" in dataToExport && "data" in dataToExport) {
+      console.log("Found ApiResponse format, extracting data");
+      dataToExport = dataToExport.data;
+      
+      // Check if the data has a payload property (nested structure)
+      if (dataToExport && typeof dataToExport === "object" && "payload" in dataToExport) {
+        console.log("Found nested payload in data, extracting payload");
+        dataToExport = dataToExport.payload;
+        
+        // Look for data in the payload
+        if (dataToExport && typeof dataToExport === "object") {
+          const payloadKeys = Object.keys(dataToExport);
+          for (const key of ["data", "results", "rows", "items", "records"]) {
+            if (key in dataToExport) {
+              console.log(`Found ${key} in payload, using it for export`);
+              dataToExport = dataToExport[key];
+              break;
+            }
+          }
+        }
+      }
+    }
     // Handle API response format with payload
-    if (
-      dataToExport &&
-      typeof dataToExport === "object" &&
-      "payload" in dataToExport
-    ) {
+    else if (dataToExport && typeof dataToExport === "object" && "payload" in dataToExport) {
+      console.log("Found payload format, extracting payload");
       dataToExport = dataToExport.payload;
     }
-
     // Handle case where data is nested in a 'data' property
-    if (
-      dataToExport &&
-      typeof dataToExport === "object" &&
-      "data" in dataToExport
-    ) {
+    else if (dataToExport && typeof dataToExport === "object" && "data" in dataToExport) {
+      console.log("Found data property, extracting data");
       dataToExport = dataToExport.data;
     }
 
+    console.log("Final data to export:", dataToExport);
+    console.log("Is array:", Array.isArray(dataToExport));
+    console.log("Length:", Array.isArray(dataToExport) ? dataToExport.length : "N/A");
+
     // Check if we have valid data to export
     if (!Array.isArray(dataToExport) || dataToExport.length === 0) {
+      console.log("No valid array data found for export");
+      return null;
+    }
+
+    // Ensure all items are objects with properties
+    if (dataToExport.some(item => typeof item !== "object" || item === null)) {
+      console.log("Data contains non-object items, cannot export as table");
       return null;
     }
 
@@ -102,6 +134,9 @@ export default function AIResultsPage() {
   const handleExportToCSV = () => {
     const dataToExport = extractDataForExport();
     if (!dataToExport) {
+      toast.error("No data available for export", {
+        description: "The query results don't contain exportable table data.",
+      });
       return;
     }
 
@@ -144,20 +179,35 @@ export default function AIResultsPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       setShowExportDropdown(false);
+      toast.success("CSV export completed", {
+        description: `Downloaded ${dataToExport.length} records successfully.`,
+      });
     } catch (error) {
       console.error("CSV export failed:", error);
+      toast.error("CSV export failed", {
+        description: "There was an error creating the CSV file. Please try again.",
+      });
     }
   };
 
   const handleExportToExcel = async () => {
     const dataToExport = extractDataForExport();
     if (!dataToExport) {
+      toast.error("No data available for export", {
+        description: "The query results don't contain exportable table data.",
+      });
       return;
     }
 
     try {
+      // Show loading toast
+      const loadingToast = toast.loading("Creating Excel file...", {
+        description: "Please wait while we generate your Excel file.",
+      });
+
       // Dynamically import xlsx to avoid SSR issues
       const XLSX = await import("xlsx");
 
@@ -228,8 +278,17 @@ export default function AIResultsPage() {
       XLSX.writeFile(workbook, fileName);
 
       setShowExportDropdown(false);
+      
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success("Excel export completed", {
+        description: `Downloaded ${dataToExport.length} records with formatting and query info.`,
+      });
     } catch (error) {
       console.error("Excel export failed:", error);
+      toast.error("Excel export failed", {
+        description: "There was an error creating the Excel file. Please try again.",
+      });
     }
   };
 

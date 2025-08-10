@@ -569,3 +569,58 @@ export interface UserCurrentDBTableData {
   created_at: string;
   updated_at: string;
 }
+
+// Excel to Database Types
+export interface ExcelToDBHealthResponse {
+  status: string;
+  message: string;
+  timestamp: string;
+}
+
+export interface ExcelToDBPushDataRequest {
+  user_id: string;
+  table_full_name: string;
+  column_mapping: Record<string, string>; // Excel column name -> Database column name
+  skip_first_row: boolean;
+  excel_file: File;
+}
+
+export interface ExcelToDBPushDataResponse {
+  status: string;
+  message: string;
+  data: {
+    rows_processed: number;
+    rows_inserted: number;
+    table_name: string;
+    operation_time: number;
+  };
+}
+
+export interface ExcelToDBGetAIMappingRequest {
+  user_id: string;
+  table_full_name: string;
+  excel_file: File;
+}
+
+export interface ColumnMappingSuggestion {
+  excel_column: string;
+  suggested_db_column: string;
+  confidence: number;
+  data_type_match: boolean;
+}
+
+export interface ExcelToDBGetAIMappingResponse {
+  status: string;
+  message: string;
+  data: {
+    table_name: string;
+    excel_columns: string[];
+    database_columns: string[];
+    suggested_mapping: ColumnMappingSuggestion[];
+    metadata: {
+      excel_rows_analyzed: number;
+      database_table_exists: boolean;
+      mapping_confidence: number;
+    };
+  };
+}

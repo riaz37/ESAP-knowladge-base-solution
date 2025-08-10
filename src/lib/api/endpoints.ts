@@ -67,6 +67,11 @@ export const API_ENDPOINTS = {
     `${baseUrl}/mssql-config/mssql-config/tasks/${taskId}`,
   GENERATE_MATCHED_TABLES: (id: number) =>
     `${baseUrl}/mssql-config/mssql-config/${id}/generate-matched-tables`,
+
+  // Excel to Database endpoints
+  EXCEL_TO_DB_HEALTH: `${baseUrl}/excel-to-db/excel-to-db/health`,
+  EXCEL_TO_DB_PUSH_DATA: `${baseUrl}/excel-to-db/excel-to-db/push-data`,
+  EXCEL_TO_DB_GET_AI_MAPPING: `${baseUrl}/excel-to-db/excel-to-db/get-ai-mapping`,
 };
 
 /**
