@@ -18,7 +18,20 @@ export class BusinessRulesService {
       }
 
       // Get the user's current database
-      const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
+      let userCurrentDB;
+      try {
+        userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
+      } catch (error) {
+        console.log("No current database set for user:", userId);
+        // Return empty string if no database is configured
+        return "";
+      }
+
+      if (!userCurrentDB || !userCurrentDB.db_id) {
+        console.log("No database ID found for user:", userId);
+        return "";
+      }
+
       const dbId = userCurrentDB.db_id; // With API client interceptor, no .data needed
       const response = await apiClient.get<MSSQLConfigResponse>(
         API_ENDPOINTS.GET_MSSQL_CONFIG(dbId)

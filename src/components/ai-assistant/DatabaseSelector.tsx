@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import { Loader2, Database } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Database, RefreshCw, Loader2, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -9,120 +11,244 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { UserAccessService } from "@/lib/api/services/user-access-service";
+import { MSSQLConfigService } from "@/lib/api/services/mssql-config-service";
+import { UserCurrentDBService } from "@/lib/api/services/user-current-db-service";
+import { toast } from "sonner";
 
-
-import { useDatabaseSelector } from "@/lib/hooks/use-database-selector";
-
+interface DatabaseInfo {
+  db_id: number;
+  db_name: string;
+  db_url: string;
+  access_level: "full" | "read_only" | "limited";
+}
 
 interface DatabaseSelectorProps {
-  /**
-   * Currently authenticated / selected user ID
-   */
   userId: string;
-  /**
-   * Currently active database ID (if any)
-   */
-  currentDbId?: number;
-  /**
-   * Callback fired when the database is changed
-   */
-  onDatabaseChange?: (dbId: number, dbName: string) => void;
-  /**
-   * Optional CSS classes for the wrapper element
-   */
+  selectedDatabaseId: number | null;
+  onDatabaseChange: (dbId: number, dbName: string) => void;
   className?: string;
+  disabled?: boolean;
+  showAccessLevel?: boolean;
 }
 
 export function DatabaseSelector({
   userId,
-  currentDbId,
+  selectedDatabaseId,
   onDatabaseChange,
-  className,
+  className = "",
+  disabled = false,
+  showAccessLevel = true,
 }: DatabaseSelectorProps) {
-  // Hook returns the full list of databases and utility methods
-  const {
-    databases,
-    currentDbName,
-    loading: dbLoading,
-    error: dbError,
-    selectDatabase,
-    refreshDatabases,
-  } = useDatabaseSelector(userId);
+  const [availableDatabases, setAvailableDatabases] = useState<DatabaseInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // All databases returned from the server (no access filtering requested)
-  const visibleDatabases = useMemo(() => databases, [databases]);
+  // Load databases for the user
+  const loadUserDatabases = async () => {
+    if (!userId || userId === "default") {
+      setAvailableDatabases([]);
+      return;
+    }
 
-  const isLoading = dbLoading;
-  const errorText = dbError;
+    try {
+      setLoading(true);
+      setError(null);
 
-  
+      // Get user access configuration
+      const userAccessResponse = await UserAccessService.getUserAccess(userId);
 
-  const handleChange = async (value: string) => {
-    const dbId = parseInt(value);
-    const db = visibleDatabases.find((d) => d.db_id === dbId);
-    if (!db) return;
+      // Get all available databases
+      const allDatabasesResponse = await MSSQLConfigService.getMSSQLConfigs();
+      const allDatabases = allDatabasesResponse.configs || allDatabasesResponse || [];
 
-    const success = await selectDatabase(dbId);
-    if (success && onDatabaseChange) {
-      onDatabaseChange(dbId, db.db_name);
+      // Create a map of accessible databases with their access levels
+      const accessibleDatabases: DatabaseInfo[] = [];
+      const dbAccessMap = new Map<number, "full" | "read_only" | "limited">();
+
+      // Process user access configs to build database access map
+      if (userAccessResponse.access_configs && Array.isArray(userAccessResponse.access_configs)) {
+        userAccessResponse.access_configs.forEach((config) => {
+          // Add parent databases
+          config.database_access?.parent_databases?.forEach((db) => {
+            dbAccessMap.set(db.db_id, db.access_level);
+          });
+
+          // Add sub databases
+          config.database_access?.sub_databases?.forEach((subDb) => {
+            subDb.databases?.forEach((db) => {
+              // If database already exists with 'full' access, don't downgrade
+              if (
+                !dbAccessMap.has(db.db_id) ||
+                dbAccessMap.get(db.db_id) !== "full"
+              ) {
+                dbAccessMap.set(db.db_id, db.access_level);
+              }
+            });
+          });
+        });
+      }
+
+      // Filter databases based on access
+      if (Array.isArray(allDatabases)) {
+        allDatabases.forEach((db) => {
+          if (dbAccessMap.has(db.db_id)) {
+            accessibleDatabases.push({
+              db_id: db.db_id,
+              db_name: db.db_name,
+              db_url: db.db_url,
+              access_level: dbAccessMap.get(db.db_id)!,
+            });
+          }
+        });
+      }
+
+      setAvailableDatabases(accessibleDatabases);
+
+      // Auto-select current database if not already selected
+      if (!selectedDatabaseId && accessibleDatabases.length > 0) {
+        try {
+          const currentDbResponse = await UserCurrentDBService.getUserCurrentDB(userId);
+          if (currentDbResponse.db_id) {
+            const currentDb = accessibleDatabases.find(
+              (db) => db.db_id === currentDbResponse.db_id
+            );
+            if (currentDb) {
+              onDatabaseChange(currentDb.db_id, currentDb.db_name);
+            }
+          }
+        } catch (error) {
+          // No current database set, that's okay
+          console.log("No current database set for user:", userId);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load user databases:", error);
+      setError(error instanceof Error ? error.message : "Failed to load databases");
+      setAvailableDatabases([]);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Load databases when userId changes
+  useEffect(() => {
+    loadUserDatabases();
+  }, [userId]);
+
+  // Handle database selection
+  const handleDatabaseChange = async (dbId: string) => {
+    const databaseId = parseInt(dbId);
+    const database = availableDatabases.find((db) => db.db_id === databaseId);
+
+    if (!database) {
+      toast.error("Database not found");
+      return;
+    }
+
+    if (databaseId === selectedDatabaseId) {
+      return; // Already selected
+    }
+
+    try {
+      // Set the current database for the user
+      await UserCurrentDBService.setUserCurrentDB(userId, {
+        db_id: databaseId,
+      });
+
+      onDatabaseChange(databaseId, database.db_name);
+      toast.success(`Switched to database: ${database.db_name}`);
+    } catch (error) {
+      console.error("Failed to set database:", error);
+      toast.error("Failed to switch database");
+    }
+  };
+
+  // Render loading state
+  if (loading) {
+    return (
+      <div className={`flex items-center gap-2 p-2 bg-gray-800/50 rounded-lg ${className}`}>
+        <Loader2 className="w-4 h-4 animate-spin text-green-400" />
+        <span className="text-gray-400 text-xs">Loading databases...</span>
+      </div>
+    );
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <div className={`flex items-center gap-2 p-2 bg-red-900/20 border border-red-400/30 rounded-lg ${className}`}>
+        <AlertCircle className="w-4 h-4 text-red-400" />
+        <span className="text-red-300 text-xs flex-1">{error}</span>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={loadUserDatabases}
+          className="text-red-300 hover:bg-red-400/10 text-xs"
+        >
+          <RefreshCw className="w-3 h-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  // Render empty state for default user
+  if (userId === "default") {
+    return (
+      <div className={`p-2 bg-yellow-900/20 border border-yellow-400/30 text-yellow-400 text-xs rounded-lg ${className}`}>
+        Please select a user first to view available databases.
+      </div>
+    );
+  }
+
+  // Render empty state for no databases
+  if (availableDatabases.length === 0) {
+    return (
+      <div className={`p-2 bg-yellow-900/20 border border-yellow-400/30 text-yellow-400 text-xs rounded-lg ${className}`}>
+        No databases available for this user.
+      </div>
+    );
+  }
+
+  // Render database selector
   return (
     <div className={className}>
-      {isLoading ? (
-        <div className="flex items-center gap-2 p-2 bg-gray-800/50 rounded-lg">
-          <Loader2 className="w-4 h-4 animate-spin text-green-400" />
-          <span className="text-gray-400 text-xs">Loading databases...</span>
-        </div>
-      ) : errorText ? (
-        <div className="flex items-center gap-2 p-2 bg-red-900/20 border border-red-400/30 rounded-lg">
-          <span className="text-red-300 text-xs">{errorText}</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={refreshDatabases}
-            className="text-red-300 hover:bg-red-400/10 text-xs"
-          >
-            Retry
-          </Button>
-        </div>
-      ) : visibleDatabases.length === 0 ? (
-        <div className="p-2 bg-yellow-900/20 border border-yellow-400/30 text-yellow-400 text-xs rounded-lg">
-          No databases available for this user.
-        </div>
-      ) : (
+      <div className="flex gap-2">
         <Select
-          value={currentDbId?.toString() || ""}
-          onValueChange={handleChange}
+          value={selectedDatabaseId?.toString() || ""}
+          onValueChange={handleDatabaseChange}
+          disabled={disabled}
         >
-          <SelectTrigger className="bg-gray-800/50 border-green-400/30 text-white justify-between w-full">
+          <SelectTrigger className="bg-gray-800/50 border-green-400/30 text-white flex-1">
             <SelectValue placeholder="Select database" />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={refreshDatabases}
-              className="ml-auto text-green-400 hover:bg-green-400/10"
-            >
-              Refresh
-            </Button>
           </SelectTrigger>
           <SelectContent className="bg-gray-800 border-green-400/30 max-h-60 overflow-y-auto">
-            {visibleDatabases.map((db) => (
+            {availableDatabases.map((db) => (
               <SelectItem key={db.db_id} value={db.db_id.toString()}>
                 <div className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-green-400" />
                   <span>{db.db_name}</span>
+                  {showAccessLevel && (
+                    <Badge variant="outline" className="ml-auto text-xs">
+                      {db.access_level}
+                    </Badge>
+                  )}
                 </div>
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-      )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={loadUserDatabases}
+          className="text-green-400 hover:bg-green-400/10 border border-green-400/30"
+          disabled={disabled}
+        >
+          <RefreshCw className="w-3 h-3" />
+        </Button>
+      </div>
     </div>
   );
 }
-
-export default DatabaseSelector;

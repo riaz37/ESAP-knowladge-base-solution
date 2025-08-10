@@ -8,28 +8,20 @@ import {
   FileText,
   Settings,
   Loader2,
-  MessageSquare,
   Database,
   Zap,
   AlertCircle,
   CheckCircle,
   X,
   ChevronDown,
+  RefreshCw,
+  User,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { useDatabaseOperations, useBusinessRules, useUserSettings } from "@/lib/hooks";
-import { DatabaseSelector } from "./DatabaseSelector";
+import { useDatabaseOperations } from "@/lib/hooks";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -39,8 +31,56 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import UserAccessService from "@/lib/api/services/user-access-service";
-import UserCurrentDBService from "@/lib/api/services/user-current-db-service";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { UserAccessService } from "@/lib/api/services/user-access-service";
+import { MSSQLConfigService } from "@/lib/api/services/mssql-config-service";
+import { UserCurrentDBService } from "@/lib/api/services/user-current-db-service";
+import { BusinessRulesService } from "@/lib/api/services/business-rules-service";
+import { DatabaseSelector } from "./DatabaseSelector";
+
+// Types for the redesigned interface
+interface UserData {
+  id: string;
+  name: string;
+  access_configs: Array<{
+    parent_company_id: number;
+    parent_company_name?: string;
+    database_access: {
+      parent_databases: Array<{
+        db_id: number;
+        db_name?: string;
+        access_level: "full" | "read_only" | "limited";
+      }>;
+      sub_databases: Array<{
+        sub_company_id: number;
+        databases: Array<{
+          db_id: number;
+          db_name?: string;
+          access_level: "full" | "read_only" | "limited";
+        }>;
+      }>;
+    };
+  }>;
+}
+
+interface DatabaseInfo {
+  db_id: number;
+  db_name: string;
+  db_url: string;
+  access_level: "full" | "read_only" | "limited";
+}
+
+interface BusinessRulesInfo {
+  content: string;
+  status: "loading" | "loaded" | "error" | "none";
+  error?: string;
+}
 
 interface AIInterfaceProps {
   isOpen: boolean;
@@ -51,56 +91,236 @@ interface AIInterfaceProps {
 export function AIInterface({
   isOpen,
   onClose,
-  userId = "nilab",
+  userId = "default",
 }: AIInterfaceProps) {
+  // Core state
   const [query, setQuery] = useState("");
-  const [businessRulesStatus, setBusinessRulesStatus] = useState<
-    "loading" | "loaded" | "error" | "none"
-  >("loading");
   const [queryHistory, setQueryHistory] = useState<
     Array<{ query: string; result: any; timestamp: Date }>
   >([]);
-  const [currentDbId, setCurrentDbId] = useState<number | undefined>();
-  const [currentDbName, setCurrentDbName] = useState<string>("");
+
+  // User management state
+  const [availableUsers, setAvailableUsers] = useState<UserData[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>(userId);
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [availableUsers, setAvailableUsers] = useState<Array<{id: string, name: string}>>([]);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
+
+  // Database management state
+  const [availableDatabases, setAvailableDatabases] = useState<DatabaseInfo[]>(
+    []
+  );
+  const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(
+    null
+  );
+  const [currentDatabaseName, setCurrentDatabaseName] = useState<string>("");
+  const [databasesLoading, setDatabasesLoading] = useState(false);
+  const [databasesError, setDatabasesError] = useState<string | null>(null);
+
+  // Business rules state
+  const [businessRules, setBusinessRules] = useState<BusinessRulesInfo>({
+    content: "",
+    status: "none",
+  });
+
+  // UI state
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
   const databaseOps = useDatabaseOperations();
-  const { userId: currentUserId } = useUserSettings();
-  const {
-    businessRulesText,
-    businessRulesLoading,
-    businessRulesError,
-    fetchBusinessRules,
-  } = useBusinessRules();
+
+  // Load available users on mount
+  const loadUsers = async () => {
+    try {
+      setUsersLoading(true);
+      setUsersError(null);
+
+      const response = await UserAccessService.getUserAccessConfigs();
+      const userMap = new Map<string, UserData>();
+
+      response.access_configs.forEach((config) => {
+        if (config.user_id && !userMap.has(config.user_id)) {
+          userMap.set(config.user_id, {
+            id: config.user_id,
+            name: config.user_id, // Use user_id as name for now
+            access_configs: [config],
+          });
+        } else if (config.user_id && userMap.has(config.user_id)) {
+          const existingUser = userMap.get(config.user_id)!;
+          existingUser.access_configs.push(config);
+        }
+      });
+
+      setAvailableUsers(Array.from(userMap.values()));
+    } catch (error) {
+      console.error("Failed to load users:", error);
+      setUsersError("Failed to load users");
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  // Load databases for selected user
+  const loadUserDatabases = async (userId: string) => {
+    try {
+      setDatabasesLoading(true);
+      setDatabasesError(null);
+
+      // Get user access configuration
+      const userAccessResponse = await UserAccessService.getUserAccess(userId);
+
+      // Get all available databases
+      const allDatabasesResponse = await MSSQLConfigService.getMSSQLConfigs();
+      const allDatabases =
+        allDatabasesResponse.configs || allDatabasesResponse || [];
+
+      // Create a map of accessible databases with their access levels
+      const accessibleDatabases: DatabaseInfo[] = [];
+      const dbAccessMap = new Map<number, "full" | "read_only" | "limited">();
+
+      // Process user access configs to build database access map
+      if (
+        userAccessResponse.access_configs &&
+        Array.isArray(userAccessResponse.access_configs)
+      ) {
+        userAccessResponse.access_configs.forEach((config) => {
+          // Add parent databases
+          config.database_access?.parent_databases?.forEach((db) => {
+            dbAccessMap.set(db.db_id, db.access_level);
+          });
+
+          // Add sub databases
+          config.database_access?.sub_databases?.forEach((subDb) => {
+            subDb.databases?.forEach((db) => {
+              // If database already exists with 'full' access, don't downgrade
+              if (
+                !dbAccessMap.has(db.db_id) ||
+                dbAccessMap.get(db.db_id) !== "full"
+              ) {
+                dbAccessMap.set(db.db_id, db.access_level);
+              }
+            });
+          });
+        });
+      }
+
+      // Filter databases based on access
+      if (Array.isArray(allDatabases)) {
+        allDatabases.forEach((db) => {
+          if (dbAccessMap.has(db.db_id)) {
+            accessibleDatabases.push({
+              db_id: db.db_id,
+              db_name: db.db_name,
+              db_url: db.db_url,
+              access_level: dbAccessMap.get(db.db_id)!,
+            });
+          }
+        });
+      }
+
+      setAvailableDatabases(accessibleDatabases);
+
+      // Try to load current database
+      try {
+        const currentDbResponse = await UserCurrentDBService.getUserCurrentDB(
+          userId
+        );
+        if (currentDbResponse.db_id) {
+          const currentDb = accessibleDatabases.find(
+            (db) => db.db_id === currentDbResponse.db_id
+          );
+          if (currentDb) {
+            setSelectedDatabaseId(currentDb.db_id);
+            setCurrentDatabaseName(currentDb.db_name);
+          }
+        }
+      } catch (error) {
+        // No current database set, that's okay
+        console.log("No current database set for user:", userId);
+      }
+    } catch (error) {
+      console.error("Failed to load user databases:", error);
+      setDatabasesError(
+        error instanceof Error ? error.message : "Failed to load databases"
+      );
+      setAvailableDatabases([]); // Clear databases on error
+    } finally {
+      setDatabasesLoading(false);
+    }
+  };
+
+  // Load business rules for selected user and database
+  const loadBusinessRules = async (userId: string) => {
+    try {
+      setBusinessRules((prev) => ({ ...prev, status: "loading" }));
+
+      const businessRulesContent = await BusinessRulesService.getBusinessRules(
+        userId
+      );
+
+      console.log("Business rules loaded:", {
+        userId,
+        content: businessRulesContent,
+        contentLength: businessRulesContent?.length || 0,
+        trimmedLength: businessRulesContent?.trim()?.length || 0,
+        hasContent: !!businessRulesContent?.trim(),
+      });
+
+      const hasContent =
+        businessRulesContent && businessRulesContent.trim().length > 0;
+
+      setBusinessRules({
+        content: businessRulesContent || "",
+        status: hasContent ? "loaded" : "none",
+      });
+    } catch (error) {
+      console.error("Failed to load business rules:", error);
+
+      // Check if the error is due to no database being configured
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to load business rules";
+      if (
+        errorMessage.includes("No current database") ||
+        errorMessage.includes("No database ID")
+      ) {
+        setBusinessRules({
+          content: "",
+          status: "none",
+        });
+      } else {
+        setBusinessRules({
+          content: "",
+          status: "error",
+          error: errorMessage,
+        });
+      }
+    }
+  };
 
   // Handle click outside to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      
-      // Check if the click is inside the AI interface
+
       if (dropdownRef.current && dropdownRef.current.contains(target)) {
         return;
       }
-      
-      // Check if the click is inside a dropdown menu (which is rendered in a portal)
-      const dropdownMenu = document.querySelector('[data-radix-popper-content-wrapper]');
+
+      const dropdownMenu = document.querySelector(
+        "[data-radix-popper-content-wrapper]"
+      );
       if (dropdownMenu && dropdownMenu.contains(target)) {
         return;
       }
-      
-      // Check if the click is on any dropdown trigger or menu item
-      const isDropdownElement = (target as Element).closest('[data-radix-dropdown-menu-trigger], [data-radix-dropdown-menu-content], [data-radix-dropdown-menu-item]');
+
+      const isDropdownElement = (target as Element).closest(
+        "[data-radix-dropdown-menu-trigger], [data-radix-dropdown-menu-content], [data-radix-dropdown-menu-item]"
+      );
       if (isDropdownElement) {
         return;
       }
-      
+
       onClose();
     };
 
@@ -111,120 +331,72 @@ export function AIInterface({
     }
   }, [isOpen, onClose]);
 
-  // Load users on component mount
+  // Load users on mount
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setIsLoadingUsers(true);
-        const response = await UserAccessService.getUserAccessConfigs();
-        // Extract unique users from the access configs
-        const users = new Map<string, string>();
-        response.access_configs.forEach(config => {
-          if (config.user_id && !users.has(config.user_id)) {
-            users.set(config.user_id, config.user_id); // Using user_id as both id and name
-          }
-        });
-        
-        const userList = Array.from(users.entries()).map(([id, name]) => ({ id, name }));
-        setAvailableUsers(userList);
-        
-        // If no user is selected, select the first available user
-        if (userList.length > 0 && !selectedUserId) {
-          setSelectedUserId(userList[0].id);
-        }
-        
-        setUsersError(null);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-        setUsersError("Failed to load users. Please try again later.");
-        toast.error("Failed to load users");
-      } finally {
-        setIsLoadingUsers(false);
-      }
-    };
-
     if (isOpen) {
-      fetchUsers();
+      loadUsers();
     }
   }, [isOpen]);
 
-  // Load current database when selected user changes
+  // Load user data when user changes
   useEffect(() => {
-    const fetchCurrentDb = async () => {
-      if (!selectedUserId) return;
-      try {
-        const resp: any = await UserCurrentDBService.getUserCurrentDB(selectedUserId);
-        if (resp && resp.db_id) {
-          setCurrentDbId(resp.db_id);
-          setCurrentDbName(resp.db_name ?? "");
-        } else {
-          setCurrentDbId(undefined);
-          setCurrentDbName("");
-        }
-      } catch (err: any) {
-        // 404 means user has no current DB, handle silently
-        setCurrentDbId(undefined);
-        setCurrentDbName("");
-      }
-    };
-
-    fetchCurrentDb();
-  }, [selectedUserId]);
-
-  // Load business rules when selected user changes
-  useEffect(() => {
-    if (isOpen && selectedUserId) {
+    if (isOpen && selectedUserId && selectedUserId !== "default") {
+      loadUserDatabases(selectedUserId);
       loadBusinessRules(selectedUserId);
     }
   }, [isOpen, selectedUserId]);
 
-  // Update selected user ID when the prop changes
+  // Update selected user ID when prop changes
   useEffect(() => {
     if (userId && userId !== selectedUserId) {
       setSelectedUserId(userId);
     }
-  }, [userId]);
+  }, [userId, selectedUserId]);
 
-  // Update business rules status
-  useEffect(() => {
-    if (businessRulesLoading) {
-      setBusinessRulesStatus("loading");
-    } else if (businessRulesError) {
-      setBusinessRulesStatus("error");
-    } else if (businessRulesText && businessRulesText.trim()) {
-      setBusinessRulesStatus("loaded");
-    } else {
-      setBusinessRulesStatus("none");
-    }
-  }, [businessRulesLoading, businessRulesError, businessRulesText]);
+  // Handle user selection
+  const handleUserSelect = async (userId: string) => {
+    console.log("Selecting user:", userId, "Current selected:", selectedUserId);
 
-  const loadBusinessRules = async (userId: string) => {
-    try {
-      await fetchBusinessRules(userId);
-    } catch (error) {
-      console.error("Failed to load business rules:", error);
-    }
-  };
-
-  const handleUserSelect = (userId: string) => {
     setSelectedUserId(userId);
     setShowUserDropdown(false);
-    // Clear query history when switching users
     setQueryHistory([]);
+
+    // Reset database and business rules state
+    setAvailableDatabases([]);
+    setSelectedDatabaseId(null);
+    setCurrentDatabaseName("");
+    setBusinessRules({ content: "", status: "none" });
+
+    // Load new user data
+    if (userId !== "default") {
+      await loadUserDatabases(userId);
+      await loadBusinessRules(userId);
+    }
   };
 
+  // Handle database selection from DatabaseSelector component
+  const handleDatabaseChange = (dbId: number, dbName: string) => {
+    setSelectedDatabaseId(dbId);
+    setCurrentDatabaseName(dbName);
+    setQueryHistory([]); // Clear query history when switching databases
+
+    // Reload business rules for the new database
+    loadBusinessRules(selectedUserId);
+  };
+
+  // Handle query submission
   const handleQuerySubmit = async () => {
     if (!query.trim()) {
       toast.error("Please enter a query");
       return;
     }
 
-    if (!currentDbId) {
+    if (!selectedDatabaseId) {
       toast.error("Please select a database first");
       return;
     }
 
-    if (!selectedUserId) {
+    if (!selectedUserId || selectedUserId === "default") {
       toast.error("Please select a user");
       return;
     }
@@ -233,37 +405,36 @@ export function AIInterface({
       const result = await databaseOps.sendDatabaseQuery(query, selectedUserId);
 
       if (result) {
-        // Add to query history for display in AI interface
+        // Add to query history
         setQueryHistory((prev) => [
           {
             query: query.trim(),
             result,
             timestamp: new Date(),
           },
-          ...prev.slice(0, 4), // Keep last 5 queries for dropdown
+          ...prev.slice(0, 4), // Keep last 5 queries
         ]);
 
-        // Store the result in sessionStorage to pass to the results page
+        // Store result for results page
         sessionStorage.setItem(
           "aiQueryResult",
           JSON.stringify({
             query: query.trim(),
             result,
             timestamp: new Date().toISOString(),
-            userId,
-            dbId: currentDbId,
-            dbName: currentDbName,
+            userId: selectedUserId,
+            dbId: selectedDatabaseId,
+            dbName: currentDatabaseName,
           })
         );
 
-        // Clear input after successful query
         setQuery("");
-
-        // Close the AI interface and navigate to results page
         onClose();
         router.push("/ai-results");
 
-        toast.success(`Query executed successfully on ${currentDbName}! Redirecting to results...`);
+        toast.success(
+          `Query executed successfully on ${currentDatabaseName}! Redirecting to results...`
+        );
       }
     } catch (error) {
       toast.error("Failed to execute query");
@@ -277,25 +448,21 @@ export function AIInterface({
     }
   };
 
-  const handleDatabaseChange = (dbId: number, dbName: string) => {
-    setCurrentDbId(dbId);
-    setCurrentDbName(dbName);
-    // Clear query history when switching databases
-    setQueryHistory([]);
-    toast.success(`Switched to database: ${dbName}`);
-  };
+  // Helper functions
+  const selectedUserName =
+    availableUsers.find((u) => u.id === selectedUserId)?.name || selectedUserId;
 
-  const selectedUserName = availableUsers.find(u => u.id === selectedUserId)?.name || selectedUserId;
-
-  const handleBusinessRulesUpdated = () => {
-    loadBusinessRules();
-    toast.success(
-      "Business rules updated! Your next queries will use the new rules."
-    );
-  };
+  // Debug logging
+  console.log("Current state:", {
+    selectedUserId,
+    selectedUserName,
+    availableUsers: availableUsers.map((u) => ({ id: u.id, name: u.name })),
+    usersLoading,
+    usersError,
+  });
 
   const getBusinessRulesStatusInfo = () => {
-    switch (businessRulesStatus) {
+    switch (businessRules.status) {
       case "loading":
         return {
           icon: <Loader2 className="w-3 h-3 animate-spin text-blue-400" />,
@@ -373,13 +540,16 @@ export function AIInterface({
                       Ask questions about your database
                     </p>
                     <span className="text-gray-400">•</span>
-                    <DropdownMenu open={showUserDropdown} onOpenChange={setShowUserDropdown}>
+                    <DropdownMenu
+                      open={showUserDropdown}
+                      onOpenChange={setShowUserDropdown}
+                    >
                       <DropdownMenuTrigger asChild>
-                        <button 
+                        <button
                           className="text-green-400 text-xs font-medium hover:bg-green-500/10 px-2 py-0.5 rounded-md flex items-center gap-1"
-                          disabled={isLoadingUsers}
+                          disabled={usersLoading}
                         >
-                          {isLoadingUsers ? (
+                          {usersLoading ? (
                             <span className="flex items-center gap-1">
                               <Loader2 className="w-3 h-3 animate-spin" />
                               Loading...
@@ -388,6 +558,7 @@ export function AIInterface({
                             <span className="text-red-400">Error</span>
                           ) : (
                             <>
+                              <User className="w-3 h-3" />
                               {selectedUserName}
                               <ChevronDown className="w-3 h-3" />
                             </>
@@ -395,21 +566,34 @@ export function AIInterface({
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-48 bg-gray-800 border-gray-700">
-                        <DropdownMenuLabel className="text-xs">Switch User</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-xs flex items-center gap-2">
+                          <Users className="w-3 h-3" />
+                          Switch User
+                        </DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-gray-700" />
                         {availableUsers.length > 0 ? (
                           availableUsers.map((user) => (
                             <DropdownMenuItem
                               key={user.id}
-                              className={`text-sm cursor-pointer ${selectedUserId === user.id ? 'bg-green-500/10 text-green-400' : 'text-gray-300 hover:bg-gray-700'}`}
+                              className={`text-sm cursor-pointer ${
+                                selectedUserId === user.id
+                                  ? "bg-green-500/10 text-green-400"
+                                  : "text-gray-300 hover:bg-gray-700"
+                              }`}
                               onClick={() => handleUserSelect(user.id)}
                             >
-                              {user.name}
+                              <div className="flex items-center gap-2">
+                                <User className="w-3 h-3" />
+                                {user.name}
+                                {selectedUserId === user.id && (
+                                  <CheckCircle className="w-3 h-3 ml-auto" />
+                                )}
+                              </div>
                             </DropdownMenuItem>
                           ))
                         ) : (
                           <div className="px-2 py-1.5 text-xs text-gray-400">
-                            {usersError || 'No users found'}
+                            {usersError || "No users found"}
                           </div>
                         )}
                       </DropdownMenuContent>
@@ -431,18 +615,17 @@ export function AIInterface({
           {/* Database Selection */}
           <div className="p-4 border-b border-green-500/20">
             <DatabaseSelector
-               key={selectedUserId}
-               userId={selectedUserId}
-               currentDbId={currentDbId}
-               onDatabaseChange={handleDatabaseChange}
-               className="w-full"
-             />
-            {currentDbName && (
+              userId={selectedUserId}
+              selectedDatabaseId={selectedDatabaseId}
+              onDatabaseChange={handleDatabaseChange}
+            />
+            {currentDatabaseName && (
               <div className="mt-2 p-2 bg-green-900/20 border border-green-400/30 rounded-lg">
                 <div className="flex items-start gap-2">
                   <Database className="w-3 h-3 text-green-400 mt-0.5" />
                   <p className="text-green-400 text-xs">
-                    Querying database: <span className="font-medium">{currentDbName}</span>
+                    Querying database:{" "}
+                    <span className="font-medium">{currentDatabaseName}</span>
                   </p>
                 </div>
               </div>
@@ -476,7 +659,7 @@ export function AIInterface({
               </Button>
             </div>
 
-            {businessRulesStatus === "loaded" && (
+            {businessRules.status === "loaded" && (
               <div className="mt-2 p-2 bg-green-900/20 border border-green-400/30 rounded-lg">
                 <div className="flex items-start gap-2">
                   <Zap className="w-3 h-3 text-green-400 mt-0.5" />
@@ -487,12 +670,23 @@ export function AIInterface({
               </div>
             )}
 
-            {businessRulesStatus === "none" && (
+            {businessRules.status === "none" && (
               <div className="mt-2 p-2 bg-yellow-900/20 border border-yellow-400/30 rounded-lg">
                 <div className="flex items-start gap-2">
                   <AlertCircle className="w-3 h-3 text-yellow-400 mt-0.5" />
                   <p className="text-yellow-400 text-xs">
                     No business rules configured.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {businessRules.status === "error" && (
+              <div className="mt-2 p-2 bg-red-900/20 border border-red-400/30 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-3 h-3 text-red-400 mt-0.5" />
+                  <p className="text-red-400 text-xs">
+                    {businessRules.error || "Failed to load business rules"}
                   </p>
                 </div>
               </div>
