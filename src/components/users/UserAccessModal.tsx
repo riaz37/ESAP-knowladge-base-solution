@@ -20,27 +20,17 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trash2, Plus, AlertCircle, CheckCircle } from "lucide-react";
+import { Trash2, Plus, AlertCircle, CheckCircle, Database } from "lucide-react";
 import { useUserAccess } from "@/lib/hooks/use-user-access";
 import { useParentCompanies } from "@/lib/hooks/use-parent-companies";
 import { useSubCompanies } from "@/lib/hooks/use-sub-companies";
-import { UserAccessCreateRequest, DatabaseAccess } from "@/types/api";
+import { UserAccessCreateRequest } from "@/types/api";
 
 interface UserAccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId?: string;
   onSuccess?: () => void;
-}
-
-interface DatabaseAccessForm extends DatabaseAccess {
-  tempId: string;
-}
-
-interface SubDatabaseForm {
-  tempId: string;
-  sub_company_id: number;
-  databases: DatabaseAccessForm[];
 }
 
 export function UserAccessModal({
@@ -64,15 +54,15 @@ export function UserAccessModal({
     user_id: string;
     parent_company_id: number;
     sub_company_ids: number[];
-    parent_databases: DatabaseAccessForm[];
-    sub_databases: SubDatabaseForm[];
+    parent_database_access_level: string;
+    sub_database_access_levels: Record<number, string>;
     table_shows: Record<string, string[]>;
   }>({
     user_id: userId,
     parent_company_id: 0,
     sub_company_ids: [],
-    parent_databases: [],
-    sub_databases: [],
+    parent_database_access_level: "read_only",
+    sub_database_access_levels: {},
     table_shows: {},
   });
 
@@ -120,119 +110,45 @@ export function UserAccessModal({
     }
   };
 
-  const addParentDatabase = () => {
-    const newDb: DatabaseAccessForm = {
-      tempId: Date.now().toString(),
-      db_id: 0,
-      access_level: "read_only",
-    };
-    setFormData((prev) => ({
-      ...prev,
-      parent_databases: [...prev.parent_databases, newDb],
-    }));
+  const handleSubCompanyAdd = (subCompanyId: number) => {
+    if (!formData.sub_company_ids.includes(subCompanyId)) {
+      setFormData((prev) => ({
+        ...prev,
+        sub_company_ids: [...prev.sub_company_ids, subCompanyId],
+        sub_database_access_levels: {
+          ...prev.sub_database_access_levels,
+          [subCompanyId]: "read_only",
+        },
+      }));
+    }
   };
 
-  const updateParentDatabase = (
-    tempId: string,
-    field: keyof DatabaseAccess,
-    value: any
+  const handleSubCompanyRemove = (subCompanyId: number) => {
+    setFormData((prev) => {
+      const newSubCompanyIds = prev.sub_company_ids.filter(
+        (id) => id !== subCompanyId
+      );
+      const newAccessLevels = { ...prev.sub_database_access_levels };
+      delete newAccessLevels[subCompanyId];
+
+      return {
+        ...prev,
+        sub_company_ids: newSubCompanyIds,
+        sub_database_access_levels: newAccessLevels,
+      };
+    });
+  };
+
+  const updateSubCompanyAccessLevel = (
+    subCompanyId: number,
+    accessLevel: string
   ) => {
     setFormData((prev) => ({
       ...prev,
-      parent_databases: prev.parent_databases.map((db) =>
-        db.tempId === tempId ? { ...db, [field]: value } : db
-      ),
-    }));
-  };
-
-  const removeParentDatabase = (tempId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      parent_databases: prev.parent_databases.filter(
-        (db) => db.tempId !== tempId
-      ),
-    }));
-  };
-
-  const addSubDatabase = () => {
-    const newSubDb: SubDatabaseForm = {
-      tempId: Date.now().toString(),
-      sub_company_id: 0,
-      databases: [],
-    };
-    setFormData((prev) => ({
-      ...prev,
-      sub_databases: [...prev.sub_databases, newSubDb],
-    }));
-  };
-
-  const updateSubDatabase = (tempId: string, field: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      sub_databases: prev.sub_databases.map((subDb) =>
-        subDb.tempId === tempId ? { ...subDb, [field]: value } : subDb
-      ),
-    }));
-  };
-
-  const removeSubDatabase = (tempId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      sub_databases: prev.sub_databases.filter(
-        (subDb) => subDb.tempId !== tempId
-      ),
-    }));
-  };
-
-  const addDatabaseToSubCompany = (subDbTempId: string) => {
-    const newDb: DatabaseAccessForm = {
-      tempId: Date.now().toString(),
-      db_id: 0,
-      access_level: "read_only",
-    };
-
-    setFormData((prev) => ({
-      ...prev,
-      sub_databases: prev.sub_databases.map((subDb) =>
-        subDb.tempId === subDbTempId
-          ? { ...subDb, databases: [...subDb.databases, newDb] }
-          : subDb
-      ),
-    }));
-  };
-
-  const updateSubCompanyDatabase = (
-    subDbTempId: string,
-    dbTempId: string,
-    field: keyof DatabaseAccess,
-    value: any
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      sub_databases: prev.sub_databases.map((subDb) =>
-        subDb.tempId === subDbTempId
-          ? {
-              ...subDb,
-              databases: subDb.databases.map((db) =>
-                db.tempId === dbTempId ? { ...db, [field]: value } : db
-              ),
-            }
-          : subDb
-      ),
-    }));
-  };
-
-  const removeSubCompanyDatabase = (subDbTempId: string, dbTempId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      sub_databases: prev.sub_databases.map((subDb) =>
-        subDb.tempId === subDbTempId
-          ? {
-              ...subDb,
-              databases: subDb.databases.filter((db) => db.tempId !== dbTempId),
-            }
-          : subDb
-      ),
+      sub_database_access_levels: {
+        ...prev.sub_database_access_levels,
+        [subCompanyId]: accessLevel,
+      },
     }));
   };
 
@@ -264,42 +180,78 @@ export function UserAccessModal({
     }));
   };
 
+  const getSelectedParentCompany = () => {
+    return parentCompanies.find(
+      (company) => company.parent_company_id === formData.parent_company_id
+    );
+  };
+
+  const getSelectedSubCompanies = () => {
+    return formData.sub_company_ids
+      .map((id) =>
+        subCompanies.find((company) => company.sub_company_id === id)
+      )
+      .filter(Boolean);
+  };
+
+  const getAllDatabaseIds = () => {
+    const dbIds = new Set<string>();
+
+    // Add parent company database
+    const parentCompany = getSelectedParentCompany();
+    if (parentCompany?.db_id) {
+      dbIds.add(parentCompany.db_id.toString());
+    }
+
+    // Add sub company databases
+    getSelectedSubCompanies().forEach((subCompany) => {
+      if (subCompany?.db_id) {
+        dbIds.add(subCompany.db_id.toString());
+      }
+    });
+
+    return Array.from(dbIds);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
+
+    const parentCompany = getSelectedParentCompany();
+    const selectedSubCompanies = getSelectedSubCompanies();
 
     const requestData: UserAccessCreateRequest = {
       user_id: formData.user_id,
       parent_company_id: formData.parent_company_id,
       sub_company_ids: formData.sub_company_ids,
       database_access: {
-        parent_databases: formData.parent_databases.map(
-          ({ tempId, ...db }) => db
-        ),
-        sub_databases: formData.sub_databases.map(
-          ({ tempId, databases, ...subDb }) => ({
-            ...subDb,
-            databases: databases.map(({ tempId, ...db }) => db),
-          })
-        ),
+        parent_databases: parentCompany?.db_id
+          ? [
+              {
+                db_id: parentCompany.db_id,
+                access_level: formData.parent_database_access_level as any,
+              },
+            ]
+          : [],
+        sub_databases: selectedSubCompanies.map((subCompany) => ({
+          sub_company_id: subCompany.sub_company_id,
+          databases: subCompany.db_id
+            ? [
+                {
+                  db_id: subCompany.db_id,
+                  access_level: (formData.sub_database_access_levels[
+                    subCompany.sub_company_id
+                  ] || "read_only") as any,
+                },
+              ]
+            : [],
+        })),
       },
       table_shows: formData.table_shows,
     };
 
+    console.log("Submitting user access request:", requestData);
     await createUserAccess(requestData);
-  };
-
-  const getAllDatabaseIds = () => {
-    const dbIds = new Set<string>();
-    formData.parent_databases.forEach((db) => {
-      if (db.db_id > 0) dbIds.add(db.db_id.toString());
-    });
-    formData.sub_databases.forEach((subDb) => {
-      subDb.databases.forEach((db) => {
-        if (db.db_id > 0) dbIds.add(db.db_id.toString());
-      });
-    });
-    return Array.from(dbIds);
   };
 
   return (
@@ -332,7 +284,7 @@ export function UserAccessModal({
           </div>
 
           {/* Parent Company */}
-          <div className="space-y-2">
+          <div className="space-y-4">
             <Label className="text-gray-300">Parent Company</Label>
             <Select
               value={formData.parent_company_id.toString()}
@@ -358,21 +310,69 @@ export function UserAccessModal({
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Parent Company Database Access */}
+            {getSelectedParentCompany() && (
+              <div className="p-4 bg-slate-700/30 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <Database className="w-4 h-4 text-emerald-400" />
+                  <Label className="text-gray-300">
+                    Parent Database Access
+                  </Label>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <Label className="text-xs text-gray-400">Database ID</Label>
+                    <Input
+                      type="number"
+                      value={getSelectedParentCompany()?.db_id || ""}
+                      className="bg-slate-600 border-slate-500 text-white"
+                      readOnly
+                    />
+                    <p className="text-xs text-emerald-400 mt-1">
+                      Auto-populated from{" "}
+                      {getSelectedParentCompany()?.company_name}
+                    </p>
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-xs text-gray-400">
+                      Access Level
+                    </Label>
+                    <Select
+                      value={formData.parent_database_access_level}
+                      onValueChange={(value) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          parent_database_access_level: value,
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="bg-slate-600 border-slate-500 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-700 border-slate-600">
+                        <SelectItem value="full" className="text-white">
+                          Full Access
+                        </SelectItem>
+                        <SelectItem value="read_only" className="text-white">
+                          Read Only
+                        </SelectItem>
+                        <SelectItem value="limited" className="text-white">
+                          Limited
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sub Companies */}
-          <div className="space-y-2">
+          <div className="space-y-4">
             <Label className="text-gray-300">Sub Companies</Label>
             <Select
-              onValueChange={(value) => {
-                const subCompanyId = Number(value);
-                if (!formData.sub_company_ids.includes(subCompanyId)) {
-                  setFormData((prev) => ({
-                    ...prev,
-                    sub_company_ids: [...prev.sub_company_ids, subCompanyId],
-                  }));
-                }
-              }}
+              onValueChange={(value) => handleSubCompanyAdd(Number(value))}
             >
               <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
                 <SelectValue placeholder="Add sub company" />
@@ -394,206 +394,65 @@ export function UserAccessModal({
                   ))}
               </SelectContent>
             </Select>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {formData.sub_company_ids.map((id) => {
-                const company = subCompanies.find(
-                  (c) => c.sub_company_id === id
-                );
-                return (
-                  <Badge
-                    key={id}
-                    variant="secondary"
-                    className="bg-emerald-600/20 text-emerald-400"
-                  >
-                    {company?.company_name || `Company ${id}`}
-                    <button
+
+            {/* Selected Sub Companies */}
+            <div className="space-y-3">
+              {getSelectedSubCompanies().map((subCompany) => (
+                <div
+                  key={subCompany.sub_company_id}
+                  className="p-4 bg-slate-700/30 rounded-lg"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-4 h-4 text-blue-400" />
+                      <span className="text-white font-medium">
+                        {subCompany.company_name}
+                      </span>
+                    </div>
+                    <Button
                       type="button"
                       onClick={() =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          sub_company_ids: prev.sub_company_ids.filter(
-                            (cId) => cId !== id
-                          ),
-                        }))
+                        handleSubCompanyRemove(subCompany.sub_company_id)
                       }
-                      className="ml-2 hover:text-red-400"
+                      size="sm"
+                      variant="destructive"
                     >
-                      ×
-                    </button>
-                  </Badge>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Parent Databases */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-gray-300">Parent Company Databases</Label>
-              <Button
-                type="button"
-                onClick={addParentDatabase}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Database
-              </Button>
-            </div>
-            {formData.parent_databases.map((db) => (
-              <div
-                key={db.tempId}
-                className="flex items-center gap-4 p-4 bg-slate-700/50 rounded-lg"
-              >
-                <div className="flex-1">
-                  <Input
-                    type="number"
-                    placeholder="Database ID"
-                    value={db.db_id || ""}
-                    onChange={(e) =>
-                      updateParentDatabase(
-                        db.tempId,
-                        "db_id",
-                        Number(e.target.value)
-                      )
-                    }
-                    className="bg-slate-600 border-slate-500 text-white"
-                  />
-                </div>
-                <div className="flex-1">
-                  <Select
-                    value={db.access_level}
-                    onValueChange={(value) =>
-                      updateParentDatabase(db.tempId, "access_level", value)
-                    }
-                  >
-                    <SelectTrigger className="bg-slate-600 border-slate-500 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-700 border-slate-600">
-                      <SelectItem value="full" className="text-white">
-                        Full Access
-                      </SelectItem>
-                      <SelectItem value="read_only" className="text-white">
-                        Read Only
-                      </SelectItem>
-                      <SelectItem value="limited" className="text-white">
-                        Limited
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  type="button"
-                  onClick={() => removeParentDatabase(db.tempId)}
-                  size="sm"
-                  variant="destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-
-          {/* Sub Company Databases */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-gray-300">Sub Company Databases</Label>
-              <Button
-                type="button"
-                onClick={addSubDatabase}
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Sub Company
-              </Button>
-            </div>
-            {formData.sub_databases.map((subDb) => (
-              <div
-                key={subDb.tempId}
-                className="p-4 bg-slate-700/30 rounded-lg space-y-4"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <Select
-                      value={subDb.sub_company_id.toString()}
-                      onValueChange={(value) =>
-                        updateSubDatabase(
-                          subDb.tempId,
-                          "sub_company_id",
-                          Number(value)
-                        )
-                      }
-                    >
-                      <SelectTrigger className="bg-slate-600 border-slate-500 text-white">
-                        <SelectValue placeholder="Select sub company" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-slate-700 border-slate-600">
-                        {subCompanies.map((company) => (
-                          <SelectItem
-                            key={company.sub_company_id}
-                            value={company.sub_company_id.toString()}
-                            className="text-white"
-                          >
-                            {company.company_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={() => addDatabaseToSubCompany(subDb.tempId)}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add DB
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => removeSubDatabase(subDb.tempId)}
-                    size="sm"
-                    variant="destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-                {subDb.databases.map((db) => (
-                  <div
-                    key={db.tempId}
-                    className="flex items-center gap-4 ml-4 p-3 bg-slate-600/50 rounded"
-                  >
+                  <div className="flex items-center gap-4">
                     <div className="flex-1">
+                      <Label className="text-xs text-gray-400">
+                        Database ID
+                      </Label>
                       <Input
                         type="number"
-                        placeholder="Database ID"
-                        value={db.db_id || ""}
-                        onChange={(e) =>
-                          updateSubCompanyDatabase(
-                            subDb.tempId,
-                            db.tempId,
-                            "db_id",
-                            Number(e.target.value)
-                          )
-                        }
-                        className="bg-slate-500 border-slate-400 text-white"
+                        value={subCompany.db_id || ""}
+                        className="bg-slate-600 border-slate-500 text-white"
+                        readOnly
                       />
+                      <p className="text-xs text-blue-400 mt-1">
+                        Auto-populated from {subCompany.company_name}
+                      </p>
                     </div>
                     <div className="flex-1">
+                      <Label className="text-xs text-gray-400">
+                        Access Level
+                      </Label>
                       <Select
-                        value={db.access_level}
+                        value={
+                          formData.sub_database_access_levels[
+                            subCompany.sub_company_id
+                          ] || "read_only"
+                        }
                         onValueChange={(value) =>
-                          updateSubCompanyDatabase(
-                            subDb.tempId,
-                            db.tempId,
-                            "access_level",
+                          updateSubCompanyAccessLevel(
+                            subCompany.sub_company_id,
                             value
                           )
                         }
                       >
-                        <SelectTrigger className="bg-slate-500 border-slate-400 text-white">
+                        <SelectTrigger className="bg-slate-600 border-slate-500 text-white">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-slate-700 border-slate-600">
@@ -609,23 +468,13 @@ export function UserAccessModal({
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button
-                      type="button"
-                      onClick={() =>
-                        removeSubCompanyDatabase(subDb.tempId, db.tempId)
-                      }
-                      size="sm"
-                      variant="destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
-                ))}
-              </div>
-            ))}
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Table Shows */}
+          {/* Table Access Configuration */}
           <div className="space-y-4">
             <Label className="text-gray-300">Table Access Configuration</Label>
             <div className="flex items-center gap-4">

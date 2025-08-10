@@ -40,7 +40,9 @@ export function DatabaseSelector({
   disabled = false,
   showAccessLevel = true,
 }: DatabaseSelectorProps) {
-  const [availableDatabases, setAvailableDatabases] = useState<DatabaseInfo[]>([]);
+  const [availableDatabases, setAvailableDatabases] = useState<DatabaseInfo[]>(
+    []
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,14 +62,18 @@ export function DatabaseSelector({
 
       // Get all available databases
       const allDatabasesResponse = await MSSQLConfigService.getMSSQLConfigs();
-      const allDatabases = allDatabasesResponse.configs || allDatabasesResponse || [];
+      const allDatabases =
+        allDatabasesResponse.configs || allDatabasesResponse || [];
 
       // Create a map of accessible databases with their access levels
       const accessibleDatabases: DatabaseInfo[] = [];
       const dbAccessMap = new Map<number, "full" | "read_only" | "limited">();
 
       // Process user access configs to build database access map
-      if (userAccessResponse.access_configs && Array.isArray(userAccessResponse.access_configs)) {
+      if (
+        userAccessResponse.access_configs &&
+        Array.isArray(userAccessResponse.access_configs)
+      ) {
         userAccessResponse.access_configs.forEach((config) => {
           // Add parent databases
           config.database_access?.parent_databases?.forEach((db) => {
@@ -108,7 +114,9 @@ export function DatabaseSelector({
       // Auto-select current database if not already selected
       if (!selectedDatabaseId && accessibleDatabases.length > 0) {
         try {
-          const currentDbResponse = await UserCurrentDBService.getUserCurrentDB(userId);
+          const currentDbResponse = await UserCurrentDBService.getUserCurrentDB(
+            userId
+          );
           if (currentDbResponse.db_id) {
             const currentDb = accessibleDatabases.find(
               (db) => db.db_id === currentDbResponse.db_id
@@ -124,7 +132,9 @@ export function DatabaseSelector({
       }
     } catch (error) {
       console.error("Failed to load user databases:", error);
-      setError(error instanceof Error ? error.message : "Failed to load databases");
+      setError(
+        error instanceof Error ? error.message : "Failed to load databases"
+      );
       setAvailableDatabases([]);
     } finally {
       setLoading(false);
@@ -167,7 +177,9 @@ export function DatabaseSelector({
   // Render loading state
   if (loading) {
     return (
-      <div className={`flex items-center gap-2 p-2 bg-gray-800/50 rounded-lg ${className}`}>
+      <div
+        className={`flex items-center gap-2 p-2 bg-gray-800/50 rounded-lg ${className}`}
+      >
         <Loader2 className="w-4 h-4 animate-spin text-green-400" />
         <span className="text-gray-400 text-xs">Loading databases...</span>
       </div>
@@ -177,7 +189,9 @@ export function DatabaseSelector({
   // Render error state
   if (error) {
     return (
-      <div className={`flex items-center gap-2 p-2 bg-red-900/20 border border-red-400/30 rounded-lg ${className}`}>
+      <div
+        className={`flex items-center gap-2 p-2 bg-red-900/20 border border-red-400/30 rounded-lg ${className}`}
+      >
         <AlertCircle className="w-4 h-4 text-red-400" />
         <span className="text-red-300 text-xs flex-1">{error}</span>
         <Button
@@ -195,7 +209,9 @@ export function DatabaseSelector({
   // Render empty state for default user
   if (userId === "default") {
     return (
-      <div className={`p-2 bg-yellow-900/20 border border-yellow-400/30 text-yellow-400 text-xs rounded-lg ${className}`}>
+      <div
+        className={`p-2 bg-yellow-900/20 border border-yellow-400/30 text-yellow-400 text-xs rounded-lg ${className}`}
+      >
         Please select a user first to view available databases.
       </div>
     );
@@ -204,7 +220,9 @@ export function DatabaseSelector({
   // Render empty state for no databases
   if (availableDatabases.length === 0) {
     return (
-      <div className={`p-2 bg-yellow-900/20 border border-yellow-400/30 text-yellow-400 text-xs rounded-lg ${className}`}>
+      <div
+        className={`p-2 bg-yellow-900/20 border border-yellow-400/30 text-yellow-400 text-xs rounded-lg ${className}`}
+      >
         No databases available for this user.
       </div>
     );
