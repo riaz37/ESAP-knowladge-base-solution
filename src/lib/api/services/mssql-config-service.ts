@@ -1,15 +1,15 @@
 import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../endpoints";
 import {
-  MSSQLConfigRequest,
   MSSQLConfigResponse,
   MSSQLConfigsListResponse,
   GenerateTableInfoRequest,
   GenerateTableInfoResponse,
-  TaskStatusResponse,
   GenerateMatchedTablesRequest,
   GenerateMatchedTablesResponse,
   MSSQLConfigFormRequest,
+  MSSQLConfigTaskResponse,
+  MSSQLConfigTaskStatusResponse,
 } from "@/types/api";
 
 /**
@@ -30,30 +30,11 @@ export class MSSQLConfigService {
   ];
 
   /**
-   * Create a new MSSQL database configuration (JSON format)
+   * Set MSSQL database configuration (new task-based API)
    */
-  static async createMSSQLConfig(
-    config: MSSQLConfigRequest
-  ): Promise<any> {
-    try {
-      const response = await apiClient.post(
-        API_ENDPOINTS.CREATE_MSSQL_CONFIG,
-        config
-      );
-      // With API client interceptor, response already contains the data portion
-      return response;
-    } catch (error) {
-      console.error("Error creating MSSQL configuration:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create a new MSSQL database configuration with file upload (multipart/form-data)
-   */
-  static async createMSSQLConfigWithFile(
-    config: MSSQLConfigFormRequest
-  ): Promise<any> {
+  static async setMSSQLConfig(
+    config: MSSQLConfigFormRequest & { user_id: string }
+  ): Promise<MSSQLConfigTaskResponse> {
     try {
       // Validate file type if file is provided
       if (config.file) {
@@ -66,17 +47,22 @@ export class MSSQLConfigService {
       const formData = new FormData();
       formData.append("db_url", config.db_url);
       formData.append("db_name", config.db_name);
+      formData.append("user_id", config.user_id);
 
       if (config.business_rule) {
         formData.append("business_rule", config.business_rule);
+      } else {
+        formData.append("business_rule", "");
       }
 
       if (config.file) {
         formData.append("file", config.file);
+      } else {
+        formData.append("file", "");
       }
 
       const response = await apiClient.post(
-        API_ENDPOINTS.CREATE_MSSQL_CONFIG,
+        API_ENDPOINTS.SET_MSSQL_CONFIG,
         formData,
         {
           headers: {
@@ -84,10 +70,58 @@ export class MSSQLConfigService {
           },
         }
       );
-      // With API client interceptor, response already contains the data portion
       return response;
     } catch (error) {
-      console.error("Error creating MSSQL configuration with file:", error);
+      console.error("Error setting MSSQL configuration:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update MSSQL database configuration (new task-based API)
+   */
+  static async updateMSSQLConfig(
+    id: number,
+    config: MSSQLConfigFormRequest & { user_id: string }
+  ): Promise<MSSQLConfigTaskResponse> {
+    try {
+      // Validate file type if file is provided
+      if (config.file) {
+        const isValidFile = this.validateDatabaseFile(config.file);
+        if (!isValidFile.isValid) {
+          throw new Error(isValidFile.error);
+        }
+      }
+
+      const formData = new FormData();
+      formData.append("db_url", config.db_url);
+      formData.append("db_name", config.db_name);
+      formData.append("user_id", config.user_id);
+
+      if (config.business_rule) {
+        formData.append("business_rule", config.business_rule);
+      } else {
+        formData.append("business_rule", "");
+      }
+
+      if (config.file) {
+        formData.append("file", config.file);
+      } else {
+        formData.append("file", "");
+      }
+
+      const response = await apiClient.put(
+        API_ENDPOINTS.UPDATE_MSSQL_CONFIG(id),
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response;
+    } catch (error) {
+      console.error("Error updating MSSQL configuration:", error);
       throw error;
     }
   }
@@ -171,19 +205,83 @@ export class MSSQLConfigService {
   }
 
   /**
-   * Get task status by task ID
+   * Get task status by task ID (new API structure)
    */
-  static async getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
+  static async getTaskStatus(taskId: string): Promise<MSSQLConfigTaskStatusResponse> {
     try {
       const response = await apiClient.get(
         API_ENDPOINTS.GET_TASK_STATUS(taskId)
       );
-      // With API client interceptor, response already contains the data portion
       return response;
     } catch (error) {
       console.error(`Error fetching task status ${taskId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Poll task status until completion
+   */
+  static async pollTaskStatus(
+    taskId: string,
+    onProgress?: (progress: number, status: string) => void,
+    maxAttempts: number = 60,
+    intervalMs: number = 2000
+  ): Promise<MSSQLConfigTaskStatusResponse> {
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const response = await this.getTaskStatus(taskId);
+        const taskData = response.data;
+        
+        if (onProgress) {
+          onProgress(taskData.progress, taskData.status);
+        }
+        
+        if (taskData.status === 'success' || taskData.status === 'failed') {
+          return response;
+        }
+        
+        // Wait before next poll
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
+        attempts++;
+      } catch (error) {
+        console.error(`Error polling task status ${taskId}:`, error);
+        attempts++;
+        if (attempts >= maxAttempts) {
+          throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, intervalMs));
+      }
+    }
+    
+    throw new Error(`Task ${taskId} did not complete within ${maxAttempts} attempts`);
+  }
+
+  /**
+   * Set MSSQL config and wait for completion
+   */
+  static async setMSSQLConfigAndWait(
+    config: MSSQLConfigFormRequest & { user_id: string },
+    onProgress?: (progress: number, status: string) => void
+  ): Promise<MSSQLConfigTaskStatusResponse> {
+    const taskResponse = await this.setMSSQLConfig(config);
+    const taskId = taskResponse.data.task_id;
+    return await this.pollTaskStatus(taskId, onProgress);
+  }
+
+  /**
+   * Update MSSQL config and wait for completion
+   */
+  static async updateMSSQLConfigAndWait(
+    id: number,
+    config: MSSQLConfigFormRequest & { user_id: string },
+    onProgress?: (progress: number, status: string) => void
+  ): Promise<MSSQLConfigTaskStatusResponse> {
+    const taskResponse = await this.updateMSSQLConfig(id, config);
+    const taskId = taskResponse.data.task_id;
+    return await this.pollTaskStatus(taskId, onProgress);
   }
 
   /**
@@ -248,33 +346,7 @@ export class MSSQLConfigService {
     return { isValid: true };
   }
 
-  /**
-   * Validate MSSQL configuration before creating
-   */
-  static validateConfig(config: MSSQLConfigRequest): {
-    isValid: boolean;
-    errors: string[];
-  } {
-    const errors: string[] = [];
 
-    if (!config.db_url || config.db_url.trim() === "") {
-      errors.push("Database URL is required");
-    }
-
-    if (!config.db_name || config.db_name.trim() === "") {
-      errors.push("Database name is required");
-    }
-
-    // Validate connection string format
-    if (config.db_url && !config.db_url.startsWith("mssql+pyodbc://")) {
-      errors.push("Database URL must be a valid MSSQL connection string");
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-    };
-  }
 
   /**
    * Validate MSSQL form configuration before creating

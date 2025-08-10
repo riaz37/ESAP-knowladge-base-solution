@@ -1,22 +1,27 @@
 import { useState, useCallback } from "react";
 import { MSSQLConfigService } from "../api/services/mssql-config-service";
 import { 
-  MSSQLConfigRequest, 
-  MSSQLConfigResponse, 
   MSSQLConfigData,
-  MSSQLConfigFormRequest 
+  MSSQLConfigFormRequest,
+  MSSQLConfigTaskResponse,
+  MSSQLConfigTaskStatusResponse 
 } from "@/types/api";
 
 interface UseMSSQLConfigReturn {
   configs: MSSQLConfigData[] | null;
-  createConfig: (config: MSSQLConfigRequest) => Promise<MSSQLConfigResponse | null>;
-  createConfigWithFile: (config: MSSQLConfigFormRequest) => Promise<MSSQLConfigResponse | null>;
+  setConfig: (config: MSSQLConfigFormRequest & { user_id: string }) => Promise<MSSQLConfigTaskResponse | null>;
+  updateConfig: (id: number, config: MSSQLConfigFormRequest & { user_id: string }) => Promise<MSSQLConfigTaskResponse | null>;
+  setConfigAndWait: (config: MSSQLConfigFormRequest & { user_id: string }, onProgress?: (progress: number, status: string) => void) => Promise<MSSQLConfigTaskStatusResponse | null>;
+  updateConfigAndWait: (id: number, config: MSSQLConfigFormRequest & { user_id: string }, onProgress?: (progress: number, status: string) => void) => Promise<MSSQLConfigTaskStatusResponse | null>;
+  pollTaskStatus: (taskId: string, onProgress?: (progress: number, status: string) => void) => Promise<MSSQLConfigTaskStatusResponse | null>;
   getConfigs: () => Promise<MSSQLConfigData[] | null>;
   getConfig: (id: number) => Promise<MSSQLConfigData | null>;
   refetch: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
   success: boolean;
+  taskProgress: number;
+  taskStatus: string | null;
   clearError: () => void;
   clearSuccess: () => void;
 }
@@ -26,39 +31,17 @@ export function useMSSQLConfig(): UseMSSQLConfigReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [taskProgress, setTaskProgress] = useState(0);
+  const [taskStatus, setTaskStatus] = useState<string | null>(null);
 
-  const createConfig = async (
-    config: MSSQLConfigRequest
-  ): Promise<MSSQLConfigResponse | null> => {
+  const setConfig = async (
+    config: MSSQLConfigFormRequest & { user_id: string }
+  ): Promise<MSSQLConfigTaskResponse | null> => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
-
-    try {
-      // Validate config before sending
-      const validation = MSSQLConfigService.validateConfig(config);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(", "));
-      }
-
-      const response = await MSSQLConfigService.createMSSQLConfig(config);
-      setSuccess(true);
-      return response;
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to create MSSQL configuration";
-      setError(errorMessage);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const createConfigWithFile = async (
-    config: MSSQLConfigFormRequest
-  ): Promise<MSSQLConfigResponse | null> => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
+    setTaskProgress(0);
+    setTaskStatus(null);
 
     try {
       // Validate form config before sending
@@ -67,11 +50,165 @@ export function useMSSQLConfig(): UseMSSQLConfigReturn {
         throw new Error(validation.errors.join(", "));
       }
 
-      const response = await MSSQLConfigService.createMSSQLConfigWithFile(config);
+      const response = await MSSQLConfigService.setMSSQLConfig(config);
       setSuccess(true);
       return response;
     } catch (err: any) {
-      const errorMessage = err?.message || "Failed to create MSSQL configuration with file";
+      const errorMessage = err?.message || "Failed to set MSSQL configuration";
+      setError(errorMessage);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateConfig = async (
+    id: number,
+    config: MSSQLConfigFormRequest & { user_id: string }
+  ): Promise<MSSQLConfigTaskResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(false);
+    setTaskProgress(0);
+    setTaskStatus(null);
+
+    try {
+      // Validate form config before sending
+      const validation = MSSQLConfigService.validateFormConfig(config);
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(", "));
+      }
+
+      const response = await MSSQLConfigService.updateMSSQLConfig(id, config);
+      setSuccess(true);
+      return response;
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to update MSSQL configuration";
+      setError(errorMessage);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const pollTaskStatus = async (
+    taskId: string,
+    onProgress?: (progress: number, status: string) => void
+  ): Promise<MSSQLConfigTaskStatusResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await MSSQLConfigService.pollTaskStatus(
+        taskId,
+        (progress, status) => {
+          setTaskProgress(progress);
+          setTaskStatus(status);
+          if (onProgress) {
+            onProgress(progress, status);
+          }
+        }
+      );
+      
+      if (response.data.status === 'success') {
+        setSuccess(true);
+      } else if (response.data.status === 'failed') {
+        setError(response.data.error || 'Task failed');
+      }
+      
+      return response;
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to poll task status";
+      setError(errorMessage);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setConfigAndWait = async (
+    config: MSSQLConfigFormRequest & { user_id: string },
+    onProgress?: (progress: number, status: string) => void
+  ): Promise<MSSQLConfigTaskStatusResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(false);
+    setTaskProgress(0);
+    setTaskStatus(null);
+
+    try {
+      // Validate form config before sending
+      const validation = MSSQLConfigService.validateFormConfig(config);
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(", "));
+      }
+
+      const response = await MSSQLConfigService.setMSSQLConfigAndWait(
+        config,
+        (progress, status) => {
+          setTaskProgress(progress);
+          setTaskStatus(status);
+          if (onProgress) {
+            onProgress(progress, status);
+          }
+        }
+      );
+      
+      if (response.data.status === 'success') {
+        setSuccess(true);
+      } else if (response.data.status === 'failed') {
+        setError(response.data.error || 'Task failed');
+      }
+      
+      return response;
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to set MSSQL configuration";
+      setError(errorMessage);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateConfigAndWait = async (
+    id: number,
+    config: MSSQLConfigFormRequest & { user_id: string },
+    onProgress?: (progress: number, status: string) => void
+  ): Promise<MSSQLConfigTaskStatusResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+    setSuccess(false);
+    setTaskProgress(0);
+    setTaskStatus(null);
+
+    try {
+      // Validate form config before sending
+      const validation = MSSQLConfigService.validateFormConfig(config);
+      if (!validation.isValid) {
+        throw new Error(validation.errors.join(", "));
+      }
+
+      const response = await MSSQLConfigService.updateMSSQLConfigAndWait(
+        id,
+        config,
+        (progress, status) => {
+          setTaskProgress(progress);
+          setTaskStatus(status);
+          if (onProgress) {
+            onProgress(progress, status);
+          }
+        }
+      );
+      
+      if (response.data.status === 'success') {
+        setSuccess(true);
+      } else if (response.data.status === 'failed') {
+        setError(response.data.error || 'Task failed');
+      }
+      
+      return response;
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to update MSSQL configuration";
       setError(errorMessage);
       return null;
     } finally {
@@ -157,14 +294,19 @@ export function useMSSQLConfig(): UseMSSQLConfigReturn {
 
   return {
     configs,
-    createConfig,
-    createConfigWithFile,
+    setConfig,
+    updateConfig,
+    setConfigAndWait,
+    updateConfigAndWait,
+    pollTaskStatus,
     getConfigs,
     getConfig,
     refetch,
     isLoading,
     error,
     success,
+    taskProgress,
+    taskStatus,
     clearError,
     clearSuccess,
   };

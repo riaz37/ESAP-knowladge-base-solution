@@ -51,7 +51,7 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
   const handleInputChange = (field: string, value: any) => {
     if (field.startsWith("db_config.")) {
       const dbField = field.replace("db_config.", "");
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         db_config: {
           ...prev.db_config,
@@ -59,7 +59,7 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
         },
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         [field]: field === "access_level" ? parseInt(value) || 0 : value,
       }));
@@ -138,7 +138,9 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                   <Input
                     id="user_id"
                     value={formData.user_id}
-                    onChange={(e) => handleInputChange("user_id", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("user_id", e.target.value)
+                    }
                     placeholder="Enter user ID"
                     required
                   />
@@ -149,7 +151,9 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                     id="access_level"
                     type="number"
                     value={formData.access_level}
-                    onChange={(e) => handleInputChange("access_level", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("access_level", e.target.value)
+                    }
                     placeholder="Access level (0-3)"
                     min="0"
                     max="3"
@@ -166,7 +170,9 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                     <Input
                       id="db_host"
                       value={formData.db_config.DB_HOST}
-                      onChange={(e) => handleInputChange("db_config.DB_HOST", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("db_config.DB_HOST", e.target.value)
+                      }
                       placeholder="Database host"
                       required
                     />
@@ -177,7 +183,9 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                       id="db_port"
                       type="number"
                       value={formData.db_config.DB_PORT}
-                      onChange={(e) => handleInputChange("db_config.DB_PORT", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("db_config.DB_PORT", e.target.value)
+                      }
                       placeholder="Database port"
                       required
                     />
@@ -187,7 +195,9 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                     <Input
                       id="db_name"
                       value={formData.db_config.DB_NAME}
-                      onChange={(e) => handleInputChange("db_config.DB_NAME", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("db_config.DB_NAME", e.target.value)
+                      }
                       placeholder="Database name"
                       required
                     />
@@ -197,7 +207,9 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                     <Input
                       id="db_user"
                       value={formData.db_config.DB_USER}
-                      onChange={(e) => handleInputChange("db_config.DB_USER", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("db_config.DB_USER", e.target.value)
+                      }
                       placeholder="Database user"
                       required
                     />
@@ -208,7 +220,12 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                       id="db_password"
                       type="password"
                       value={formData.db_config.DB_PASSWORD}
-                      onChange={(e) => handleInputChange("db_config.DB_PASSWORD", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "db_config.DB_PASSWORD",
+                          e.target.value
+                        )
+                      }
                       placeholder="Database password"
                       required
                     />
@@ -218,7 +235,9 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                     <Input
                       id="db_schema"
                       value={formData.db_config.schema}
-                      onChange={(e) => handleInputChange("db_config.schema", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("db_config.schema", e.target.value)
+                      }
                       placeholder="Database schema"
                       required
                     />
@@ -228,7 +247,9 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
 
               <div className="flex space-x-2">
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Create Configuration
                 </Button>
                 <Button
@@ -273,9 +294,9 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                     <div>
                       <h4 className="font-semibold">User: {config.user_id}</h4>
                       <p className="text-sm text-gray-600">
-                        Database: {config.db_config.DB_NAME} | 
-                        Access Level: {config.access_level} |
-                        Latest: {config.is_latest ? "Yes" : "No"}
+                        Database: {config.db_config.DB_NAME} | Access Level:{" "}
+                        {config.access_level} | Latest:{" "}
+                        {config.is_latest ? "Yes" : "No"}
                       </p>
                       <p className="text-xs text-gray-500">
                         Created: {new Date(config.created_at).toLocaleString()}
@@ -330,21 +351,22 @@ export const UserConfigManager: React.FC<UserConfigManagerProps> = ({
                   </p>
                 </div>
               </div>
-              
+
               <div>
                 <Label>Database Configuration</Label>
                 <div className="text-sm font-mono bg-gray-100 p-4 rounded mt-2">
-                  <pre>{JSON.stringify(currentUserConfig.db_config, null, 2)}</pre>
+                  <pre>
+                    {JSON.stringify(currentUserConfig.db_config, null, 2)}
+                  </pre>
                 </div>
               </div>
 
               <div>
                 <Label>Accessible Tables</Label>
                 <div className="text-sm font-mono bg-gray-100 p-2 rounded mt-2">
-                  {currentUserConfig.accessible_tables.length > 0 
+                  {currentUserConfig.accessible_tables.length > 0
                     ? currentUserConfig.accessible_tables.join(", ")
-                    : "No specific tables configured"
-                  }
+                    : "No specific tables configured"}
                 </div>
               </div>
             </div>
