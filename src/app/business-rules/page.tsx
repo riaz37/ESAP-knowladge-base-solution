@@ -1,12 +1,15 @@
 "use client";
 
 import { BusinessRulesManager } from "@/components/business-rules/BusinessRulesManager";
+import { EnhancedBackground } from "@/components/ui/enhanced-background";
 
 export default function BusinessRulesPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-      {/* Add top padding to account for fixed navbar */}
-      <div className="pt-24 pb-8">
+    <div className="min-h-screen relative">
+      <EnhancedBackground />
+      
+      {/* Content */}
+      <div className="relative z-10 pt-24 pb-8">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
             <div className="mb-8">
