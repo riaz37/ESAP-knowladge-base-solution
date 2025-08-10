@@ -39,26 +39,31 @@ export function CompanyInfoStep({
   };
 
   return (
-    <div className="space-y-6">
-      <h3 className="text-lg font-medium text-green-400">Company Information</h3>
+    <div className="space-y-8 p-1">
+      <div>
+        <h3 className="text-xl font-semibold text-green-400 mb-1">Company Information</h3>
+        <p className="text-sm text-gray-400">Enter your company details to get started</p>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+        {/* Company Name */}
         <div className="space-y-2">
-          <Label htmlFor="companyName" className="text-gray-300">
-            Company Name *
+          <Label htmlFor="companyName" className="text-sm font-medium text-gray-300">
+            Company Name <span className="text-red-500">*</span>
           </Label>
           <Input
             id="companyName"
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
-            placeholder="Enter company name"
-            className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+            placeholder="Acme Inc."
+            className="h-11 bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30"
             required
           />
         </div>
 
+        {/* Contact Email */}
         <div className="space-y-2">
-          <Label htmlFor="contactEmail" className="text-gray-300">
+          <Label htmlFor="contactEmail" className="text-sm font-medium text-gray-300">
             Contact Email
           </Label>
           <Input
@@ -67,33 +72,38 @@ export function CompanyInfoStep({
             value={contactEmail}
             onChange={(e) => setContactEmail(e.target.value)}
             placeholder="contact@company.com"
-            className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+            className="h-11 bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="address" className="text-gray-300">
-            Address
+        {/* Address - Full Width */}
+        <div className="md:col-span-2 space-y-2">
+          <Label htmlFor="address" className="text-sm font-medium text-gray-300">
+            Company Address
           </Label>
           <Input
             id="address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Company address"
-            className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+            placeholder="123 Business St, City, Country"
+            className="h-11 bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30"
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="description" className="text-gray-300">
-            Description
-          </Label>
+        {/* Description - Full Width */}
+        <div className="md:col-span-2 space-y-2">
+          <div className="flex justify-between items-center">
+            <Label htmlFor="description" className="text-sm font-medium text-gray-300">
+              About the Company
+            </Label>
+            <span className="text-xs text-gray-500">{description.length}/500</span>
+          </div>
           <Textarea
             id="description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Brief description of the company"
-            className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500 min-h-[60px] resize-none"
+            onChange={(e) => setDescription(e.target.value.slice(0, 500))}
+            placeholder="Tell us about your company's mission, values, and what makes it unique..."
+            className="min-h-[120px] bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30 resize-none"
           />
         </div>
       </div>
