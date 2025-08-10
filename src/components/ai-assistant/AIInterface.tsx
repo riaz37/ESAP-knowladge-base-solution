@@ -28,9 +28,19 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useDatabaseOperations, useBusinessRules } from "@/lib/hooks";
+import { useDatabaseOperations, useBusinessRules, useUserSettings } from "@/lib/hooks";
 import { DatabaseSelector } from "./DatabaseSelector";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import UserAccessService from "@/lib/api/services/user-access-service";
+import UserCurrentDBService from "@/lib/api/services/user-current-db-service";
 
 interface AIInterfaceProps {
   isOpen: boolean;
@@ -52,11 +62,16 @@ export function AIInterface({
   >([]);
   const [currentDbId, setCurrentDbId] = useState<number | undefined>();
   const [currentDbName, setCurrentDbName] = useState<string>("");
-
+  const [selectedUserId, setSelectedUserId] = useState<string>(userId);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<Array<{id: string, name: string}>>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const databaseOps = useDatabaseOperations();
+  const { userId: currentUserId } = useUserSettings();
   const {
     businessRulesText,
     businessRulesLoading,
@@ -96,12 +111,79 @@ export function AIInterface({
     }
   }, [isOpen, onClose]);
 
-  // Load business rules on component mount
+  // Load users on component mount
   useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setIsLoadingUsers(true);
+        const response = await UserAccessService.getUserAccessConfigs();
+        // Extract unique users from the access configs
+        const users = new Map<string, string>();
+        response.access_configs.forEach(config => {
+          if (config.user_id && !users.has(config.user_id)) {
+            users.set(config.user_id, config.user_id); // Using user_id as both id and name
+          }
+        });
+        
+        const userList = Array.from(users.entries()).map(([id, name]) => ({ id, name }));
+        setAvailableUsers(userList);
+        
+        // If no user is selected, select the first available user
+        if (userList.length > 0 && !selectedUserId) {
+          setSelectedUserId(userList[0].id);
+        }
+        
+        setUsersError(null);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+        setUsersError("Failed to load users. Please try again later.");
+        toast.error("Failed to load users");
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
     if (isOpen) {
-      loadBusinessRules();
+      fetchUsers();
     }
-  }, [isOpen, userId]);
+  }, [isOpen]);
+
+  // Load current database when selected user changes
+  useEffect(() => {
+    const fetchCurrentDb = async () => {
+      if (!selectedUserId) return;
+      try {
+        const resp: any = await UserCurrentDBService.getUserCurrentDB(selectedUserId);
+        if (resp && resp.db_id) {
+          setCurrentDbId(resp.db_id);
+          setCurrentDbName(resp.db_name ?? "");
+        } else {
+          setCurrentDbId(undefined);
+          setCurrentDbName("");
+        }
+      } catch (err: any) {
+        // 404 means user has no current DB, handle silently
+        setCurrentDbId(undefined);
+        setCurrentDbName("");
+      }
+    };
+
+    fetchCurrentDb();
+  }, [selectedUserId]);
+
+  // Load business rules when selected user changes
+  useEffect(() => {
+    if (isOpen && selectedUserId) {
+      loadBusinessRules(selectedUserId);
+    }
+  }, [isOpen, selectedUserId]);
+
+  // Update selected user ID when the prop changes
+  useEffect(() => {
+    if (userId && userId !== selectedUserId) {
+      setSelectedUserId(userId);
+    }
+  }, [userId]);
 
   // Update business rules status
   useEffect(() => {
@@ -116,12 +198,19 @@ export function AIInterface({
     }
   }, [businessRulesLoading, businessRulesError, businessRulesText]);
 
-  const loadBusinessRules = async () => {
+  const loadBusinessRules = async (userId: string) => {
     try {
       await fetchBusinessRules(userId);
     } catch (error) {
       console.error("Failed to load business rules:", error);
     }
+  };
+
+  const handleUserSelect = (userId: string) => {
+    setSelectedUserId(userId);
+    setShowUserDropdown(false);
+    // Clear query history when switching users
+    setQueryHistory([]);
   };
 
   const handleQuerySubmit = async () => {
@@ -135,8 +224,13 @@ export function AIInterface({
       return;
     }
 
+    if (!selectedUserId) {
+      toast.error("Please select a user");
+      return;
+    }
+
     try {
-      const result = await databaseOps.sendDatabaseQuery(query, userId);
+      const result = await databaseOps.sendDatabaseQuery(query, selectedUserId);
 
       if (result) {
         // Add to query history for display in AI interface
@@ -190,6 +284,8 @@ export function AIInterface({
     setQueryHistory([]);
     toast.success(`Switched to database: ${dbName}`);
   };
+
+  const selectedUserName = availableUsers.find(u => u.id === selectedUserId)?.name || selectedUserId;
 
   const handleBusinessRulesUpdated = () => {
     loadBusinessRules();
@@ -272,9 +368,53 @@ export function AIInterface({
                   <h3 className="text-white font-medium">
                     AI Database Assistant
                   </h3>
-                  <p className="text-gray-400 text-xs">
-                    Ask questions about your database
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-gray-400 text-xs">
+                      Ask questions about your database
+                    </p>
+                    <span className="text-gray-400">•</span>
+                    <DropdownMenu open={showUserDropdown} onOpenChange={setShowUserDropdown}>
+                      <DropdownMenuTrigger asChild>
+                        <button 
+                          className="text-green-400 text-xs font-medium hover:bg-green-500/10 px-2 py-0.5 rounded-md flex items-center gap-1"
+                          disabled={isLoadingUsers}
+                        >
+                          {isLoadingUsers ? (
+                            <span className="flex items-center gap-1">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Loading...
+                            </span>
+                          ) : usersError ? (
+                            <span className="text-red-400">Error</span>
+                          ) : (
+                            <>
+                              {selectedUserName}
+                              <ChevronDown className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="w-48 bg-gray-800 border-gray-700">
+                        <DropdownMenuLabel className="text-xs">Switch User</DropdownMenuLabel>
+                        <DropdownMenuSeparator className="bg-gray-700" />
+                        {availableUsers.length > 0 ? (
+                          availableUsers.map((user) => (
+                            <DropdownMenuItem
+                              key={user.id}
+                              className={`text-sm cursor-pointer ${selectedUserId === user.id ? 'bg-green-500/10 text-green-400' : 'text-gray-300 hover:bg-gray-700'}`}
+                              onClick={() => handleUserSelect(user.id)}
+                            >
+                              {user.name}
+                            </DropdownMenuItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-1.5 text-xs text-gray-400">
+                            {usersError || 'No users found'}
+                          </div>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
               <Button
@@ -291,11 +431,12 @@ export function AIInterface({
           {/* Database Selection */}
           <div className="p-4 border-b border-green-500/20">
             <DatabaseSelector
-              userId={userId}
-              currentDbId={currentDbId}
-              onDatabaseChange={handleDatabaseChange}
-              className="w-full"
-            />
+               key={selectedUserId}
+               userId={selectedUserId}
+               currentDbId={currentDbId}
+               onDatabaseChange={handleDatabaseChange}
+               className="w-full"
+             />
             {currentDbName && (
               <div className="mt-2 p-2 bg-green-900/20 border border-green-400/30 rounded-lg">
                 <div className="flex items-start gap-2">

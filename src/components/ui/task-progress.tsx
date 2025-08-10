@@ -62,11 +62,14 @@ export function TaskProgress({
       try {
         setIsPolling(true);
         const response = await MSSQLConfigService.getTaskStatus(taskId);
+        // axios interceptor may already unwrap `data`
+        const taskData: any = (response as any)?.data ?? response;
+        const normalizedStatus = taskData.status === 'completed' ? 'success' : taskData.status;
         const newStatus: TaskStatus = {
-          status: response.data.status,
-          progress: response.data.progress,
-          error: response.data.error,
-          result: response.data.result,
+          status: normalizedStatus,
+          progress: taskData.progress,
+          error: taskData.error,
+          result: taskData.result,
         };
         
         setTaskStatus(newStatus);
