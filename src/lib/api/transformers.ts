@@ -1,11 +1,11 @@
-import { ApiResponse, PaginatedResponse } from '@/types/api';
+import { ApiResponse, PaginatedResponse } from "@/types/api";
 
 /**
  * Transforms raw API response data to a standardized format
  */
 export function transformResponse<T = any>(response: any): ApiResponse<T> {
   // If response is already in the expected format, return it
-  if (response && 'success' in response && 'data' in response) {
+  if (response && "success" in response && "data" in response) {
     return response as ApiResponse<T>;
   }
 
@@ -28,20 +28,20 @@ export function transformPaginatedResponse<T = any>(
   // If response is already in the expected format, return it
   if (
     response &&
-    'success' in response &&
-    'data' in response &&
-    'pagination' in response
+    "success" in response &&
+    "data" in response &&
+    "pagination" in response
   ) {
     return response as PaginatedResponse<T>;
   }
 
   // Extract data array
   const data = Array.isArray(response) ? response : response?.data || [];
-  
+
   // Calculate pagination info
   const total = response?.total || data.length;
   const totalPages = Math.ceil(total / limit);
-  
+
   return {
     success: true,
     data: data as T[],
@@ -65,26 +65,26 @@ export function transformRequest<T = any>(data: T): any {
   if (data instanceof Date) {
     return data.toISOString();
   }
-  
+
   // Handle arrays
   if (Array.isArray(data)) {
-    return data.map(item => transformRequest(item));
+    return data.map((item) => transformRequest(item));
   }
-  
+
   // Handle objects
-  if (data !== null && typeof data === 'object') {
+  if (data !== null && typeof data === "object") {
     return Object.entries(data).reduce((acc, [key, value]) => {
       // Skip undefined values
       if (value === undefined) {
         return acc;
       }
-      
+
       // Transform value
       acc[key] = transformRequest(value);
       return acc;
     }, {} as Record<string, any>);
   }
-  
+
   // Return primitive values as is
   return data;
 }
@@ -97,14 +97,14 @@ export function transformErrorResponse(error: any): Error {
   if (error instanceof Error) {
     return error;
   }
-  
+
   // If error has a message property, use it
-  if (error && typeof error === 'object' && 'message' in error) {
+  if (error && typeof error === "object" && "message" in error) {
     return new Error(error.message as string);
   }
-  
+
   // Otherwise, create a generic error
-  return new Error('An unknown error occurred');
+  return new Error("An unknown error occurred");
 }
 
 /**
@@ -115,8 +115,8 @@ export function transformFileUploadData(
   additionalData?: Record<string, any>
 ): FormData {
   const formData = new FormData();
-  formData.append('file', file);
-  
+  formData.append("file", file);
+
   // Add additional data if provided
   if (additionalData) {
     Object.entries(additionalData).forEach(([key, value]) => {
@@ -125,7 +125,7 @@ export function transformFileUploadData(
       }
     });
   }
-  
+
   return formData;
 }
 
@@ -140,15 +140,15 @@ export function transformQueryParams(
     if (value === undefined || value === null) {
       return acc;
     }
-    
+
     // Handle arrays
     if (Array.isArray(value)) {
       return {
         ...acc,
-        [key]: value.join(','),
+        [key]: value.join(","),
       };
     }
-    
+
     // Handle dates
     if (value instanceof Date) {
       return {
@@ -156,15 +156,15 @@ export function transformQueryParams(
         [key]: value.toISOString(),
       };
     }
-    
+
     // Handle objects
-    if (typeof value === 'object') {
+    if (typeof value === "object") {
       return {
         ...acc,
         [key]: JSON.stringify(value),
       };
     }
-    
+
     // Handle primitives
     return {
       ...acc,

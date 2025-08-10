@@ -124,6 +124,35 @@ export type MSSQLConfigsListResponse = {
   count: number;
 };
 
+// Task-based API Types (New API Structure)
+export interface MSSQLConfigTaskResponse {
+  status: string;
+  message: string;
+  data: {
+    task_id: string;
+    status: string;
+    db_id?: number;
+  };
+}
+
+export interface MSSQLConfigTaskStatus {
+  task_id: string;
+  user_id: string;
+  db_id: number;
+  status: 'pending' | 'running' | 'success' | 'failed';
+  progress: number;
+  result: any;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MSSQLConfigTaskStatusResponse {
+  status: string;
+  message: string;
+  data: MSSQLConfigTaskStatus;
+}
+
 // Parent Company Types
 export interface ParentCompanyCreateRequest {
   company_name: string;

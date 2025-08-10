@@ -23,12 +23,12 @@ export const API_ENDPOINTS = {
   RELOAD_DB: `${baseUrl}/mssql/reload-db`,
 
   // MSSQL Configuration endpoints
-  CREATE_MSSQL_CONFIG: `${baseUrl}/mssql-config/mssql-config`,
+  SET_MSSQL_CONFIG: `${baseUrl}/mssql-config/mssql-config/set-config`,
   GET_MSSQL_CONFIGS: `${baseUrl}/mssql-config/mssql-config`,
   GET_MSSQL_CONFIG: (id: number) =>
     `${baseUrl}/mssql-config/mssql-config/${id}`,
   UPDATE_MSSQL_CONFIG: (id: number) =>
-    `${baseUrl}/mssql-config/mssql-config/${id}`,
+    `${baseUrl}/mssql-config/mssql-config/update-config/${id}`,
 
   // Parent Companies endpoints
   CREATE_PARENT_COMPANY: `${baseUrl}/mssql-config/parent-companies`,
