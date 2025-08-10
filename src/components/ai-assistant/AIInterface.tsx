@@ -39,7 +39,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { UserAccessService } from "@/lib/api/services/user-access-service";
+import UserAccessService from "@/lib/api/services/user-access-service";
+import UserCurrentDBService from "@/lib/api/services/user-current-db-service";
 
 interface AIInterfaceProps {
   isOpen: boolean;
@@ -146,6 +147,29 @@ export function AIInterface({
       fetchUsers();
     }
   }, [isOpen]);
+
+  // Load current database when selected user changes
+  useEffect(() => {
+    const fetchCurrentDb = async () => {
+      if (!selectedUserId) return;
+      try {
+        const resp: any = await UserCurrentDBService.getUserCurrentDB(selectedUserId);
+        if (resp && resp.db_id) {
+          setCurrentDbId(resp.db_id);
+          setCurrentDbName(resp.db_name ?? "");
+        } else {
+          setCurrentDbId(undefined);
+          setCurrentDbName("");
+        }
+      } catch (err: any) {
+        // 404 means user has no current DB, handle silently
+        setCurrentDbId(undefined);
+        setCurrentDbName("");
+      }
+    };
+
+    fetchCurrentDb();
+  }, [selectedUserId]);
 
   // Load business rules when selected user changes
   useEffect(() => {
@@ -407,11 +431,12 @@ export function AIInterface({
           {/* Database Selection */}
           <div className="p-4 border-b border-green-500/20">
             <DatabaseSelector
-              userId={userId}
-              currentDbId={currentDbId}
-              onDatabaseChange={handleDatabaseChange}
-              className="w-full"
-            />
+               key={selectedUserId}
+               userId={selectedUserId}
+               currentDbId={currentDbId}
+               onDatabaseChange={handleDatabaseChange}
+               className="w-full"
+             />
             {currentDbName && (
               <div className="mt-2 p-2 bg-green-900/20 border border-green-400/30 rounded-lg">
                 <div className="flex items-start gap-2">

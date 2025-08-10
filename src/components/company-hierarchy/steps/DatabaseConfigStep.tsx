@@ -23,7 +23,7 @@ interface DatabaseConfigStepProps {
   setSelectedDbId: (id: number | null) => void;
   databases: MSSQLConfigData[];
   mssqlLoading: boolean;
-  setConfigAndWait: any;
+  setConfig: any;
   loadDatabases: () => Promise<void>;
   setCurrentStep: (step: WorkflowStep) => void;
   setDatabaseCreationData: (data: any) => void;
@@ -35,7 +35,7 @@ export function DatabaseConfigStep({
   setSelectedDbId,
   databases,
   mssqlLoading,
-  setConfigAndWait,
+  setConfig,
   loadDatabases,
   setCurrentStep,
   setDatabaseCreationData,
@@ -62,21 +62,37 @@ export function DatabaseConfigStep({
 
     try {
       // Prepare the database configuration data
-      const dbConfig = {
+      const dbConfig: any = {
         db_url: newDbUrl.trim(),
         db_name: newDbName.trim(),
         business_rule: newDbBusinessRule.trim() || undefined,
         user_id: newDbUserId.trim(),
       };
 
-      // Store the database creation data and file for the next step
+      if (selectedFile) {
+        dbConfig.file = selectedFile;
+      }
+
+      // Cache creation input so it can be reused after completion
       setDatabaseCreationData({ dbConfig, selectedFile });
 
-      // Start the database creation task
-      const taskId = await setConfigAndWait(dbConfig, selectedFile);
+      // Kick off async creation task (non-blocking)
+      const taskResponse = await setConfig(dbConfig);
+      // `taskResponse` shape can vary depending on axios interceptor; attempt multiple selectors
+      const taskId: string | null =
+        (taskResponse as any)?.data?.task_id ??
+        (taskResponse as any)?.task_id ??
+        null;
+
+      if (!taskId) {
+        console.error("Unexpected create-database response", taskResponse);
+        toast.error("Server did not return a task ID");
+        return;
+      }
+
       setCurrentTaskId(taskId);
 
-      // Move to database creation step to show processing
+      // Move to database creation step so the user can see progress
       setCurrentStep("database-creation");
       
     } catch (error) {

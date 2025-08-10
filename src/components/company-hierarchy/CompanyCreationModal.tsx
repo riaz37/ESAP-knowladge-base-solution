@@ -65,6 +65,7 @@ export function CompanyCreationModal({
   // Hooks
   const {
     getConfigs,
+    setConfig,
     setConfigAndWait,
     isLoading: mssqlLoading,
     clearError: clearMSSQLError,
@@ -227,7 +228,7 @@ export function CompanyCreationModal({
     userConfigs,
     mssqlLoading,
     userConfigLoading,
-    setConfigAndWait,
+    setConfig,
     createUserConfig,
     loadDatabases,
     loadUserConfigs,
