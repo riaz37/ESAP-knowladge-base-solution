@@ -4,10 +4,7 @@ import React from "react";
 import { Plus, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
-interface EmptyStateProps {
-  onAddParentCompany: () => void;
-}
+import { EmptyStateProps } from "../types";
 
 export function EmptyState({ onAddParentCompany }: EmptyStateProps) {
   return (

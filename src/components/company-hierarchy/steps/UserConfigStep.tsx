@@ -14,18 +14,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { UserConfigData, UserConfigCreateRequest } from "@/types/api";
-import { WorkflowStep } from "../CompanyCreationModal";
-
-interface UserConfigStepProps {
-  selectedUserConfigId: number | null;
-  setSelectedUserConfigId: (id: number | null) => void;
-  userConfigs: UserConfigData[];
-  userConfigLoading: boolean;
-  createUserConfig: (request: UserConfigCreateRequest) => Promise<any>;
-  loadUserConfigs: () => Promise<void>;
-  setCurrentStep: (step: WorkflowStep) => void;
-}
+import { UserConfigCreateRequest} from "@/types/api";
+import { UserConfigStepProps } from "../types";
 
 export function UserConfigStep({
   selectedUserConfigId,
@@ -106,7 +96,9 @@ export function UserConfigStep({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-green-400">User Configuration</h3>
+        <h3 className="text-lg font-medium text-green-400">
+          User Configuration
+        </h3>
         <Button
           variant="outline"
           onClick={handlePrevious}
@@ -149,7 +141,9 @@ export function UserConfigStep({
             ) : (
               <Select
                 value={selectedUserConfigId?.toString() || ""}
-                onValueChange={(value) => setSelectedUserConfigId(parseInt(value))}
+                onValueChange={(value) =>
+                  setSelectedUserConfigId(parseInt(value))
+                }
               >
                 <SelectTrigger className="bg-gray-800/50 border-green-400/30 text-white">
                   <SelectValue placeholder="Choose a user configuration" />
@@ -206,7 +200,10 @@ export function UserConfigStep({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="newUserConfigAccessLevel" className="text-gray-300">
+              <Label
+                htmlFor="newUserConfigAccessLevel"
+                className="text-gray-300"
+              >
                 Access Level *
               </Label>
               <Select
@@ -287,7 +284,10 @@ export function UserConfigStep({
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="newUserConfigDbPassword" className="text-gray-300">
+              <Label
+                htmlFor="newUserConfigDbPassword"
+                className="text-gray-300"
+              >
                 Database Password *
               </Label>
               <Input

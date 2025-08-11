@@ -1,18 +1,17 @@
-//@ts-nocheck
 "use client";
 
-import { useState, useEffect } from "react";
-import { Building2 } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Building2, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useMSSQLConfig } from "@/lib/hooks/use-mssql-config";
 import { useUserConfig } from "@/lib/hooks/use-user-config";
-import { MSSQLConfigData, UserConfigData } from "@/types/api";
+import { MSSQLConfigData } from "@/types/api";
 import { toast } from "sonner";
 
 // Step components
@@ -24,36 +23,7 @@ import { UserConfigStep } from "./steps/UserConfigStep";
 import { FinalCreationStep } from "./steps/FinalCreationStep";
 
 // Types
-export interface CompanyFormData {
-  name: string;
-  description: string;
-  address: string;
-  contactEmail: string;
-  dbId: number;
-  parentCompanyId?: number;
-}
-
-export interface DatabaseFormData {
-  db_url: string;
-  db_name: string;
-  business_rule?: string;
-  user_id: string;
-}
-
-export type WorkflowStep =
-  | "company-info"
-  | "database-config"
-  | "database-creation"
-  | "user-config"
-  | "final-creation";
-
-interface CompanyCreationModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (companyData: CompanyFormData) => Promise<void>;
-  type: "parent" | "sub";
-  parentCompanyId?: number;
-}
+import { CompanyFormData, DatabaseFormData, WorkflowStep, CompanyCreationModalProps } from "./types";
 
 export function CompanyCreationModal({
   isOpen,
@@ -66,17 +36,16 @@ export function CompanyCreationModal({
   const {
     getConfigs,
     setConfig,
-    setConfigAndWait,
     isLoading: mssqlLoading,
     clearError: clearMSSQLError,
     clearSuccess: clearMSSQLSuccess,
   } = useMSSQLConfig();
 
-  const { 
-    userConfigs, 
-    fetchUserConfigs, 
+  const {
+    userConfigs,
+    fetchUserConfigs,
     createUserConfig,
-    isLoading: userConfigLoading 
+    isLoading: userConfigLoading,
   } = useUserConfig();
 
   // Workflow state
@@ -96,19 +65,12 @@ export function CompanyCreationModal({
   const [databaseCreationData, setDatabaseCreationData] = useState<any>(null);
 
   // User Configuration states
-  const [selectedUserConfigId, setSelectedUserConfigId] = useState<number | null>(null);
+  const [selectedUserConfigId, setSelectedUserConfigId] = useState<
+    number | null
+  >(null);
 
-  // Load data when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      loadDatabases();
-      loadUserConfigs();
-      setCurrentStep("company-info");
-      setCurrentTaskId(null);
-    }
-  }, [isOpen]);
-
-  const loadDatabases = async () => {
+  // Memoized data loading functions
+  const loadDatabases = useCallback(async () => {
     try {
       const configs = await getConfigs();
       if (configs && Array.isArray(configs)) {
@@ -121,37 +83,69 @@ export function CompanyCreationModal({
       toast.error("Failed to load databases");
       setDatabases([]);
     }
-  };
+  }, [getConfigs]);
 
-  const loadUserConfigs = async () => {
+  const loadUserConfigs = useCallback(async () => {
     try {
       await fetchUserConfigs();
     } catch (error) {
       console.error("Error loading user configs:", error);
       toast.error("Failed to load user configurations");
     }
-  };
+  }, [fetchUserConfigs]);
+
+  // Load data when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadDatabases();
+      loadUserConfigs();
+      setCurrentStep("company-info");
+      setCurrentTaskId(null);
+    }
+  }, [isOpen, loadDatabases, loadUserConfigs]);
 
   const handleTaskComplete = async (success: boolean, result?: any) => {
     if (success) {
       toast.success("Database created successfully");
-      
+
       // Reload databases to get the newly created one
       await loadDatabases();
-      
-      // If we have a result with the new database ID, select it
+
+      // Try to find and select the newly created database
+      let newDbId = null;
+
+      // First, try to get the database ID from the result
       if (result?.db_id) {
-        setSelectedDbId(result.db_id);
+        newDbId = result.db_id;
+      } else if (result?.database_id) {
+        newDbId = result.database_id;
+      } else if (databaseCreationData?.dbConfig?.db_name) {
+        // If no ID in result, try to find by name from the creation data
+        const configs = await getConfigs();
+        if (configs && Array.isArray(configs)) {
+          const newDb = configs.find(
+            (db) => db.db_name === databaseCreationData.dbConfig.db_name
+          );
+          if (newDb) {
+            newDbId = newDb.db_id;
+          }
+        }
       }
-      
+
+      // Select the newly created database
+      if (newDbId) {
+        setSelectedDbId(newDbId);
+      }
+
       // Automatically move to the next step
       setCurrentStep("user-config");
     } else {
       toast.error("Failed to create database");
       setCurrentStep("database-config");
     }
+
+    // Clear the task ID
     setCurrentTaskId(null);
-    setDatabaseCreationData(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -241,35 +235,62 @@ export function CompanyCreationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[98vw] max-w-none h-[95vh] bg-gray-900/95 backdrop-blur-md border border-green-400/30 text-white flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl">
-            <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-green-400" />
+      <DialogContent className="max-w-6xl w-[95vw] h-[95vh] bg-gray-900/95 backdrop-blur-md border border-green-400/30 text-white p-0 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-green-400/20 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-green-400" />
             </div>
-            Create {type === "parent" ? "Parent" : "Sub"} Company
-          </DialogTitle>
-          <DialogDescription className="text-gray-400">
-            {type === "parent"
-              ? "Create a new parent company and associate it with a database"
-              : "Create a new sub-company under the selected parent company"}
-          </DialogDescription>
-        </DialogHeader>
+            <div>
+              <DialogTitle className="text-xl font-semibold text-white">
+                Create {type === "parent" ? "Parent" : "Sub"} Company
+              </DialogTitle>
+              <DialogDescription className="text-gray-400 text-sm mt-1">
+                {type === "parent"
+                  ? "Create a new parent company and associate it with a database"
+                  : "Create a new sub-company under the selected parent company"}
+              </DialogDescription>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            className="text-gray-400 hover:text-white hover:bg-gray-800"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
 
-        <StepIndicator currentStep={currentStep} />
+        {/* Step Indicator */}
+        <div className="px-6 py-4 bg-gray-800/30 flex-shrink-0">
+          <StepIndicator currentStep={currentStep} />
+        </div>
 
-        <div className="flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto px-1">
-            {currentStep === "company-info" && <CompanyInfoStep {...stepProps} />}
-            {currentStep === "database-config" && <DatabaseConfigStep {...stepProps} />}
-            {currentStep === "database-creation" && (
-              <DatabaseCreationStep
-                currentTaskId={currentTaskId}
-                onTaskComplete={handleTaskComplete}
-              />
-            )}
-            {currentStep === "user-config" && <UserConfigStep {...stepProps} />}
-            {currentStep === "final-creation" && <FinalCreationStep {...stepProps} />}
+        {/* Content Area */}
+        <div className="flex-1 min-h-0">
+          <div className="h-full overflow-y-auto">
+            <div className="p-6 min-h-full">
+              {currentStep === "company-info" && (
+                <CompanyInfoStep {...stepProps} />
+              )}
+              {currentStep === "database-config" && (
+                <DatabaseConfigStep {...stepProps} />
+              )}
+              {currentStep === "database-creation" && (
+                <DatabaseCreationStep
+                  currentTaskId={currentTaskId}
+                  onTaskComplete={handleTaskComplete}
+                />
+              )}
+              {currentStep === "user-config" && (
+                <UserConfigStep {...stepProps} />
+              )}
+              {currentStep === "final-creation" && (
+                <FinalCreationStep {...stepProps} />
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>

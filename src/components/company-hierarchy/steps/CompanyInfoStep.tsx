@@ -5,19 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { WorkflowStep } from "../CompanyCreationModal";
-
-interface CompanyInfoStepProps {
-  companyName: string;
-  setCompanyName: (value: string) => void;
-  description: string;
-  setDescription: (value: string) => void;
-  address: string;
-  setAddress: (value: string) => void;
-  contactEmail: string;
-  setContactEmail: (value: string) => void;
-  setCurrentStep: (step: WorkflowStep) => void;
-}
+import  {CompanyInfoStepProps} from "../types"
 
 export function CompanyInfoStep({
   companyName,
@@ -41,14 +29,21 @@ export function CompanyInfoStep({
   return (
     <div className="space-y-8 p-1">
       <div>
-        <h3 className="text-xl font-semibold text-green-400 mb-1">Company Information</h3>
-        <p className="text-sm text-gray-400">Enter your company details to get started</p>
+        <h3 className="text-xl font-semibold text-green-400 mb-1">
+          Company Information
+        </h3>
+        <p className="text-sm text-gray-400">
+          Enter your company details to get started
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
         {/* Company Name */}
         <div className="space-y-2">
-          <Label htmlFor="companyName" className="text-sm font-medium text-gray-300">
+          <Label
+            htmlFor="companyName"
+            className="text-sm font-medium text-gray-300"
+          >
             Company Name <span className="text-red-500">*</span>
           </Label>
           <Input
@@ -63,7 +58,10 @@ export function CompanyInfoStep({
 
         {/* Contact Email */}
         <div className="space-y-2">
-          <Label htmlFor="contactEmail" className="text-sm font-medium text-gray-300">
+          <Label
+            htmlFor="contactEmail"
+            className="text-sm font-medium text-gray-300"
+          >
             Contact Email
           </Label>
           <Input
@@ -78,7 +76,10 @@ export function CompanyInfoStep({
 
         {/* Address - Full Width */}
         <div className="md:col-span-2 space-y-2">
-          <Label htmlFor="address" className="text-sm font-medium text-gray-300">
+          <Label
+            htmlFor="address"
+            className="text-sm font-medium text-gray-300"
+          >
             Company Address
           </Label>
           <Input
@@ -93,10 +94,15 @@ export function CompanyInfoStep({
         {/* Description - Full Width */}
         <div className="md:col-span-2 space-y-2">
           <div className="flex justify-between items-center">
-            <Label htmlFor="description" className="text-sm font-medium text-gray-300">
+            <Label
+              htmlFor="description"
+              className="text-sm font-medium text-gray-300"
+            >
               About the Company
             </Label>
-            <span className="text-xs text-gray-500">{description.length}/500</span>
+            <span className="text-xs text-gray-500">
+              {description.length}/500
+            </span>
           </div>
           <Textarea
             id="description"
