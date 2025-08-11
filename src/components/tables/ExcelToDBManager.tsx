@@ -126,37 +126,43 @@ export function ExcelToDBManager({
 
       console.log("AI mapping response:", response);
 
-      // Validate response structure (API client already extracts data portion)
-      if (response && 
-          response.all_table_columns && 
-          response.all_excel_columns && 
-          response.mapping_details &&
-          Array.isArray(response.all_table_columns) &&
-          Array.isArray(response.all_excel_columns) &&
-          Array.isArray(response.mapping_details)) {
-        
-        setAIMappingData(response);
+      // Validate response structure
+      if (
+        response &&
+        response.data &&
+        response.data.all_table_columns &&
+        response.data.all_excel_columns &&
+        response.data.mapping_details &&
+        Array.isArray(response.data.all_table_columns) &&
+        Array.isArray(response.data.all_excel_columns) &&
+        Array.isArray(response.data.mapping_details)
+      ) {
+        setAIMappingData(response.data);
 
         // Initialize custom mapping with AI suggestions
         const initialMapping: Record<string, string> = {};
-        response.mapping_details.forEach((detail: any) => {
+        response.data.mapping_details.forEach((detail: any) => {
           if (detail.is_mapped && detail.excel_column && detail.table_column) {
             initialMapping[detail.excel_column] = detail.table_column;
           }
         });
-        
+
         setCustomMapping(initialMapping);
         setStep("mapping");
 
         toast.success("AI mapping suggestions generated successfully");
       } else {
         console.error("Invalid response format:", response);
-        console.error("Expected structure: { all_table_columns: [], all_excel_columns: [], mapping_details: [] }");
+        console.error(
+          "Expected structure: { all_table_columns: [], all_excel_columns: [], mapping_details: [] }"
+        );
         toast.error("Invalid response from AI mapping service");
       }
     } catch (err) {
       console.error("Error getting AI mapping:", err);
-      toast.error("Failed to get AI mapping suggestions. Please check the console for details.");
+      toast.error(
+        "Failed to get AI mapping suggestions. Please check the console for details."
+      );
     }
   };
 
@@ -431,7 +437,9 @@ export function ExcelToDBManager({
                           <SelectValue placeholder="Select DB column" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="__no_mapping__">No mapping</SelectItem>
+                          <SelectItem value="__no_mapping__">
+                            No mapping
+                          </SelectItem>
                           {selectedTableData?.columns.map((col) => (
                             <SelectItem
                               key={col.column_name}

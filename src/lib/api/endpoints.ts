@@ -72,6 +72,19 @@ export const API_ENDPOINTS = {
   EXCEL_TO_DB_HEALTH: `${baseUrl}/excel-to-db/excel-to-db/health`,
   EXCEL_TO_DB_PUSH_DATA: `${baseUrl}/excel-to-db/excel-to-db/push-data`,
   EXCEL_TO_DB_GET_AI_MAPPING: `${baseUrl}/excel-to-db/excel-to-db/get-ai-mapping`,
+
+  // New Table Management endpoints
+  CREATE_TABLE: `${baseUrl}/new-table/create`,
+  GET_DATA_TYPES: `${baseUrl}/new-table/data-types`,
+  GET_USER_TABLES: (userId: string) =>
+    `${baseUrl}/new-table/user-tables/${encodeURIComponent(userId)}`,
+  GET_TABLES_BY_DB: (dbId: number) =>
+    `${baseUrl}/new-table/user-tables-by-db/${dbId}`,
+  SETUP_TRACKING_TABLE: `${baseUrl}/new-table/setup-tracking-table`,
+  UPDATE_USER_BUSINESS_RULE: (userId: string) =>
+    `${baseUrl}/new-table/user-business-rule/${encodeURIComponent(userId)}`,
+  GET_USER_BUSINESS_RULE: (userId: string) =>
+    `${baseUrl}/new-table/user-business-rule/${encodeURIComponent(userId)}`,
 };
 
 /**

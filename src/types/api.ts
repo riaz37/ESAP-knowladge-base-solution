@@ -645,3 +645,133 @@ export interface LegacyExcelToDBGetAIMappingResponse {
     };
   };
 }
+// New Table Management Types
+export interface TableColumn {
+  name: string;
+  data_type: string;
+  nullable: boolean;
+  is_primary: boolean;
+  is_identity: boolean;
+}
+
+export interface CreateTableRequest {
+  user_id: string;
+  table_name: string;
+  schema: string;
+  columns: TableColumn[];
+}
+
+export interface CreateTableResponse {
+  status: string;
+  message: string;
+  data: {
+    schema: string;
+    table: string;
+    columns: TableColumn[];
+    table_schema_stored: boolean;
+    db_id: number;
+  };
+}
+
+export interface DataTypesResponse {
+  status: string;
+  message: string;
+  data: {
+    numeric: string[];
+    string: string[];
+    date_time: string[];
+    binary: string[];
+    other: string[];
+  };
+}
+
+export interface TableSchema {
+  schema: string;
+  columns: Array<{
+    name: string;
+    type: string;
+    is_foreign: boolean;
+    is_primary: boolean;
+    max_length: number;
+    is_required: boolean;
+  }>;
+  full_name: string;
+  created_at: string;
+  table_name: string;
+  sample_data: any[];
+  primary_keys: string[];
+  relationships: any[];
+  row_count_sample: number;
+}
+
+export interface UserTable {
+  table_name: string;
+  schema_name: string;
+  table_schema: TableSchema;
+  created_by_user: string;
+  table_full_name: string;
+  creation_timestamp: string;
+  user_business_rule?: string;
+}
+
+export interface UserTablesResponse {
+  status: string;
+  message: string;
+  data: {
+    user_id: string;
+    current_db_id: number;
+    tables: UserTable[];
+    business_rule: string;
+    business_rule_exists: boolean;
+    count: number;
+    created_at: string;
+    updated_at: string;
+    business_rule_endpoint: string;
+  };
+}
+
+export interface TablesByDbResponse {
+  status: string;
+  message: string;
+  data: {
+    db_id: number;
+    db_name: string;
+    tables: UserTable[];
+    user_records: Array<{
+      id: number;
+      db_id: number;
+      user_id: string;
+      table_details: UserTable[];
+      business_rule: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    table_count: number;
+    user_count: number;
+  };
+}
+
+export interface SetupTrackingTableResponse {
+  status: string;
+  message: string;
+  data: {
+    table_name: string;
+  };
+}
+
+export interface UpdateBusinessRuleRequest {
+  business_rule: string;
+}
+
+export interface BusinessRuleResponse {
+  status: string;
+  message: string;
+  data: {
+    user_id: string;
+    db_id: number;
+    db_name: string;
+    business_rule: string;
+    updated_at?: string;
+    exists?: boolean;
+  };
+}
