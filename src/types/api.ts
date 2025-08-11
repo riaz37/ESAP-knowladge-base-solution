@@ -609,7 +609,28 @@ export interface ColumnMappingSuggestion {
   data_type_match: boolean;
 }
 
+// New API response format
+export interface MappingDetail {
+  table_column: string;
+  excel_column: string;
+  is_identity: boolean;
+  is_mapped: boolean;
+  mapping_status: "MAPPED" | "IDENTITY" | "UNMAPPED";
+}
+
 export interface ExcelToDBGetAIMappingResponse {
+  status: string;
+  message: string;
+  data: {
+    all_table_columns: string[];
+    identity_columns: string[];
+    all_excel_columns: string[];
+    mapping_details: MappingDetail[];
+  };
+}
+
+// Legacy type for backward compatibility (if needed)
+export interface LegacyExcelToDBGetAIMappingResponse {
   status: string;
   message: string;
   data: {

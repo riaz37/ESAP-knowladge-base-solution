@@ -6,8 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Database, Search, RefreshCw, Settings } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Loader2,
+  Database,
+  Search,
+  RefreshCw,
+  Settings,
+  FileSpreadsheet,
+  Table,
+  Eye,
+} from "lucide-react";
 import { TableFlowVisualization } from "./TableFlowVisualization";
+import { ExcelToDBManager } from "./ExcelToDBManager";
 import { UserCurrentDBService } from "@/lib/api/services/user-current-db-service";
 import { UserCurrentDBTableData } from "@/types/api";
 import { DatabaseService } from "@/lib/api/services/database-service";
@@ -21,9 +32,12 @@ export function TablesManager() {
   const [generatingTables, setGeneratingTables] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [userId, setUserId] = useState("nilab"); // Default user ID
+  const [userId, setUserId] = useState(""); // User ID input
   const [dbId, setDbId] = useState<number>(1); // Default database ID
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("visualization");
+  const [selectedTableForViewing, setSelectedTableForViewing] =
+    useState<string>("");
 
   const setCurrentDatabase = async () => {
     if (!userId.trim()) {
@@ -179,6 +193,18 @@ export function TablesManager() {
         table.table_name.toLowerCase().includes(searchTerm.toLowerCase())
     ) || [];
 
+  // Prepare available tables for Excel to DB
+  const availableTables =
+    tableData?.table_info?.tables?.map((table) => ({
+      table_name: table.table_name,
+      full_name: table.full_name,
+      columns: (table.columns || []).map((column) => ({
+        column_name: column.name,
+        data_type: column.type,
+        is_nullable: !column.is_required,
+      })),
+    })) || [];
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -186,7 +212,7 @@ export function TablesManager() {
         <div>
           <h1 className="text-3xl font-bold text-white">Database Tables</h1>
           <p className="text-slate-400 mt-2">
-            Visualize table relationships and structure
+            Manage table relationships and import data
           </p>
         </div>
       </div>
@@ -330,69 +356,106 @@ export function TablesManager() {
         </Card>
       )}
 
-      {/* Search */}
-      {tableData && (
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Search tables..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 bg-slate-800/50">
+          <TabsTrigger
+            value="visualization"
+            className="flex items-center gap-2 data-[state=active]:bg-slate-700"
+          >
+            <Table className="h-4 w-4" />
+            Table Visualization
+          </TabsTrigger>
+          <TabsTrigger
+            value="excel-import"
+            className="flex items-center gap-2 data-[state=active]:bg-slate-700"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel Import
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Table Flow Visualization */}
-      {tableData && (
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white">Table Relationships</CardTitle>
-            <p className="text-slate-400 text-sm">
-              Interactive visualization of table relationships and structure
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[600px] w-full">
-              <TableFlowVisualization rawData={tableData} />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        {/* Table Visualization Tab */}
+        <TabsContent value="visualization" className="space-y-6 mt-6">
+          {/* Search */}
+          {tableData && (
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="pt-6">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Search tables..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* No Data State */}
-      {!loading && !tableData && (
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardContent className="text-center py-12">
-            <Database className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">
-              No Table Data
-            </h3>
-            <p className="text-slate-400 mb-4">
-              Enter a user ID and click Load to fetch table information
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          {/* Table Flow Visualization */}
+          {tableData && (
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white">
+                  Table Relationships
+                </CardTitle>
+                <p className="text-slate-400 text-sm">
+                  Interactive visualization of table relationships and structure
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[600px] w-full">
+                  <TableFlowVisualization rawData={tableData} />
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* No Results State */}
-      {tableData && filteredTables.length === 0 && searchTerm && (
-        <Card className="bg-slate-800/50 border-slate-700">
-          <CardContent className="text-center py-12">
-            <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-white mb-2">
-              No Tables Found
-            </h3>
-            <p className="text-slate-400">
-              No tables match your search criteria: "{searchTerm}"
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          {/* No Data State */}
+          {!loading && !tableData && (
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="text-center py-12">
+                <Database className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">
+                  No Table Data
+                </h3>
+                <p className="text-slate-400 mb-4">
+                  Enter a user ID and click Load to fetch table information
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* No Results State */}
+          {tableData && filteredTables.length === 0 && searchTerm && (
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="text-center py-12">
+                <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">
+                  No Tables Found
+                </h3>
+                <p className="text-slate-400">
+                  No tables match your search criteria: "{searchTerm}"
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Excel Import Tab */}
+        <TabsContent value="excel-import" className="mt-6">
+          <ExcelToDBManager
+            userId={userId}
+            availableTables={availableTables}
+            onViewTableData={(tableName) => {
+              setSelectedTableForViewing(tableName);
+              setActiveTab("table-data");
+            }}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

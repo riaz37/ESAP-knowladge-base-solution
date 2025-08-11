@@ -31,6 +31,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useBusinessRules } from "@/lib/hooks/use-business-rules";
 import { useUserSettings } from "@/lib/hooks/use-user-settings";
+import { useUserCurrentDB } from "@/lib/hooks/use-user-current-db";
 import { DatabaseSelector } from "@/components/ai-assistant/DatabaseSelector";
 import { AIConfigService } from "@/lib/api/services/ai-config-service";
 import { toast } from "sonner";

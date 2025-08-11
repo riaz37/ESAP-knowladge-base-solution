@@ -14,6 +14,7 @@ import {
 import { UserAccessService } from "@/lib/api/services/user-access-service";
 import { MSSQLConfigService } from "@/lib/api/services/mssql-config-service";
 import { UserCurrentDBService } from "@/lib/api/services/user-current-db-service";
+import { DatabaseService } from "@/lib/api/services/database-service";
 import { toast } from "sonner";
 
 interface DatabaseInfo {
@@ -165,6 +166,15 @@ export function DatabaseSelector({
       await UserCurrentDBService.setUserCurrentDB(userId, {
         db_id: databaseId,
       });
+
+      // Reload the database to refresh connections and metadata
+      try {
+        await DatabaseService.reloadDatabase();
+        console.log("Database reloaded successfully");
+      } catch (reloadError) {
+        console.warn("Failed to reload database:", reloadError);
+        // Don't fail the entire operation if reload fails
+      }
 
       onDatabaseChange(databaseId, database.db_name);
       toast.success(`Switched to database: ${database.db_name}`);
