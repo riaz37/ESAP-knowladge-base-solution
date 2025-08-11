@@ -18,7 +18,13 @@ export class ExcelToDBService {
   static async checkHealth(): Promise<ExcelToDBHealthResponse> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.EXCEL_TO_DB_HEALTH);
-      return response;
+      // API client returns just the data portion, so we need to wrap it
+      return {
+        status: "success",
+        message: "Health check completed",
+        timestamp: new Date().toISOString(),
+        ...response
+      };
     } catch (error) {
       console.error("Error checking Excel to DB health:", error);
       throw error;
@@ -48,7 +54,13 @@ export class ExcelToDBService {
           },
         }
       );
-      return response;
+      
+      // API client returns just the data portion, so we need to wrap it
+      return {
+        status: "success",
+        message: "Data pushed successfully",
+        data: response
+      };
     } catch (error) {
       console.error("Error pushing data to database:", error);
       throw error;
@@ -76,7 +88,13 @@ export class ExcelToDBService {
           },
         }
       );
-      return response;
+      
+      // API client returns just the data portion, so we need to wrap it
+      return {
+        status: "success",
+        message: "AI mapping generated successfully",
+        data: response
+      };
     } catch (error) {
       console.error("Error getting AI mapping:", error);
       throw error;
