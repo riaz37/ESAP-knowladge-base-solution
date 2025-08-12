@@ -13,22 +13,22 @@ import {
 
 interface UseNewTableReturn {
   // Table operations
-  createTable: (request: CreateTableRequest) => Promise<CreateTableResponse | null>;
-  getUserTables: (userId: string) => Promise<UserTablesResponse | null>;
-  getTablesByDatabase: (dbId: number) => Promise<TablesByDbResponse | null>;
+  createTable: (request: CreateTableRequest) => Promise<CreateTableResponse["data"] | null>;
+  getUserTables: (userId: string) => Promise<UserTablesResponse["data"] | null>;
+  getTablesByDatabase: (dbId: number) => Promise<TablesByDbResponse["data"] | null>;
   
   // Data types
-  getDataTypes: () => Promise<DataTypesResponse | null>;
+  getDataTypes: () => Promise<DataTypesResponse["data"] | null>;
   
   // Setup operations
-  setupTrackingTable: () => Promise<SetupTrackingTableResponse | null>;
+  setupTrackingTable: () => Promise<SetupTrackingTableResponse["data"] | null>;
   
   // Business rules
   updateUserBusinessRule: (
     userId: string,
     request: UpdateBusinessRuleRequest
-  ) => Promise<BusinessRuleResponse | null>;
-  getUserBusinessRule: (userId: string) => Promise<BusinessRuleResponse | null>;
+  ) => Promise<BusinessRuleResponse["data"] | null>;
+  getUserBusinessRule: (userId: string) => Promise<BusinessRuleResponse["data"] | null>;
   
   // State management
   isLoading: boolean;
@@ -47,7 +47,7 @@ export function useNewTable(): UseNewTableReturn {
 
   const createTable = async (
     request: CreateTableRequest
-  ): Promise<CreateTableResponse | null> => {
+  ): Promise<CreateTableResponse["data"] | null> => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
@@ -71,7 +71,7 @@ export function useNewTable(): UseNewTableReturn {
     }
   };
 
-  const getUserTables = async (userId: string): Promise<UserTablesResponse | null> => {
+  const getUserTables = async (userId: string): Promise<UserTablesResponse["data"] | null> => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
@@ -93,7 +93,7 @@ export function useNewTable(): UseNewTableReturn {
     }
   };
 
-  const getTablesByDatabase = async (dbId: number): Promise<TablesByDbResponse | null> => {
+  const getTablesByDatabase = async (dbId: number): Promise<TablesByDbResponse["data"] | null> => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
@@ -115,7 +115,7 @@ export function useNewTable(): UseNewTableReturn {
     }
   };
 
-  const getDataTypes = async (): Promise<DataTypesResponse | null> => {
+  const getDataTypes = async (): Promise<DataTypesResponse["data"] | null> => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
@@ -133,7 +133,7 @@ export function useNewTable(): UseNewTableReturn {
     }
   };
 
-  const setupTrackingTable = async (): Promise<SetupTrackingTableResponse | null> => {
+  const setupTrackingTable = async (): Promise<SetupTrackingTableResponse["data"] | null> => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
@@ -154,7 +154,7 @@ export function useNewTable(): UseNewTableReturn {
   const updateUserBusinessRule = async (
     userId: string,
     request: UpdateBusinessRuleRequest
-  ): Promise<BusinessRuleResponse | null> => {
+  ): Promise<BusinessRuleResponse["data"] | null> => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
@@ -182,7 +182,7 @@ export function useNewTable(): UseNewTableReturn {
     }
   };
 
-  const getUserBusinessRule = async (userId: string): Promise<BusinessRuleResponse | null> => {
+  const getUserBusinessRule = async (userId: string): Promise<BusinessRuleResponse["data"] | null> => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);

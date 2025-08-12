@@ -18,9 +18,10 @@ export class NewTableService {
   /**
    * Create a new table
    */
-  static async createTable(request: CreateTableRequest): Promise<CreateTableResponse> {
+  static async createTable(request: CreateTableRequest): Promise<CreateTableResponse["data"]> {
     try {
       const response = await apiClient.post(API_ENDPOINTS.CREATE_TABLE, request);
+      // API client returns just the data portion
       return response;
     } catch (error) {
       console.error("Error creating table:", error);
@@ -31,9 +32,10 @@ export class NewTableService {
   /**
    * Get supported SQL Server data types
    */
-  static async getDataTypes(): Promise<DataTypesResponse> {
+  static async getDataTypes(): Promise<DataTypesResponse["data"]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_DATA_TYPES);
+      // API client returns just the data portion
       return response;
     } catch (error) {
       console.error("Error getting data types:", error);
@@ -44,9 +46,10 @@ export class NewTableService {
   /**
    * Get tables created by a specific user
    */
-  static async getUserTables(userId: string): Promise<UserTablesResponse> {
+  static async getUserTables(userId: string): Promise<UserTablesResponse["data"]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_USER_TABLES(userId));
+      // API client returns just the data portion
       return response;
     } catch (error) {
       console.error("Error getting user tables:", error);
@@ -57,9 +60,10 @@ export class NewTableService {
   /**
    * Get all tables in a specific database
    */
-  static async getTablesByDatabase(dbId: number): Promise<TablesByDbResponse> {
+  static async getTablesByDatabase(dbId: number): Promise<TablesByDbResponse["data"]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_TABLES_BY_DB(dbId));
+      // API client returns just the data portion
       return response;
     } catch (error) {
       console.error("Error getting tables by database:", error);
@@ -70,9 +74,10 @@ export class NewTableService {
   /**
    * Setup tracking table for user created tables
    */
-  static async setupTrackingTable(): Promise<SetupTrackingTableResponse> {
+  static async setupTrackingTable(): Promise<SetupTrackingTableResponse["data"]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.SETUP_TRACKING_TABLE);
+      // API client returns just the data portion
       return response;
     } catch (error) {
       console.error("Error setting up tracking table:", error);
@@ -86,12 +91,13 @@ export class NewTableService {
   static async updateUserBusinessRule(
     userId: string,
     request: UpdateBusinessRuleRequest
-  ): Promise<BusinessRuleResponse> {
+  ): Promise<BusinessRuleResponse["data"]> {
     try {
       const response = await apiClient.put(
         API_ENDPOINTS.UPDATE_USER_BUSINESS_RULE(userId),
         request
       );
+      // API client returns just the data portion
       return response;
     } catch (error) {
       console.error("Error updating user business rule:", error);
@@ -102,9 +108,10 @@ export class NewTableService {
   /**
    * Get user's business rule
    */
-  static async getUserBusinessRule(userId: string): Promise<BusinessRuleResponse> {
+  static async getUserBusinessRule(userId: string): Promise<BusinessRuleResponse["data"]> {
     try {
       const response = await apiClient.get(API_ENDPOINTS.GET_USER_BUSINESS_RULE(userId));
+      // API client returns just the data portion
       return response;
     } catch (error) {
       console.error("Error getting user business rule:", error);
