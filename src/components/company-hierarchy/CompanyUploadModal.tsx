@@ -169,9 +169,6 @@ export function CompanyUploadModal({
       setStep(5);
     } else if (step === 5) {
       // Final confirmation
-      console.log(
-        `Processing ${companyName} (${companyType}) with ${selectedDatabaseType} database`
-      );
       onClose();
       resetModal();
     }

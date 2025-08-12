@@ -1,4 +1,3 @@
-//@ts-nocheck
 import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../endpoints";
 import { MSSQLConfigResponse } from "@/types/api";

@@ -16,19 +16,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { MSSQLConfigData } from "@/types/api";
-import { WorkflowStep } from "../CompanyCreationModal";
-
-interface DatabaseConfigStepProps {
-  selectedDbId: number | null;
-  setSelectedDbId: (id: number | null) => void;
-  databases: MSSQLConfigData[];
-  mssqlLoading: boolean;
-  setConfig: any;
-  loadDatabases: () => Promise<void>;
-  setCurrentStep: (step: WorkflowStep) => void;
-  setDatabaseCreationData: (data: any) => void;
-  setCurrentTaskId: (taskId: string | null) => void;
-}
+import { DatabaseConfigStepProps } from "../types"
 
 export function DatabaseConfigStep({
   selectedDbId,

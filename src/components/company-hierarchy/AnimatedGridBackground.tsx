@@ -1,4 +1,3 @@
-//@ts-nocheck
 "use client";
 
 import React, { useEffect, useRef } from "react";
@@ -7,9 +6,11 @@ interface AnimatedGridBackgroundProps {
   className?: string;
 }
 
-export function AnimatedGridBackground({ className = "" }: AnimatedGridBackgroundProps) {
+export function AnimatedGridBackground({
+  className = "",
+}: AnimatedGridBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -31,18 +32,19 @@ export function AnimatedGridBackground({ className = "" }: AnimatedGridBackgroun
     const gridSize = 50;
 
     // Check if dark mode
-    const isDarkMode = () => document.documentElement.classList.contains('dark');
+    const isDarkMode = () =>
+      document.documentElement.classList.contains("dark");
 
     const animate = () => {
       const dark = isDarkMode();
-      
+
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Draw grid lines
-      ctx.strokeStyle = dark 
-        ? 'rgba(16, 185, 129, 0.1)' // Dark mode: very subtle
-        : 'rgba(16, 185, 129, 0.2)'; // Light mode: slightly more visible
+      ctx.strokeStyle = dark
+        ? "rgba(16, 185, 129, 0.1)" // Dark mode: very subtle
+        : "rgba(16, 185, 129, 0.2)"; // Light mode: slightly more visible
       ctx.lineWidth = 1;
 
       // Vertical lines
@@ -61,8 +63,6 @@ export function AnimatedGridBackground({ className = "" }: AnimatedGridBackgroun
         ctx.stroke();
       }
 
-
-
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -80,8 +80,8 @@ export function AnimatedGridBackground({ className = "" }: AnimatedGridBackgroun
     <canvas
       ref={canvasRef}
       className={`fixed inset-0 pointer-events-none z-0 ${className}`}
-      style={{ 
-        background: 'transparent',
+      style={{
+        background: "transparent",
       }}
     />
   );

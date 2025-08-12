@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -12,32 +12,18 @@ import ReactFlow, {
   MarkerType,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { CompanyCard } from "./CompanyCard";
-import { EmptyState } from "./EmptyState";
-import { CompanyTreeSidebar } from "./CompanyTreeSidebar";
-import { CompanyCreationModal, CompanyFormData } from "./CompanyCreationModal";
+import { CompanyCard } from "./ui/CompanyCard";
+import { EmptyState } from "./ui/EmptyState";
+import { CompanyTreeSidebar } from "./ui/CompanyTreeSidebar";
+import { CompanyCreationModal } from "./CompanyCreationModal";
+import { CompanyFormData } from "./types";
 import { CompanyUploadModal } from "./CompanyUploadModal";
 import { useParentCompanies } from "@/lib/hooks/use-parent-companies";
 import { useSubCompanies } from "@/lib/hooks/use-sub-companies";
 import { ParentCompanyData, SubCompanyData } from "@/types/api";
 import { toast } from "sonner";
 import { AnimatedGridBackground } from "./AnimatedGridBackground";
-
-// Types
-export interface Company {
-  id: string;
-  name: string;
-  description?: string;
-  address?: string;
-  contactEmail?: string;
-  dbId: number;
-  parentId?: string;
-  children?: Company[];
-}
-
-interface CompanyTreeViewProps {
-  onCompanyCreated?: () => void;
-}
+import { Company, CompanyTreeViewProps } from "./types";
 
 // Custom Node Component using the new CompanyCard
 const CompanyNode = ({ data, selected }: { data: any; selected: boolean }) => {
@@ -84,15 +70,11 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
   const {
     getParentCompanies,
     createParentCompany,
-    isLoading: parentLoading,
-    error: parentError,
   } = useParentCompanies();
 
   const {
     getSubCompanies,
     createSubCompany,
-    isLoading: subLoading,
-    error: subError,
   } = useSubCompanies();
 
   // State management
@@ -112,8 +94,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
     "parent"
   );
 
-  // Derived loading state
-  const loading = parentLoading || subLoading;
+
 
   // Load companies on mount
   useEffect(() => {
@@ -122,7 +103,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
 
   // Handle upload modal
   const handleUpload = useCallback(
-    (companyId: string, companyName: string, companyType: "parent" | "sub") => {
+    (_companyId: string, companyName: string, companyType: "parent" | "sub") => {
       setUploadCompanyName(companyName);
       setUploadCompanyType(companyType);
       setUploadModalOpen(true);
@@ -138,8 +119,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         getSubCompanies(),
       ]);
 
-      console.log("Parent companies from hook:", parentCompanies);
-      console.log("Sub companies from hook:", subCompanies);
+
 
       // Handle null responses gracefully
       const safeParentCompanies = parentCompanies || [];
@@ -171,7 +151,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         })
       );
 
-      console.log("Transformed companies:", transformedCompanies);
+
       setCompanies(transformedCompanies);
 
       // Show success message if we have data
@@ -245,14 +225,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         draggable: true,
       };
 
-      console.log(
-        "Creating node:",
-        node.id,
-        "level:",
-        level,
-        "hasChildren:",
-        company.children?.length || 0
-      );
+
       return node;
     };
 
@@ -276,7 +249,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
           height: 16,
         },
       };
-      console.log("Creating edge:", edge.id, "from", sourceId, "to", targetId);
+
       return edge;
     };
 
@@ -304,12 +277,6 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         flowNodes.push(createCompanyNode(child, childPosition, 1));
 
         // Add edge from parent to child
-        console.log(
-          "Adding edge from parent:",
-          displayCompany.id,
-          "to child:",
-          child.id
-        );
         flowEdges.push(createEdge(displayCompany.id, child.id));
       });
     }
@@ -385,16 +352,6 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
       throw error; // Re-throw to let modal handle the error
     }
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-gray-900 dark:text-white text-xl">
-          Loading companies...
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-full relative bg-gradient-to-br from-gray-50 via-emerald-50/30 to-gray-100 dark:from-gray-900 dark:via-emerald-950/20 dark:to-gray-800">
