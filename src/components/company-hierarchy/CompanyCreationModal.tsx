@@ -23,7 +23,12 @@ import { UserConfigStep } from "./steps/UserConfigStep";
 import { FinalCreationStep } from "./steps/FinalCreationStep";
 
 // Types
-import { CompanyFormData, DatabaseFormData, WorkflowStep, CompanyCreationModalProps } from "./types";
+import {
+  CompanyFormData,
+  DatabaseFormData,
+  WorkflowStep,
+  CompanyCreationModalProps,
+} from "./types";
 
 export function CompanyCreationModal({
   isOpen,
@@ -253,14 +258,6 @@ export function CompanyCreationModal({
               </DialogDescription>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            className="text-gray-400 hover:text-white hover:bg-gray-800"
-          >
-            <X className="w-4 h-4" />
-          </Button>
         </div>
 
         {/* Step Indicator */}

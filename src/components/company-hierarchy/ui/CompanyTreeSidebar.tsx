@@ -61,7 +61,7 @@ export function CompanyTreeSidebar({
               size="sm"
               variant="outline"
               onClick={() => onSelectParentForFlow(null)}
-              className="text-xs border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10"
+              className="text-xs border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 cursor-pointer transition-colors"
             >
               Show All
             </Button>
@@ -120,7 +120,7 @@ function CompanyTreeItem({
       <div
         className={cn(
           "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-all duration-200",
-          "hover:bg-emerald-500/10 hover:border-emerald-400/30 border border-transparent",
+          "hover:bg-emerald-500/10 hover:border-emerald-400/30 border border-transparent active:scale-95",
           isSelectedForFlow && "bg-emerald-500/20 border-emerald-400/50"
         )}
         onClick={() => {
@@ -140,7 +140,7 @@ function CompanyTreeItem({
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
-            className="p-0.5 h-auto w-auto hover:bg-emerald-400/20"
+            className="p-0.5 h-auto w-auto hover:bg-emerald-400/20 cursor-pointer transition-colors"
           >
             {isExpanded ? (
               <ChevronDown className="w-3 h-3 text-emerald-400" />
@@ -176,7 +176,7 @@ function CompanyTreeItem({
                 e.stopPropagation();
                 onUpload(company.id, company.name, companyType);
               }}
-              className="p-1 h-auto w-auto hover:bg-emerald-400/20"
+              className="p-1 h-auto w-auto hover:bg-emerald-400/20 cursor-pointer transition-colors"
               title="Upload Files"
             >
               <Upload className="w-3 h-3 text-emerald-400" />
@@ -191,7 +191,7 @@ function CompanyTreeItem({
                 e.stopPropagation();
                 onAddSubCompany(company.id);
               }}
-              className="p-1 h-auto w-auto hover:bg-emerald-400/20"
+              className="p-1 h-auto w-auto hover:bg-emerald-400/20 cursor-pointer transition-colors"
               title="Add Sub-Company"
             >
               <Plus className="w-3 h-3 text-emerald-400" />
@@ -223,7 +223,7 @@ function CompanyTreeItem({
                 <div
                   className={cn(
                     "flex items-center gap-2 p-2 ml-6 rounded-lg cursor-pointer transition-all duration-200",
-                    "hover:bg-emerald-500/10",
+                    "hover:bg-emerald-500/10 active:scale-95",
                     selectedCompany === child.id && "bg-emerald-500/15 border border-emerald-400/30"
                   )}
                   onClick={() => onSelectCompany(child.id)}
@@ -253,7 +253,7 @@ function CompanyTreeItem({
                         e.stopPropagation();
                         onUpload(child.id, child.name, childType);
                       }}
-                      className="p-1 h-auto w-auto hover:bg-emerald-400/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1 h-auto w-auto hover:bg-emerald-400/20 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer"
                       title="Upload Files"
                     >
                       <Upload className="w-3 h-3 text-emerald-400/70" />

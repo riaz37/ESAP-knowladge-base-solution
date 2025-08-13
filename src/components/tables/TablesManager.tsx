@@ -19,13 +19,14 @@ import {
 } from "lucide-react";
 import { TableFlowVisualization } from "./TableFlowVisualization";
 import { ExcelToDBManager } from "./ExcelToDBManager";
+import { TableManagementSection } from "./TableManagementSection";
 import { UserCurrentDBService } from "@/lib/api/services/user-current-db-service";
 import { UserCurrentDBTableData } from "@/types/api";
 import { DatabaseService } from "@/lib/api/services/database-service";
 
 export function TablesManager() {
   const [tableData, setTableData] = useState<UserCurrentDBTableData | null>(
-    null
+    null,
   );
   const [loading, setLoading] = useState(false);
   const [settingDB, setSettingDB] = useState(false);
@@ -35,7 +36,7 @@ export function TablesManager() {
   const [userId, setUserId] = useState(""); // User ID input
   const [dbId, setDbId] = useState<number>(1); // Default database ID
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("visualization");
+  const [activeTab, setActiveTab] = useState("management");
   const [selectedTableForViewing, setSelectedTableForViewing] =
     useState<string>("");
 
@@ -64,7 +65,7 @@ export function TablesManager() {
     } catch (err) {
       console.error("Error setting current database:", err);
       setError(
-        "Failed to set current database. Please check the user ID and database ID."
+        "Failed to set current database. Please check the user ID and database ID.",
       );
     } finally {
       setSettingDB(false);
@@ -98,7 +99,7 @@ export function TablesManager() {
           } catch (parseError) {
             console.error(
               "Failed to parse table_info.schema JSON:",
-              parseError
+              parseError,
             );
           }
         }
@@ -124,17 +125,17 @@ export function TablesManager() {
         } else {
           console.warn(
             "Table info not in expected format:",
-            response.table_info
+            response.table_info,
           );
           setError(
-            "Table information is not available or in an unexpected format. Please generate table info first."
+            "Table information is not available or in an unexpected format. Please generate table info first.",
           );
           setTableData(null);
         }
       } else {
         console.warn("No table_info found in response:", response);
         setError(
-          "Table information is not available. Please generate table info first."
+          "Table information is not available. Please generate table info first.",
         );
         setTableData(null);
       }
@@ -144,7 +145,7 @@ export function TablesManager() {
     } catch (err) {
       console.error("Error fetching table data:", err);
       setError(
-        "Failed to fetch table data. Please check the user ID and try again."
+        "Failed to fetch table data. Please check the user ID and try again.",
       );
     } finally {
       setLoading(false);
@@ -165,7 +166,7 @@ export function TablesManager() {
       // For now, let's just reload the database to refresh table info
       const response = await DatabaseService.reloadDatabase();
       setSuccess(
-        `Database reloaded successfully. Please try loading tables again.`
+        `Database reloaded successfully. Please try loading tables again.`,
       );
 
       // Auto-fetch table data after reloading
@@ -190,7 +191,7 @@ export function TablesManager() {
     tableData?.table_info?.tables?.filter(
       (table) =>
         table.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        table.table_name.toLowerCase().includes(searchTerm.toLowerCase())
+        table.table_name.toLowerCase().includes(searchTerm.toLowerCase()),
     ) || [];
 
   // Prepare available tables for Excel to DB
@@ -347,7 +348,7 @@ export function TablesManager() {
                       >
                         {rule}
                       </Badge>
-                    )
+                    ),
                   )}
                 </div>
               </div>
@@ -358,7 +359,14 @@ export function TablesManager() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-800/50">
+        <TabsList className="grid w-full grid-cols-4 bg-slate-800/50">
+          <TabsTrigger
+            value="management"
+            className="flex items-center gap-2 data-[state=active]:bg-slate-700"
+          >
+            <Settings className="h-4 w-4" />
+            Table Management
+          </TabsTrigger>
           <TabsTrigger
             value="visualization"
             className="flex items-center gap-2 data-[state=active]:bg-slate-700"
@@ -374,6 +382,20 @@ export function TablesManager() {
             Excel Import
           </TabsTrigger>
         </TabsList>
+
+        {/* Table Management Tab */}
+        <TabsContent value="management" className="space-y-6 mt-6">
+          <TableManagementSection
+            userId={userId}
+            databaseId={dbId}
+            onTableCreated={() => {
+              // Refresh table data when a new table is created
+              setTimeout(() => {
+                fetchTableData();
+              }, 1000);
+            }}
+          />
+        </TabsContent>
 
         {/* Table Visualization Tab */}
         <TabsContent value="visualization" className="space-y-6 mt-6">
@@ -451,7 +473,7 @@ export function TablesManager() {
             availableTables={availableTables}
             onViewTableData={(tableName) => {
               setSelectedTableForViewing(tableName);
-              setActiveTab("table-data");
+              setActiveTab("visualization");
             }}
           />
         </TabsContent>

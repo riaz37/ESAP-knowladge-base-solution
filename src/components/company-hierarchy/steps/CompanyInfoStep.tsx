@@ -51,7 +51,7 @@ export function CompanyInfoStep({
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             placeholder="Acme Inc."
-            className="h-11 bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30"
+            className="h-11 bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30 cursor-text"
             required
           />
         </div>
@@ -70,7 +70,7 @@ export function CompanyInfoStep({
             value={contactEmail}
             onChange={(e) => setContactEmail(e.target.value)}
             placeholder="contact@company.com"
-            className="h-11 bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30"
+            className="h-11 bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30 cursor-text"
           />
         </div>
 
@@ -87,7 +87,7 @@ export function CompanyInfoStep({
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="123 Business St, City, Country"
-            className="h-11 bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30"
+            className="h-11 bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30 cursor-text"
           />
         </div>
 
@@ -109,7 +109,7 @@ export function CompanyInfoStep({
             value={description}
             onChange={(e) => setDescription(e.target.value.slice(0, 500))}
             placeholder="Tell us about your company's mission, values, and what makes it unique..."
-            className="min-h-[120px] bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30 resize-none"
+            className="min-h-[100px] bg-gray-800/70 border-gray-600/50 hover:border-green-400/50 focus:border-green-400 text-white placeholder:text-gray-500 transition-colors focus-visible:ring-2 focus-visible:ring-green-400/30 cursor-text resize-none"
           />
         </div>
       </div>
@@ -117,7 +117,7 @@ export function CompanyInfoStep({
       <div className="flex justify-end">
         <Button
           onClick={handleNext}
-          className="bg-green-600 hover:bg-green-700 text-white"
+          className="bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95"
         >
           Next: Configure Database
         </Button>

@@ -1,13 +1,10 @@
 "use client";
 
 import { BusinessRulesManager } from "@/components/business-rules/BusinessRulesManager";
-import { EnhancedBackground } from "@/components/ui/enhanced-background";
 
 export default function BusinessRulesPage() {
   return (
-    <div className="min-h-screen relative">
-      <EnhancedBackground />
-      
+    <div className="w-full min-h-screen relative bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 pt-20">
       {/* Content */}
       <div className="relative z-10 pt-24 pb-8">
         <div className="container mx-auto px-4">
