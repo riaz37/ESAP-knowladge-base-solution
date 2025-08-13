@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { TableFlowVisualization } from "./TableFlowVisualization";
 import { ExcelToDBManager } from "./ExcelToDBManager";
-import { TableManagementSection } from "./TableManagementSection";
+
 import { UserCurrentDBService } from "@/lib/api/services/user-current-db-service";
 import { UserCurrentDBTableData } from "@/types/api";
 import { DatabaseService } from "@/lib/api/services/database-service";
@@ -361,13 +361,6 @@ export function TablesManager() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 bg-slate-800/50">
           <TabsTrigger
-            value="management"
-            className="flex items-center gap-2 data-[state=active]:bg-slate-700"
-          >
-            <Settings className="h-4 w-4" />
-            Table Management
-          </TabsTrigger>
-          <TabsTrigger
             value="visualization"
             className="flex items-center gap-2 data-[state=active]:bg-slate-700"
           >
@@ -382,20 +375,6 @@ export function TablesManager() {
             Excel Import
           </TabsTrigger>
         </TabsList>
-
-        {/* Table Management Tab */}
-        <TabsContent value="management" className="space-y-6 mt-6">
-          <TableManagementSection
-            userId={userId}
-            databaseId={dbId}
-            onTableCreated={() => {
-              // Refresh table data when a new table is created
-              setTimeout(() => {
-                fetchTableData();
-              }, 1000);
-            }}
-          />
-        </TabsContent>
 
         {/* Table Visualization Tab */}
         <TabsContent value="visualization" className="space-y-6 mt-6">
