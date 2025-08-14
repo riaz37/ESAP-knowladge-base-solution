@@ -48,11 +48,30 @@ export const API_ENDPOINTS = {
   GET_USER_ACCESS: (userId: string) =>
     `${baseUrl}/mssql-config/user-access/${encodeURIComponent(userId)}`,
 
+  // Database Configuration endpoints
+  CREATE_DATABASE_CONFIG: `${baseUrl}/database-config`,
+  GET_DATABASE_CONFIGS: `${baseUrl}/database-config`,
+  GET_DATABASE_CONFIG: (id: number) => `${baseUrl}/database-config/${id}`,
+  UPDATE_DATABASE_CONFIG: (id: number) => `${baseUrl}/database-config/${id}`,
+  DELETE_DATABASE_CONFIG: (id: number) => `${baseUrl}/database-config/${id}`,
+
   // User Configuration endpoints
   CREATE_USER_CONFIG: `${baseUrl}/user-config`,
   GET_USER_CONFIGS: `${baseUrl}/user-config`,
   GET_USER_CONFIG: (userId: string) =>
     `${baseUrl}/user-config/${encodeURIComponent(userId)}`,
+  GET_USER_CONFIG_BY_DB: (userId: string, dbId: number) =>
+    `${baseUrl}/user-config/${encodeURIComponent(userId)}/${dbId}`,
+  GET_CONFIG_BY_ID: (id: number) => `${baseUrl}/config/${id}`,
+  UPDATE_USER_CONFIG: (id: number) => `${baseUrl}/user-config/${id}`,
+
+  // User Table Names endpoints
+  ADD_USER_TABLE_NAME: (userId: string) =>
+    `${baseUrl}/user/${encodeURIComponent(userId)}/table-names`,
+  GET_USER_TABLE_NAMES: (userId: string) =>
+    `${baseUrl}/user/${encodeURIComponent(userId)}/table-names`,
+  DELETE_USER_TABLE_NAME: (userId: string, tableName: string) =>
+    `${baseUrl}/user/${encodeURIComponent(userId)}/table-names/${encodeURIComponent(tableName)}`,
 
   // User Current Database endpoints
   SET_USER_CURRENT_DB: (userId: string) =>
@@ -92,7 +111,7 @@ export const API_ENDPOINTS = {
  */
 export function buildEndpointWithQueryParams(
   endpoint: string,
-  params: Record<string, any>
+  params: Record<string, any>,
 ): string {
   const queryParams = new URLSearchParams();
 
@@ -116,7 +135,7 @@ export function buildEndpointWithQueryParams(
  */
 export function buildEndpointWithPathParams(
   endpointTemplate: string,
-  params: Record<string, string | number>
+  params: Record<string, string | number>,
 ): string {
   let endpoint = endpointTemplate;
 

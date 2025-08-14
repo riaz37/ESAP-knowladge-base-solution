@@ -19,11 +19,7 @@ export default function TableManagementPage() {
     return () => clearTimeout(timeoutId);
   }, [userId]);
 
-  // This page will host the TableManagementSection.
-  // The TableManagementSection component will now manage its own internal user ID state
-  // directly within the table creation form, as per the user's request.
-  // The database configuration (User ID/DB ID inputs) remains on the
-  // original /tables page.
+ 
   return (
     <div className="w-full min-h-screen relative bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 pt-20">
       <div className="container mx-auto p-6 space-y-6">

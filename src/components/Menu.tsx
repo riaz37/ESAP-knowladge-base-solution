@@ -60,6 +60,12 @@ export default function Menu() {
       isActive: pathname === "/tables",
     },
     {
+      name: "Table Management",
+      path: "/table-management",
+      icon: Database,
+      isActive: pathname === "/table-management",
+    },
+    {
       name: "History Log",
       path: "/database-hierarchy",
       icon: History,

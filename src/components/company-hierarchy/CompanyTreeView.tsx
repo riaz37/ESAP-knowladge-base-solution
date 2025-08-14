@@ -67,15 +67,9 @@ const defaultEdgeOptions = {
 
 export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
   // Use hooks for consistent API calls and state management
-  const {
-    getParentCompanies,
-    createParentCompany,
-  } = useParentCompanies();
+  const { getParentCompanies, createParentCompany } = useParentCompanies();
 
-  const {
-    getSubCompanies,
-    createSubCompany,
-  } = useSubCompanies();
+  const { getSubCompanies, createSubCompany } = useSubCompanies();
 
   // State management
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -91,10 +85,8 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploadCompanyName, setUploadCompanyName] = useState("");
   const [uploadCompanyType, setUploadCompanyType] = useState<"parent" | "sub">(
-    "parent"
+    "parent",
   );
-
-
 
   // Load companies on mount
   useEffect(() => {
@@ -103,12 +95,16 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
 
   // Handle upload modal
   const handleUpload = useCallback(
-    (_companyId: string, companyName: string, companyType: "parent" | "sub") => {
+    (
+      _companyId: string,
+      companyName: string,
+      companyType: "parent" | "sub",
+    ) => {
       setUploadCompanyName(companyName);
       setUploadCompanyType(companyType);
       setUploadModalOpen(true);
     },
-    []
+    [],
   );
 
   const loadCompanies = async () => {
@@ -118,8 +114,6 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         getParentCompanies(),
         getSubCompanies(),
       ]);
-
-
 
       // Handle null responses gracefully
       const safeParentCompanies = parentCompanies || [];
@@ -137,7 +131,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
           children: safeSubCompanies
             .filter(
               (sub: SubCompanyData) =>
-                sub.parent_company_id === parent.parent_company_id
+                sub.parent_company_id === parent.parent_company_id,
             )
             .map((sub: SubCompanyData) => ({
               id: `sub-${sub.sub_company_id}`,
@@ -148,16 +142,15 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
               dbId: sub.db_id,
               parentId: `parent-${sub.parent_company_id}`,
             })),
-        })
+        }),
       );
-
 
       setCompanies(transformedCompanies);
 
       // Show success message if we have data
       if (transformedCompanies.length > 0) {
         toast.success(
-          `Loaded ${transformedCompanies.length} companies successfully`
+          `Loaded ${transformedCompanies.length} companies successfully`,
         );
       }
     } catch (error) {
@@ -176,7 +169,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
           {
             id: "empty-state",
             type: "emptyState",
-            position: { x: 400, y: 300 },
+            position: { x: 0, y: 300 },
             data: {
               onAddParentCompany: () => {
                 setModalType("parent");
@@ -198,7 +191,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
     const createCompanyNode = (
       company: Company,
       position: { x: number; y: number },
-      level: number
+      level: number,
     ) => {
       const node = {
         id: company.id,
@@ -209,7 +202,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
           level,
           onSelect: (companyId: string) => {
             setSelectedCompany(
-              companyId === selectedCompany ? null : companyId
+              companyId === selectedCompany ? null : companyId,
             );
           },
           onAddSubCompany: (parentId: string) => {
@@ -224,7 +217,6 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         selected: selectedCompany === company.id,
         draggable: true,
       };
-
 
       return node;
     };
@@ -261,7 +253,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
     if (!displayCompany) return { nodes: [], edges: [] };
 
     // Add parent company node
-    const parentPosition = { x: 400, y: 150 };
+    const parentPosition = { x: 0, y: 150 };
     flowNodes.push(createCompanyNode(displayCompany, parentPosition, 0));
 
     // Add child nodes and edges if they exist
@@ -295,7 +287,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    [setEdges],
   );
 
   // Handle company creation using hooks consistently
@@ -315,12 +307,12 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         }
 
         toast.success(
-          `Parent company "${companyData.name}" created successfully`
+          `Parent company "${companyData.name}" created successfully`,
         );
       } else {
         if (!parentCompanyId) {
           throw new Error(
-            "Parent company ID is required for sub-company creation"
+            "Parent company ID is required for sub-company creation",
           );
         }
 
@@ -347,7 +339,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
     } catch (error) {
       console.error("Error creating company:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to create company"
+        error instanceof Error ? error.message : "Failed to create company",
       );
       throw error; // Re-throw to let modal handle the error
     }

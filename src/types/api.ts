@@ -139,7 +139,7 @@ export interface MSSQLConfigTaskStatus {
   task_id: string;
   user_id: string;
   db_id: number;
-  status: 'pending' | 'running' | 'success' | 'failed';
+  status: "pending" | "running" | "success" | "failed";
   progress: number;
   result: any;
   error: string | null;
@@ -339,17 +339,20 @@ export interface DatabaseConfig {
 
 export interface UserConfigCreateRequest {
   user_id: string;
-  db_config: DatabaseConfig;
+  db_id: number;
   access_level: number;
   accessible_tables: string[];
+  table_names: string[];
 }
 
 export interface UserConfigData {
   config_id: number;
   user_id: string;
+  db_id: number;
   db_config: DatabaseConfig;
   access_level: number;
   accessible_tables: string[];
+  table_names: string[];
   is_latest: boolean;
   created_at: string;
   updated_at: string;
@@ -361,6 +364,7 @@ export interface UserConfigCreateApiResponse {
   message: string;
   data: {
     config_id: number;
+    db_id: number;
     config_reused: boolean;
     database_created: boolean;
     database_name: string;
@@ -386,6 +390,7 @@ export interface UserConfigsListApiResponse {
 // Service response types (what services return after API client interceptor)
 export type UserConfigCreateResponse = {
   config_id: number;
+  db_id: number;
   config_reused: boolean;
   database_created: boolean;
   database_name: string;
@@ -394,10 +399,87 @@ export type UserConfigCreateResponse = {
 
 export type UserConfigResponse = UserConfigData;
 
-export type UserConfigsListResponse = {
+type UserConfigsListResponse = {
   configs: UserConfigData[];
   count: number;
 };
+
+// User Config by DB response (for GET /user-config/{userId}/{dbId})
+export interface UserConfigByDbApiResponse {
+  status: string;
+  message: string;
+  data: {
+    configs: UserConfigData[];
+    count: number;
+    latest_config_id: number;
+    user_id: string;
+    db_id: number;
+    database_name: string;
+  };
+}
+
+export type UserConfigByDbResponse = {
+  configs: UserConfigData[];
+  count: number;
+  latest_config_id: number;
+  user_id: string;
+  db_id: number;
+  database_name: string;
+};
+
+// User Config update request
+export interface UserConfigUpdateRequest {
+  db_id: number;
+  access_level: number;
+  accessible_tables: string[];
+  table_names: string[];
+}
+
+// User Config update response
+export interface UserConfigUpdateApiResponse {
+  status: string;
+  message: string;
+  data: {
+    config_id: number;
+    updated_config: UserConfigData;
+    updated_fields: Record<string, boolean>;
+  };
+}
+
+export type UserConfigUpdateResponse = {
+  config_id: number;
+  updated_config: UserConfigData;
+  updated_fields: Record<string, boolean>;
+};
+
+// User Table Names Types
+export interface AddUserTableNameRequest {
+  table_name: string;
+}
+
+export interface UserTableNameActionApiResponse {
+  status: string;
+  message: string;
+  data: {
+    user_id: string;
+    table_name: string;
+    action: string;
+  };
+}
+
+export type UserTableNameActionResponse = {
+  user_id: string;
+  table_name: string;
+  action: string;
+};
+
+export interface GetUserTableNamesApiResponse {
+  status: string;
+  message: string;
+  data: string[];
+}
+
+export type GetUserTableNamesResponse = string[];
 
 // User Current Database Types
 export interface UserCurrentDBRequest {

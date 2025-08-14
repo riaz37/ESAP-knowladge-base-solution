@@ -5,10 +5,11 @@ import { BusinessRulesService } from "../api";
  * Hook for managing business rules operations
  */
 export function useBusinessRules() {
+  const [userId, setUserId] = useState<string>("");
   const [businessRulesText, setBusinessRulesText] = useState<string>("");
   const [businessRulesLoading, setBusinessRulesLoading] = useState(false);
   const [businessRulesError, setBusinessRulesError] = useState<string | null>(
-    null
+    null,
   );
   const [downloadingRules, setDownloadingRules] = useState(false);
   const [uploadingRules, setUploadingRules] = useState(false);
@@ -18,22 +19,28 @@ export function useBusinessRules() {
   /**
    * Fetch business rules text
    */
-  const fetchBusinessRules = useCallback(async (userId?: string) => {
-    setBusinessRulesLoading(true);
-    setBusinessRulesError(null);
+  const fetchBusinessRules = useCallback(
+    async (userIdOverride?: string) => {
+      setBusinessRulesLoading(true);
+      setBusinessRulesError(null);
 
-    try {
-      const text = await BusinessRulesService.getBusinessRules(userId);
-      setBusinessRulesText(text || ""); // Ensure we always set a string
-      console.log("Business rules fetched successfully:", text);
-    } catch (e: any) {
-      console.error("Error in fetchBusinessRules hook:", e);
-      setBusinessRulesError(e.message || "Failed to fetch business rules");
-      setBusinessRulesText(""); // Reset on error
-    } finally {
-      setBusinessRulesLoading(false);
-    }
-  }, []);
+      const effectiveUserId = userIdOverride || userId; // Use provided userId or the hook's internal state
+
+      try {
+        const text =
+          await BusinessRulesService.getBusinessRules(effectiveUserId);
+        setBusinessRulesText(text || ""); // Ensure we always set a string
+        console.log("Business rules fetched successfully:", text);
+      } catch (e: any) {
+        console.error("Error in fetchBusinessRules hook:", e);
+        setBusinessRulesError(e.message || "Failed to fetch business rules");
+        setBusinessRulesText(""); // Reset on error
+      } finally {
+        setBusinessRulesLoading(false);
+      }
+    },
+    [userId],
+  );
 
   /**
    * Download business rules file
@@ -45,7 +52,7 @@ export function useBusinessRules() {
       await BusinessRulesService.downloadBusinessRulesFileToDevice();
     } catch (e: any) {
       setBusinessRulesError(
-        e.message || "Failed to download business rules file"
+        e.message || "Failed to download business rules file",
       );
     } finally {
       setDownloadingRules(false);
@@ -56,31 +63,37 @@ export function useBusinessRules() {
    * Update business rules
    */
   const updateBusinessRules = useCallback(
-    async (content: string, userId?: string) => {
+    async (content: string, userIdOverride?: string) => {
       setUploadingRules(true);
       setUploadError(null);
       setUploadSuccess(false);
 
+      const effectiveUserId = userIdOverride || userId;
+
       try {
         console.log(
           "Updating business rules for user:",
-          userId,
+          effectiveUserId,
           "Content length:",
-          content.length
+          content.length,
         );
-        await BusinessRulesService.updateBusinessRules(content, userId);
+        await BusinessRulesService.updateBusinessRules(
+          content,
+          effectiveUserId,
+        );
         console.log("Business rules updated successfully");
 
         setUploadSuccess(true);
 
         // Reload rules after update - call the service directly to avoid dependency issues
         try {
-          const text = await BusinessRulesService.getBusinessRules(userId);
+          const text =
+            await BusinessRulesService.getBusinessRules(effectiveUserId);
           setBusinessRulesText(text || "");
         } catch (fetchError) {
           console.warn(
             "Failed to reload business rules after update:",
-            fetchError
+            fetchError,
           );
         }
 
@@ -95,10 +108,12 @@ export function useBusinessRules() {
         setUploadingRules(false);
       }
     },
-    []
+    [userId],
   );
 
   return {
+    userId,
+    setUserId,
     businessRulesText,
     businessRulesLoading,
     businessRulesError,
