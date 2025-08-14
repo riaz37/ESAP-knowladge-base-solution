@@ -102,7 +102,7 @@ export function UserConfigStep({
         <Button
           variant="outline"
           onClick={handlePrevious}
-          className="border-gray-600 text-gray-300 hover:bg-gray-700"
+          className="border-gray-600 text-gray-300 hover:bg-gray-700 cursor-pointer transition-colors"
         >
           Back
         </Button>
@@ -116,13 +116,13 @@ export function UserConfigStep({
         <TabsList className="grid w-full grid-cols-2 bg-gray-800/50">
           <TabsTrigger
             value="existing"
-            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
+            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 cursor-pointer transition-colors"
           >
             Select Existing
           </TabsTrigger>
           <TabsTrigger
             value="new"
-            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
+            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 cursor-pointer transition-colors"
           >
             Create New
           </TabsTrigger>
@@ -176,7 +176,7 @@ export function UserConfigStep({
             <div className="flex justify-end">
               <Button
                 onClick={() => setCurrentStep("final-creation")}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95"
               >
                 Continue to Final Step
               </Button>
@@ -195,7 +195,7 @@ export function UserConfigStep({
                 value={newUserConfigUserId}
                 onChange={(e) => setNewUserConfigUserId(e.target.value)}
                 placeholder="user123"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
 
@@ -212,7 +212,7 @@ export function UserConfigStep({
                   setNewUserConfigAccessLevel(parseInt(value))
                 }
               >
-                <SelectTrigger className="bg-gray-800/50 border-green-400/30 text-white">
+                <SelectTrigger className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-gray-800 border-green-400/30">
@@ -233,7 +233,7 @@ export function UserConfigStep({
                 value={newUserConfigDbHost}
                 onChange={(e) => setNewUserConfigDbHost(e.target.value)}
                 placeholder="localhost"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
           </div>
@@ -251,7 +251,7 @@ export function UserConfigStep({
                   setNewUserConfigDbPort(parseInt(e.target.value) || 1433)
                 }
                 placeholder="1433"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
 
@@ -264,7 +264,7 @@ export function UserConfigStep({
                 value={newUserConfigDbName}
                 onChange={(e) => setNewUserConfigDbName(e.target.value)}
                 placeholder="MyDatabase"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
 
@@ -277,7 +277,7 @@ export function UserConfigStep({
                 value={newUserConfigDbUser}
                 onChange={(e) => setNewUserConfigDbUser(e.target.value)}
                 placeholder="sa"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
           </div>
@@ -296,7 +296,7 @@ export function UserConfigStep({
                 value={newUserConfigDbPassword}
                 onChange={(e) => setNewUserConfigDbPassword(e.target.value)}
                 placeholder="Enter password"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
 
@@ -309,7 +309,7 @@ export function UserConfigStep({
                 value={newUserConfigDbSchema}
                 onChange={(e) => setNewUserConfigDbSchema(e.target.value)}
                 placeholder="public"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
           </div>
@@ -350,7 +350,7 @@ export function UserConfigStep({
           <Button
             variant="outline"
             onClick={() => setCurrentStep("final-creation")}
-            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            className="border-gray-600 text-gray-300 hover:bg-gray-700 cursor-pointer transition-colors"
           >
             Skip for Now
           </Button>

@@ -51,9 +51,11 @@ export function BusinessRulesManager() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
-  
+
   // Database selection state
-  const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(null);
+  const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(
+    null
+  );
   const [selectedDatabaseName, setSelectedDatabaseName] = useState<string>("");
   const [configSaved, setConfigSaved] = useState(false);
 
@@ -82,7 +84,7 @@ export function BusinessRulesManager() {
         databaseId: selectedDatabaseId,
         databaseName: selectedDatabaseName,
       });
-      
+
       setConfigSaved(true);
       toast.success("AI configuration saved successfully!");
     } catch (error) {
@@ -244,7 +246,9 @@ export function BusinessRulesManager() {
                   <div className="absolute top-full left-0 mt-2 p-3 bg-gray-800 border border-green-400/30 rounded-lg shadow-lg z-50 min-w-[200px]">
                     {editingUserId ? (
                       <div className="space-y-2">
-                        <Label className="text-xs text-gray-400">Enter User ID</Label>
+                        <Label className="text-xs text-gray-400">
+                          Enter User ID
+                        </Label>
                         <Input
                           defaultValue={userId}
                           onKeyDown={(e) => {
@@ -262,7 +266,8 @@ export function BusinessRulesManager() {
                           <Button
                             size="sm"
                             onClick={(e) => {
-                              const input = e.currentTarget.parentElement?.previousElementSibling as HTMLInputElement;
+                              const input = e.currentTarget.parentElement
+                                ?.previousElementSibling as HTMLInputElement;
                               handleSaveUserId(input?.value || "");
                             }}
                             className="bg-green-600 hover:bg-green-700 text-white text-xs"
@@ -282,7 +287,10 @@ export function BusinessRulesManager() {
                     ) : (
                       <div className="space-y-2">
                         <div className="text-sm text-gray-300">
-                          Current User: <span className="text-green-400 font-medium">{userId}</span>
+                          Current User:{" "}
+                          <span className="text-green-400 font-medium">
+                            {userId}
+                          </span>
                         </div>
                         <Button
                           size="sm"
@@ -298,9 +306,10 @@ export function BusinessRulesManager() {
                   </div>
                 )}
               </div>
-              
+
               <div className="text-sm text-gray-400">
-                Managing business rules for: <span className="text-green-400 font-medium">{userId}</span>
+                Managing business rules for:{" "}
+                <span className="text-green-400 font-medium">{userId}</span>
               </div>
             </div>
 
@@ -340,13 +349,14 @@ export function BusinessRulesManager() {
               selectedDatabaseId={selectedDatabaseId}
               onDatabaseChange={handleDatabaseChange}
             />
-            
+
             {selectedDatabaseName && (
               <div className="p-3 bg-green-900/20 border border-green-400/30 rounded-lg">
                 <div className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-green-400" />
                   <span className="text-green-400 text-sm">
-                    Selected database: <span className="font-medium">{selectedDatabaseName}</span>
+                    Selected database:{" "}
+                    <span className="font-medium">{selectedDatabaseName}</span>
                   </span>
                 </div>
               </div>
@@ -370,13 +380,29 @@ export function BusinessRulesManager() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg border border-gray-700">
               <div className="space-y-1">
-                <div className="text-sm font-medium text-white">Current Configuration</div>
+                <div className="text-sm font-medium text-white">
+                  Current Configuration
+                </div>
                 <div className="text-xs text-gray-400 space-y-1">
-                  <div>User: <span className="text-green-400">{userId}</span></div>
-                  <div>Database: <span className="text-green-400">{selectedDatabaseName || "Not selected"}</span></div>
-                  <div>Status: <span className={configSaved ? "text-green-400" : "text-yellow-400"}>
-                    {configSaved ? "Saved" : "Unsaved changes"}
-                  </span></div>
+                  <div>
+                    User: <span className="text-green-400">{userId}</span>
+                  </div>
+                  <div>
+                    Database:{" "}
+                    <span className="text-green-400">
+                      {selectedDatabaseName || "Not selected"}
+                    </span>
+                  </div>
+                  <div>
+                    Status:{" "}
+                    <span
+                      className={
+                        configSaved ? "text-green-400" : "text-yellow-400"
+                      }
+                    >
+                      {configSaved ? "Saved" : "Unsaved changes"}
+                    </span>
+                  </div>
                 </div>
               </div>
               <Button
@@ -393,7 +419,8 @@ export function BusinessRulesManager() {
               <Alert className="border-green-400/30 bg-green-900/20">
                 <CheckCircle className="h-4 w-4 text-green-400" />
                 <AlertDescription className="text-green-300">
-                  AI configuration saved! You can now use the AI assistant with these settings.
+                  AI configuration saved! You can now use the AI assistant with
+                  these settings.
                 </AlertDescription>
               </Alert>
             )}
@@ -402,7 +429,8 @@ export function BusinessRulesManager() {
               <Alert className="border-yellow-400/30 bg-yellow-900/20">
                 <AlertCircle className="h-4 w-4 text-yellow-400" />
                 <AlertDescription className="text-yellow-300">
-                  Please select both a user and database before saving the AI configuration.
+                  Please select both a user and database before saving the AI
+                  configuration.
                 </AlertDescription>
               </Alert>
             )}
@@ -566,39 +594,6 @@ export function BusinessRulesManager() {
               </Alert>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Help Section */}
-      <Card className="bg-gray-900/50 border-green-400/30">
-        <CardHeader>
-          <CardTitle className="text-green-400">
-            How Business Rules Work
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-gray-300 space-y-3">
-          <p>
-            Business rules define how database queries should be processed and
-            what constraints should be applied.
-          </p>
-          <ul className="list-disc list-inside space-y-1 text-sm">
-            <li>
-              Rules are applied automatically when users perform database
-              queries
-            </li>
-            <li>
-              You can define data validation rules, access restrictions, and
-              query modifications
-            </li>
-            <li>
-              Rules are user-specific and can be customized for different users
-            </li>
-            <li>Changes take effect immediately after saving</li>
-          </ul>
-          <p className="text-sm text-gray-400">
-            Tip: Use Markdown format for better readability and organization of
-            your business rules.
-          </p>
         </CardContent>
       </Card>
     </div>

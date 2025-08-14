@@ -49,7 +49,7 @@ export function FinalCreationStep({
           type="button"
           variant="outline"
           onClick={handlePrevious}
-          className="border-gray-600 text-gray-300 hover:bg-gray-700"
+          className="border-gray-600 text-gray-300 hover:bg-gray-700 cursor-pointer transition-colors"
         >
           Back
         </Button>
@@ -97,14 +97,14 @@ export function FinalCreationStep({
           variant="outline"
           onClick={handlePrevious}
           disabled={creatingCompany}
-          className="border-gray-600 text-gray-300 hover:bg-gray-700"
+          className="border-gray-600 text-gray-300 hover:bg-gray-700 cursor-pointer transition-colors"
         >
           Back
         </Button>
         <Button
           type="submit"
           disabled={creatingCompany}
-          className="bg-green-600 hover:bg-green-700 text-white"
+          className="bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95"
         >
           {creatingCompany ? (
             <>

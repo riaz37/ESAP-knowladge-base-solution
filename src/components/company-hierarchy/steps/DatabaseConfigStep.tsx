@@ -108,13 +108,13 @@ export function DatabaseConfigStep({
         <TabsList className="grid w-full grid-cols-2 bg-gray-800/50">
           <TabsTrigger
             value="existing"
-            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
+            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 cursor-pointer transition-colors"
           >
             Select Existing
           </TabsTrigger>
           <TabsTrigger
             value="new"
-            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
+            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 cursor-pointer transition-colors"
           >
             Create New
           </TabsTrigger>
@@ -159,7 +159,7 @@ export function DatabaseConfigStep({
             <div className="flex justify-end">
               <Button
                 onClick={() => setCurrentStep("user-config")}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95"
               >
                 Next: Configure User Access
               </Button>
@@ -178,7 +178,7 @@ export function DatabaseConfigStep({
                 value={newDbName}
                 onChange={(e) => setNewDbName(e.target.value)}
                 placeholder="MyDatabase"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
 
@@ -191,7 +191,7 @@ export function DatabaseConfigStep({
                 value={newDbUserId}
                 onChange={(e) => setNewDbUserId(e.target.value)}
                 placeholder="admin"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
 
@@ -204,7 +204,7 @@ export function DatabaseConfigStep({
                 value={newDbUrl}
                 onChange={(e) => setNewDbUrl(e.target.value)}
                 placeholder="mssql+pyodbc://sa:password@server:1433/database..."
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
               />
             </div>
           </div>
@@ -219,7 +219,7 @@ export function DatabaseConfigStep({
                 value={newDbBusinessRule}
                 onChange={(e) => setNewDbBusinessRule(e.target.value)}
                 placeholder="Enter business rules for this database"
-                className="bg-gray-800/50 border-green-400/30 text-white placeholder:text-gray-500 min-h-[80px] resize-none"
+                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500 min-h-[80px] resize-none"
               />
             </div>
 
@@ -239,7 +239,7 @@ export function DatabaseConfigStep({
                     onChange={(e) =>
                       setSelectedFile(e.target.files?.[0] || null)
                     }
-                    className="bg-gray-800/50 border-green-400/30 text-white file:bg-green-600 file:text-white file:border-0 file:rounded file:px-3 file:py-1"
+                    className="bg-gray-800 border-green-400/30 cursor-pointer text-white file:bg-green-600 file:text-white file:border-0 file:rounded file:px-3 file:py-1"
                   />
                   {selectedFile && (
                     <Button
@@ -247,7 +247,7 @@ export function DatabaseConfigStep({
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedFile(null)}
-                      className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-700 cursor-pointer transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -269,7 +269,7 @@ export function DatabaseConfigStep({
             disabled={
               !newDbUrl.trim() || !newDbName.trim() || !newDbUserId.trim()
             }
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
+            className="w-full bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95"
           >
             <Plus className="w-4 h-4 mr-2" />
             Create Database

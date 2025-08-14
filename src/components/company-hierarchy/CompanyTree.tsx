@@ -3,8 +3,6 @@
 import { CompanyCard } from "./ui/CompanyCard";
 import { Company, CompanyCardProps, CompanyTreeProps } from "./types";
 
-
-
 export function CompanyTree({
   companies,
   onAddSubCompany,
@@ -47,9 +45,6 @@ export function CompanyTree({
           <CompanyCard
             company={company}
             onAddSubCompany={(parentId: string) => {
-              // CompanyCard expects (parentId: string) => void
-              // but CompanyTree receives (name, description, contactDatabase, parentId?) => void
-              // We need to handle this mismatch - for now, we'll call with empty values
               onAddSubCompany("", "", "", parentId);
             }}
             isSelected={selectedCompany === company.id}

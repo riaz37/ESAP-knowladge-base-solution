@@ -109,7 +109,7 @@ export function CompanyCard({
                 e.stopPropagation();
                 onAddSubCompany(company.id);
               }}
-              className="border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400"
+              className="border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 hover:border-emerald-400 cursor-pointer transition-colors"
             >
               <Plus className="w-3 h-3 mr-1" />
               Add Sub
@@ -124,7 +124,7 @@ export function CompanyCard({
                 e.stopPropagation();
                 onUpload(company.id, company.name, companyType);
               }}
-              className="border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400"
+              className="border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400 cursor-pointer transition-colors"
             >
               <Upload className="w-3 h-3 mr-1" />
               Upload
