@@ -13,6 +13,8 @@ export const API_ENDPOINTS = {
   SMART_FILE_SYSTEM: `${baseUrl}/files/smart_file_system`,
   BUNDLE_TASK_STATUS: (bundleId: string) =>
     `${baseUrl}/files/bundle_task_status/${bundleId}`,
+  BUNDLE_TASK_STATUS_ALL: `${baseUrl}/files/bundle_task_status_all`,
+  FILES_SEARCH: `${baseUrl}/files/search`,
 
   // History endpoints
   CONVERSATION_HISTORY: (userId: string) =>

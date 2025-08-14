@@ -43,23 +43,20 @@ export const useFileUploadStore = create<FileUploadState>((set, get) => ({
     set({ polling: true });
     const ref = setInterval(async () => {
       try {
-        const response = await FileService.getBundleStatus(bundleId);
+        const response = await FileService.getBundleTaskStatus(bundleId);
 
         console.log("Polling - Full response:", response);
-        console.log("Polling - Response data:", response?.data);
         console.log("Polling - Response type:", typeof response);
-        console.log("Polling - Data type:", typeof response?.data);
 
-        // Check if response exists and has data
-        if (!response || !response.data) {
-          console.warn("No response or data from bundle status API", {
+        // Check if response exists (with API client interceptor, response is now the data directly)
+        if (!response) {
+          console.warn("No response from bundle status API", {
             response,
-            data: response?.data,
           });
           return;
         }
 
-        const data = response.data;
+        const data = response;
 
         // Add safety checks for data structure
         if (!data || typeof data !== "object") {
@@ -67,7 +64,7 @@ export const useFileUploadStore = create<FileUploadState>((set, get) => ({
             "Invalid bundle status data:",
             data,
             "Type:",
-            typeof data
+            typeof data,
           );
           return;
         }
@@ -122,7 +119,7 @@ export const useFileUploadStore = create<FileUploadState>((set, get) => ({
           "Status normalized to:",
           normalized,
           "from original:",
-          statusValue
+          statusValue,
         );
 
         if (normalized === "completed") {

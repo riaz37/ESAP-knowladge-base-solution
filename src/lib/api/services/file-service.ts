@@ -1,98 +1,192 @@
-import { ApiResponse, FileUploadResponse } from '@/types/api';
-import { apiClient } from '../client';
-import { API_ENDPOINTS } from '../endpoints';
-import { transformFileUploadData, transformResponse } from '../transformers';
+import { apiClient } from "../client";
+import { API_ENDPOINTS } from "../endpoints";
+import {
+  SmartFileSystemRequest,
+  SmartFileSystemResponse,
+  BundleTaskStatusResponse,
+  BundleTaskStatusAllResponse,
+  FilesSearchRequest,
+  FilesSearchResponse,
+} from "@/types/api";
 
 /**
- * Service for handling file-related API calls
+ * Service for managing file operations
  */
-export const FileService = {
+export class FileService {
   /**
-   * Upload files to the smart file system
+   * Upload files to smart file system
    */
-  async uploadFiles(files: File[]): Promise<ApiResponse<any>> {
+  static async uploadSmartFileSystem(
+    files: File[],
+    fileDescriptions: string[],
+    tableNames: string[],
+    userIds: string[],
+  ): Promise<SmartFileSystemResponse> {
     try {
       const formData = new FormData();
-      files.forEach((file) => formData.append("files", file));
-      
-      // Using fetch directly for FormData uploads as it's simpler
-      const response = await fetch(API_ENDPOINTS.SMART_FILE_SYSTEM, {
-        method: 'POST',
-        body: formData,
-        // Add headers to handle CORS and SSL issues
-        headers: {
-          'Accept': 'application/json',
-        },
-        // For development: ignore SSL certificate issues
-        ...(process.env.NODE_ENV === 'development' && {
-          // Note: This won't work in browser, but helps identify the issue
-        })
+
+      // Add files
+      files.forEach((file) => {
+        formData.append("files", file);
       });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Upload response data:', data);
-      return transformResponse(data);
-    } catch (error: any) {
-      // Better error handling
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        throw new Error('Network error: Unable to connect to server. This might be due to CORS or SSL certificate issues.');
-      }
+
+      // Add file descriptions
+      fileDescriptions.forEach((description) => {
+        formData.append("file_descriptions", description);
+      });
+
+      // Add table names
+      tableNames.forEach((tableName) => {
+        formData.append("table_names", tableName);
+      });
+
+      // Add user IDs
+      userIds.forEach((userId) => {
+        formData.append("user_ids", userId);
+      });
+
+      const response = await apiClient.post(
+        API_ENDPOINTS.SMART_FILE_SYSTEM,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+      return response;
+    } catch (error) {
+      console.error("Error uploading files to smart file system:", error);
       throw error;
     }
-  },
+  }
 
   /**
-   * Get bundle task status
+   * Get bundle task status by bundle ID
    */
-  async getBundleStatus(bundleId: string): Promise<ApiResponse<any>> {
+  static async getBundleTaskStatus(
+    bundleId: string,
+  ): Promise<BundleTaskStatusResponse> {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.BUNDLE_TASK_STATUS(bundleId));
-      
-      // Add debugging to see what we're getting
-      console.log('Bundle status response:', response);
-      
-      // Check if response is already in the expected ApiResponse format
-      if (response && 'data' in response && 'success' in response) {
-        return response;
-      }
-      
-      // If response is the raw data, wrap it in ApiResponse format
-      if (response && typeof response === 'object') {
-        return {
-          success: true,
-          data: response,
-          timestamp: new Date().toISOString()
-        };
-      }
-      
-      // Fallback for no response
-      console.warn('No response received, creating default response');
-      return {
-        success: false,
-        data: { status: 'pending', detail: 'No response from server' },
-        timestamp: new Date().toISOString()
-      };
-    } catch (error: any) {
-      console.error('Bundle status error:', error);
-      
-      // Always return a structured response instead of throwing
-      // This prevents the polling from breaking
-      return {
-        success: false,
-        data: { 
-          status: 'pending', 
-          detail: error.message || 'Bundle status check failed',
-          error: true
-        },
-        timestamp: new Date().toISOString()
-      };
+      const response = await apiClient.get(
+        API_ENDPOINTS.BUNDLE_TASK_STATUS(bundleId),
+      );
+      return response;
+    } catch (error) {
+      console.error(
+        `Error fetching bundle task status for ${bundleId}:`,
+        error,
+      );
+      throw error;
     }
-  },
-};
+  }
+
+  /**
+   * Get all bundle task statuses
+   */
+  static async getAllBundleTaskStatus(): Promise<BundleTaskStatusAllResponse> {
+    try {
+      const response = await apiClient.get(
+        API_ENDPOINTS.BUNDLE_TASK_STATUS_ALL,
+      );
+      return response;
+    } catch (error) {
+      console.error("Error fetching all bundle task statuses:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search files
+   */
+  static async searchFiles(
+    request: FilesSearchRequest,
+  ): Promise<FilesSearchResponse> {
+    try {
+      const response = await apiClient.post(
+        API_ENDPOINTS.FILES_SEARCH,
+        request,
+      );
+      return response;
+    } catch (error) {
+      console.error("Error searching files:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate smart file system request
+   */
+  static validateSmartFileSystemRequest(
+    files: File[],
+    fileDescriptions: string[],
+    tableNames: string[],
+    userIds: string[],
+  ): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+
+    if (!files || files.length === 0) {
+      errors.push("At least one file is required");
+    }
+
+    if (!fileDescriptions || fileDescriptions.length === 0) {
+      errors.push("File descriptions are required");
+    }
+
+    if (!tableNames || tableNames.length === 0) {
+      errors.push("Table names are required");
+    }
+
+    if (!userIds || userIds.length === 0) {
+      errors.push("User IDs are required");
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+
+  /**
+   * Validate files search request
+   */
+  static validateFilesSearchRequest(request: FilesSearchRequest): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+
+    if (!request.query || request.query.trim() === "") {
+      errors.push("Query is required");
+    }
+
+    if (!request.user_id || request.user_id.trim() === "") {
+      errors.push("User ID is required");
+    }
+
+    if (request.intent_top_k !== undefined && request.intent_top_k <= 0) {
+      errors.push("Intent top k must be a positive number");
+    }
+
+    if (request.chunk_top_k !== undefined && request.chunk_top_k <= 0) {
+      errors.push("Chunk top k must be a positive number");
+    }
+
+    if (
+      request.max_chunks_for_answer !== undefined &&
+      request.max_chunks_for_answer <= 0
+    ) {
+      errors.push("Max chunks for answer must be a positive number");
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+}
 
 export default FileService;

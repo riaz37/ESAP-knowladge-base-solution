@@ -45,14 +45,114 @@ export interface UploadProgress {
   percentage: number;
 }
 
-export interface FileUploadResponse extends ApiResponse {
-  data: {
-    fileId: string;
-    fileName: string;
-    fileSize: number;
-    uploadUrl?: string;
-    processingStatus: "pending" | "processing" | "completed" | "failed";
-  };
+// Smart File System Types
+export interface SmartFileSystemRequest {
+  files: File[];
+  file_descriptions: string[];
+  table_names: string[];
+  user_ids: string[];
+}
+
+export interface TaskId {
+  task_id: string;
+  pipeline: string;
+  filename: string;
+  file_description: string;
+  table_name: string;
+  user_id: string;
+  status: string;
+}
+
+export interface SmartFileSystemResponse {
+  message: string;
+  bundle_id: string;
+  total_files: number;
+  semi_structured_files: number;
+  unstructured_files: number;
+  processing_mode: string;
+  task_ids: TaskId[];
+}
+
+// Bundle Task Status Types
+export interface IndividualTask {
+  task_id: string;
+  status: string;
+  filename: string;
+  progress: string;
+  created_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+}
+
+export interface BundleTaskStatusResponse {
+  bundle_id: string;
+  status: string;
+  total_files: number;
+  completed_files: number;
+  failed_files: number;
+  remaining_files: number;
+  progress_percentage: number;
+  created_at: string;
+  last_updated: string;
+  current_processing_files: string[];
+  remaining_file_names: string[];
+  individual_tasks: IndividualTask[];
+}
+
+// Bundle Status All Types
+export interface BundleSummary {
+  bundle_id: string;
+  status: string;
+  total_files: number;
+  completed_files: number;
+  failed_files: number;
+  remaining_files: number;
+  progress_percentage: number;
+  created_at: string;
+  last_updated: string;
+  filenames: string[];
+}
+
+export interface BundleTaskStatusAllResponse {
+  total_bundles: number;
+  bundles: BundleSummary[];
+}
+
+// Files Search Types
+export interface FilesSearchRequest {
+  query: string;
+  user_id: string;
+  use_intent_reranker?: boolean;
+  use_chunk_reranker?: boolean;
+  use_dual_embeddings?: boolean;
+  intent_top_k?: number;
+  chunk_top_k?: number;
+  chunk_source?: string;
+  max_chunks_for_answer?: number;
+  answer_style?: string;
+  table_specific?: boolean;
+  tables?: string[];
+}
+
+export interface SearchAnswer {
+  answer: string;
+  sources_used: number;
+  confidence: string;
+  sources: any[];
+}
+
+export interface SearchDatabaseConfig {
+  host: string;
+  port: number;
+  database: string;
+  schema: string;
+}
+
+export interface FilesSearchResponse {
+  query: string;
+  answer: SearchAnswer;
+  user_id_used: string;
+  database_config: SearchDatabaseConfig;
 }
 
 export interface QueryRequest {
