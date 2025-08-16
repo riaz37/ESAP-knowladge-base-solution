@@ -2,7 +2,7 @@ import { ApiRequestConfig, ApiResponse, ApiError } from "@/types/api";
 import { NetworkError } from "@/types/error";
 
 const baseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 /**
  * Default request configuration

@@ -51,10 +51,6 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
   };
 
   const handleSave = useCallback(async () => {
-    if (!userId.trim()) {
-      toast.error("Please enter a user ID before saving.");
-      return;
-    }
     if (!hasUnsavedChanges) {
       toast.info("No unsaved changes to save.");
       return;

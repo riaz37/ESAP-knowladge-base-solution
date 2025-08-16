@@ -1,16 +1,21 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { UserConfiguration } from "@/components/business-rules/UserConfiguration";
-import AIConfigurationManager from "@/components/ai-config/AIConfigurationManager";
 import BusinessRulesEditor from "@/components/business-rules/BusinessRulesEditor";
 import { useBusinessRules } from "@/lib/hooks/use-business-rules";
 
 export function BusinessRulesManager() {
-  const { userId, setUserId, businessRulesError, fetchBusinessRules } =
-    useBusinessRules();
+  const {
+    businessRulesError,
+    fetchBusinessRules,
+    businessRulesText,
+    businessRulesLoading,
+  } = useBusinessRules();
+
+  // Default user ID - you can replace this with actual user context later
+  const [userId, setUserId] = useState<string>("default-user");
 
   const handleRefresh = useCallback(
     (userId: string) => {
@@ -18,22 +23,18 @@ export function BusinessRulesManager() {
         fetchBusinessRules(userId);
       }
     },
-    [fetchBusinessRules],
+    [fetchBusinessRules]
   );
+
+  // Load business rules when component mounts
+  useEffect(() => {
+    if (userId.trim()) {
+      fetchBusinessRules(userId);
+    }
+  }, [userId, fetchBusinessRules]);
 
   return (
     <div className="space-y-6 relative">
-      {/* User Configuration */}
-      <UserConfiguration
-        onRefresh={handleRefresh}
-        businessRulesLoading={false}
-        userId={userId}
-        setUserId={setUserId}
-      />
-
-      {/* AI Configuration */}
-      <AIConfigurationManager userId={userId} />
-
       {/* Business Rules Editor */}
       <BusinessRulesEditor userId={userId} />
 

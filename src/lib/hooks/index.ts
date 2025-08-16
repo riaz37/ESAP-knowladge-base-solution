@@ -3,6 +3,7 @@ export * from "./use-file-query";
 export * from "./use-smart-file-upload";
 export { useFileOperations } from "./use-smart-file-upload";
 export * from "./use-business-rules";
+export * from "./use-database-query-validation";
 export * from "./use-database-operations";
 export * from "./use-user-settings";
 export * from "./use-toast";

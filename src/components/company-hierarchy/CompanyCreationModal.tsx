@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useMSSQLConfig } from "@/lib/hooks/use-mssql-config";
-import { useUserConfig } from "@/lib/hooks/use-user-config";
+
 import { MSSQLConfigData } from "@/types/api";
 import { toast } from "sonner";
 
@@ -19,7 +19,6 @@ import { StepIndicator } from "./steps/StepIndicator";
 import { CompanyInfoStep } from "./steps/CompanyInfoStep";
 import { DatabaseConfigStep } from "./steps/DatabaseConfigStep";
 import { DatabaseCreationStep } from "./steps/DatabaseCreationStep";
-import { UserConfigStep } from "./steps/UserConfigStep";
 import { FinalCreationStep } from "./steps/FinalCreationStep";
 
 // Types
@@ -46,13 +45,6 @@ export function CompanyCreationModal({
     clearSuccess: clearMSSQLSuccess,
   } = useMSSQLConfig();
 
-  const {
-    userConfigs,
-    fetchUserConfigs,
-    createUserConfig,
-    isLoading: userConfigLoading,
-  } = useUserConfig();
-
   // Workflow state
   const [currentStep, setCurrentStep] = useState<WorkflowStep>("company-info");
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
@@ -68,11 +60,6 @@ export function CompanyCreationModal({
   const [databases, setDatabases] = useState<MSSQLConfigData[]>([]);
   const [creatingCompany, setCreatingCompany] = useState(false);
   const [databaseCreationData, setDatabaseCreationData] = useState<any>(null);
-
-  // User Configuration states
-  const [selectedUserConfigId, setSelectedUserConfigId] = useState<
-    number | null
-  >(null);
 
   // Memoized data loading functions
   const loadDatabases = useCallback(async () => {
@@ -90,24 +77,14 @@ export function CompanyCreationModal({
     }
   }, [getConfigs]);
 
-  const loadUserConfigs = useCallback(async () => {
-    try {
-      await fetchUserConfigs();
-    } catch (error) {
-      console.error("Error loading user configs:", error);
-      toast.error("Failed to load user configurations");
-    }
-  }, [fetchUserConfigs]);
-
   // Load data when modal opens
   useEffect(() => {
     if (isOpen) {
       loadDatabases();
-      loadUserConfigs();
       setCurrentStep("company-info");
       setCurrentTaskId(null);
     }
-  }, [isOpen, loadDatabases, loadUserConfigs]);
+  }, [isOpen, loadDatabases]);
 
   const handleTaskComplete = async (success: boolean, result?: any) => {
     if (success) {
@@ -129,7 +106,7 @@ export function CompanyCreationModal({
         const configs = await getConfigs();
         if (configs && Array.isArray(configs)) {
           const newDb = configs.find(
-            (db) => db.db_name === databaseCreationData.dbConfig.db_name
+            (db) => db.db_name === databaseCreationData.dbConfig.db_name,
           );
           if (newDb) {
             newDbId = newDb.db_id;
@@ -143,7 +120,7 @@ export function CompanyCreationModal({
       }
 
       // Automatically move to the next step
-      setCurrentStep("user-config");
+      setCurrentStep("final-creation");
     } else {
       toast.error("Failed to create database");
       setCurrentStep("database-config");
@@ -180,7 +157,7 @@ export function CompanyCreationModal({
       await onSubmit(companyData);
       handleClose();
       toast.success(
-        `${type === "parent" ? "Parent" : "Sub"} company created successfully`
+        `${type === "parent" ? "Parent" : "Sub"} company created successfully`,
       );
     } catch (error) {
       console.error("Error creating company:", error);
@@ -197,7 +174,6 @@ export function CompanyCreationModal({
     setAddress("");
     setContactEmail("");
     setSelectedDbId(null);
-    setSelectedUserConfigId(null);
     setCurrentStep("company-info");
     setCurrentTaskId(null);
 
@@ -221,16 +197,10 @@ export function CompanyCreationModal({
     setContactEmail,
     selectedDbId,
     setSelectedDbId,
-    selectedUserConfigId,
-    setSelectedUserConfigId,
     databases,
-    userConfigs,
     mssqlLoading,
-    userConfigLoading,
     setConfig,
-    createUserConfig,
     loadDatabases,
-    loadUserConfigs,
     creatingCompany,
     handleSubmit,
     type,
@@ -280,9 +250,6 @@ export function CompanyCreationModal({
                   currentTaskId={currentTaskId}
                   onTaskComplete={handleTaskComplete}
                 />
-              )}
-              {currentStep === "user-config" && (
-                <UserConfigStep {...stepProps} />
               )}
               {currentStep === "final-creation" && (
                 <FinalCreationStep {...stepProps} />

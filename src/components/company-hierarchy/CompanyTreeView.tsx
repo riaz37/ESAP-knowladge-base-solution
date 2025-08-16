@@ -10,6 +10,8 @@ import ReactFlow, {
   useEdgesState,
   Controls,
   MarkerType,
+  useReactFlow,
+  ReactFlowProvider,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { CompanyCard } from "./ui/CompanyCard";
@@ -17,7 +19,6 @@ import { EmptyState } from "./ui/EmptyState";
 import { CompanyTreeSidebar } from "./ui/CompanyTreeSidebar";
 import { CompanyCreationModal } from "./CompanyCreationModal";
 import { CompanyFormData } from "./types";
-import { CompanyUploadModal } from "./CompanyUploadModal";
 import { useParentCompanies } from "@/lib/hooks/use-parent-companies";
 import { useSubCompanies } from "@/lib/hooks/use-sub-companies";
 import { ParentCompanyData, SubCompanyData } from "@/types/api";
@@ -65,11 +66,14 @@ const defaultEdgeOptions = {
   },
 };
 
-export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
+function CompanyTreeViewContent({ onCompanyCreated }: CompanyTreeViewProps) {
   // Use hooks for consistent API calls and state management
   const { getParentCompanies, createParentCompany } = useParentCompanies();
 
   const { getSubCompanies, createSubCompany } = useSubCompanies();
+
+  // React Flow instance for viewport control
+  const { fitView } = useReactFlow();
 
   // State management
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -169,7 +173,7 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
           {
             id: "empty-state",
             type: "emptyState",
-            position: { x: 0, y: 300 },
+            position: { x: 0, y: 0 },
             data: {
               onAddParentCompany: () => {
                 setModalType("parent");
@@ -252,15 +256,35 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
 
     if (!displayCompany) return { nodes: [], edges: [] };
 
-    // Add parent company node
-    const parentPosition = { x: 0, y: 150 };
+    // Calculate centered positioning
+    const containerWidth = 1200; // Approximate container width
+    const containerHeight = 800; // Approximate container height
+
+    // Add parent company node - center it horizontally
+    const parentPosition = {
+      x: containerWidth / 2 - 200, // Offset by half card width to center
+      y: 100,
+    };
     flowNodes.push(createCompanyNode(displayCompany, parentPosition, 0));
 
     // Add child nodes and edges if they exist
     if (displayCompany.children && displayCompany.children.length > 0) {
-      const childY = 400;
-      const spacing = 400;
-      const startX = 400 - ((displayCompany.children.length - 1) * spacing) / 2;
+      const childY = 350;
+      const maxSpacing = 350; // Maximum spacing between child nodes
+      const minSpacing = 250; // Minimum spacing between child nodes
+      const childCount = displayCompany.children.length;
+
+      // Calculate spacing based on number of children and available width
+      let spacing = Math.max(
+        minSpacing,
+        Math.min(maxSpacing, containerWidth / (childCount + 1)),
+      );
+
+      // Calculate total width needed for all children
+      const totalChildrenWidth = (childCount - 1) * spacing;
+
+      // Center the children as a group under the parent
+      const startX = parentPosition.x + 200 - totalChildrenWidth / 2; // Adjust for parent center
 
       displayCompany.children.forEach((child, index) => {
         const childPosition = { x: startX + index * spacing, y: childY };
@@ -283,7 +307,14 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
   useEffect(() => {
     setNodes(nodes);
     setEdges(edges);
-  }, [nodes, edges, setNodes, setEdges]);
+
+    // Fit view to nodes after a short delay to ensure nodes are rendered
+    const timer = setTimeout(() => {
+      fitView({ padding: 0.2, duration: 800 });
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [nodes, edges, setNodes, setEdges, fitView]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
@@ -362,6 +393,14 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
             onConnect={onConnect}
             nodeTypes={nodeTypes}
             fitView
+            fitViewOptions={{
+              padding: 0.2,
+              minZoom: 0.5,
+              maxZoom: 1.5,
+            }}
+            defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+            minZoom={0.3}
+            maxZoom={2}
             className="bg-transparent"
             proOptions={{ hideAttribution: true }}
             defaultEdgeOptions={defaultEdgeOptions}
@@ -407,6 +446,15 @@ export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
         companyType={uploadCompanyType}
       />
     </div>
+  );
+}
+
+// Wrapper component with ReactFlowProvider
+export function CompanyTreeView({ onCompanyCreated }: CompanyTreeViewProps) {
+  return (
+    <ReactFlowProvider>
+      <CompanyTreeViewContent onCompanyCreated={onCompanyCreated} />
+    </ReactFlowProvider>
   );
 }
 

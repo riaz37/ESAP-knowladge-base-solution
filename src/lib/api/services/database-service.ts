@@ -7,6 +7,19 @@ import { API_ENDPOINTS } from '../endpoints';
  */
 export const DatabaseService = {
   /**
+   * Get all available databases
+   */
+  async getAllDatabases(): Promise<ApiResponse<any>> {
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.GET_MSSQL_CONFIGS);
+      return response;
+    } catch (error) {
+      console.error('Error fetching all databases:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Reload the database
    */
   async reloadDatabase(): Promise<ApiResponse<any>> {

@@ -2,16 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { MSSQLConfigData, UserConfigData } from "@/types/api";
-import { WorkflowStep } from "../CompanyCreationModal";
+import { MSSQLConfigData } from "@/types/api";
+import { WorkflowStep } from "../types";
 
 interface FinalCreationStepProps {
   companyName: string;
   description: string;
   selectedDbId: number | null;
-  selectedUserConfigId: number | null;
   databases: MSSQLConfigData[];
-  userConfigs: UserConfigData[];
   creatingCompany: boolean;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   setCurrentStep: (step: WorkflowStep) => void;
@@ -22,21 +20,16 @@ export function FinalCreationStep({
   companyName,
   description,
   selectedDbId,
-  selectedUserConfigId,
   databases,
-  userConfigs,
   creatingCompany,
   handleSubmit,
   setCurrentStep,
   type,
 }: FinalCreationStepProps) {
-  const selectedDatabase = databases.find((db) => db.db_id === selectedDbId);
-  const selectedUserConfig = userConfigs.find(
-    (config) => config.config_id === selectedUserConfigId
-  );
+  const selectedDatabase = databases?.find((db) => db.db_id === selectedDbId);
 
   const handlePrevious = () => {
-    setCurrentStep("user-config");
+    setCurrentStep("database-config");
   };
 
   return (
@@ -71,14 +64,6 @@ export function FinalCreationStep({
             <span className="text-gray-400">Database:</span>
             <span className="text-white ml-2">
               {selectedDatabase?.db_name || "Not selected"}
-            </span>
-          </div>
-          <div>
-            <span className="text-gray-400">User Configuration:</span>
-            <span className="text-white ml-2">
-              {selectedUserConfig
-                ? `${selectedUserConfig.user_id} (Level ${selectedUserConfig.access_level})`
-                : "Not configured"}
             </span>
           </div>
           {description && (

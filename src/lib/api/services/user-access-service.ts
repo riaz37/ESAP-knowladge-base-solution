@@ -59,6 +59,64 @@ export class UserAccessService {
   }
 
   /**
+   * Get accessible databases for a specific user
+   */
+  static async getUserAccessibleDatabases(userId: string): Promise<any> {
+    try {
+      const userAccess = await this.getUserAccess(userId);
+      
+      if (!userAccess || !userAccess.access_configs || userAccess.access_configs.length === 0) {
+        return { data: [] };
+      }
+
+      // Get all accessible databases from user access config
+      const accessibleDatabases: any[] = [];
+      
+      userAccess.access_configs.forEach(config => {
+        // Add parent company databases
+        if (config.database_access.parent_databases) {
+          config.database_access.parent_databases.forEach(db => {
+            accessibleDatabases.push({
+              id: db.db_id,
+              name: `Database ${db.db_id}`,
+              description: `Parent Company Database (${db.access_level} access)`,
+              url: `Database ${db.db_id}`,
+              access_level: db.access_level
+            });
+          });
+        }
+
+        // Add sub company databases
+        if (config.database_access.sub_databases) {
+          config.database_access.sub_databases.forEach(subDb => {
+            if (subDb.databases) {
+              subDb.databases.forEach(db => {
+                accessibleDatabases.push({
+                  id: db.db_id,
+                  name: `Database ${db.db_id}`,
+                  description: `Sub Company Database (${db.access_level} access)`,
+                  url: `Database ${db.db_id}`,
+                  access_level: db.access_level
+                });
+              });
+            }
+          });
+        }
+      });
+
+      // Remove duplicates based on database ID
+      const uniqueDatabases = accessibleDatabases.filter((db, index, self) => 
+        index === self.findIndex(d => d.id === db.id)
+      );
+
+      return { data: uniqueDatabases };
+    } catch (error) {
+      console.error(`Error fetching accessible databases for user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Validate user access configuration before creating
    */
   static validateUserAccess(config: UserAccessCreateRequest): {

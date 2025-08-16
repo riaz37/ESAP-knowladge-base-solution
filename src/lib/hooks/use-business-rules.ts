@@ -5,7 +5,6 @@ import { BusinessRulesService } from "../api";
  * Hook for managing business rules operations
  */
 export function useBusinessRules() {
-  const [userId, setUserId] = useState<string>("");
   const [businessRulesText, setBusinessRulesText] = useState<string>("");
   const [businessRulesLoading, setBusinessRulesLoading] = useState(false);
   const [businessRulesError, setBusinessRulesError] = useState<string | null>(
@@ -20,15 +19,17 @@ export function useBusinessRules() {
    * Fetch business rules text
    */
   const fetchBusinessRules = useCallback(
-    async (userIdOverride?: string) => {
+    async (userId: string) => {
+      if (!userId.trim()) {
+        setBusinessRulesError("User ID is required");
+        return;
+      }
+
       setBusinessRulesLoading(true);
       setBusinessRulesError(null);
 
-      const effectiveUserId = userIdOverride || userId; // Use provided userId or the hook's internal state
-
       try {
-        const text =
-          await BusinessRulesService.getBusinessRules(effectiveUserId);
+        const text = await BusinessRulesService.getBusinessRules(userId);
         setBusinessRulesText(text || ""); // Ensure we always set a string
         console.log("Business rules fetched successfully:", text);
       } catch (e: any) {
@@ -39,7 +40,7 @@ export function useBusinessRules() {
         setBusinessRulesLoading(false);
       }
     },
-    [userId],
+    [],
   );
 
   /**
@@ -63,23 +64,26 @@ export function useBusinessRules() {
    * Update business rules
    */
   const updateBusinessRules = useCallback(
-    async (content: string, userIdOverride?: string) => {
+    async (content: string, userId: string) => {
+      if (!userId.trim()) {
+        setBusinessRulesError("User ID is required");
+        return false;
+      }
+
       setUploadingRules(true);
       setUploadError(null);
       setUploadSuccess(false);
 
-      const effectiveUserId = userIdOverride || userId;
-
       try {
         console.log(
           "Updating business rules for user:",
-          effectiveUserId,
+          userId,
           "Content length:",
           content.length,
         );
         await BusinessRulesService.updateBusinessRules(
           content,
-          effectiveUserId,
+          userId,
         );
         console.log("Business rules updated successfully");
 
@@ -87,8 +91,7 @@ export function useBusinessRules() {
 
         // Reload rules after update - call the service directly to avoid dependency issues
         try {
-          const text =
-            await BusinessRulesService.getBusinessRules(effectiveUserId);
+          const text = await BusinessRulesService.getBusinessRules(userId);
           setBusinessRulesText(text || "");
         } catch (fetchError) {
           console.warn(
@@ -108,12 +111,10 @@ export function useBusinessRules() {
         setUploadingRules(false);
       }
     },
-    [userId],
+    [],
   );
 
   return {
-    userId,
-    setUserId,
     businessRulesText,
     businessRulesLoading,
     businessRulesError,

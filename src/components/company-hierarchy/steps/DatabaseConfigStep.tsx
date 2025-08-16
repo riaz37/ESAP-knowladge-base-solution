@@ -16,7 +16,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { MSSQLConfigData } from "@/types/api";
-import { DatabaseConfigStepProps } from "../types"
+import { DatabaseConfigStepProps } from "../types";
 
 export function DatabaseConfigStep({
   selectedDbId,
@@ -82,7 +82,6 @@ export function DatabaseConfigStep({
 
       // Move to database creation step so the user can see progress
       setCurrentStep("database-creation");
-      
     } catch (error) {
       console.error("Error creating database:", error);
       toast.error("Failed to create database");
@@ -158,10 +157,10 @@ export function DatabaseConfigStep({
           {selectedDbId && (
             <div className="flex justify-end">
               <Button
-                onClick={() => setCurrentStep("user-config")}
+                onClick={() => setCurrentStep("final-creation")}
                 className="bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95"
               >
-                Next: Configure User Access
+                Next: Create Company
               </Button>
             </div>
           )}
