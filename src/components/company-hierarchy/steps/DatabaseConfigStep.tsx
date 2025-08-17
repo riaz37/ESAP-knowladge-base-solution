@@ -24,7 +24,6 @@ export function DatabaseConfigStep({
   databases,
   mssqlLoading,
   setConfig,
-  loadDatabases,
   setCurrentStep,
   setDatabaseCreationData,
   setCurrentTaskId,
@@ -42,6 +41,14 @@ export function DatabaseConfigStep({
     setCurrentStep("company-info");
   };
 
+  const handleNext = () => {
+    if (selectedDbId) {
+      setCurrentStep("vector-config");
+    } else {
+      toast.error("Please select or create a database first");
+    }
+  };
+
   const handleCreateDatabase = async () => {
     if (!newDbUrl.trim() || !newDbName.trim() || !newDbUserId.trim()) {
       toast.error("Database URL, name, and user ID are required");
@@ -49,51 +56,48 @@ export function DatabaseConfigStep({
     }
 
     try {
-      // Prepare the database configuration data
-      const dbConfig: any = {
+      const dbConfig = {
         db_url: newDbUrl.trim(),
         db_name: newDbName.trim(),
         business_rule: newDbBusinessRule.trim() || undefined,
         user_id: newDbUserId.trim(),
+        file: selectedFile,
       };
 
-      if (selectedFile) {
-        dbConfig.file = selectedFile;
-      }
-
-      // Cache creation input so it can be reused after completion
       setDatabaseCreationData({ dbConfig, selectedFile });
 
-      // Kick off async creation task (non-blocking)
       const taskResponse = await setConfig(dbConfig);
-      // `taskResponse` shape can vary depending on axios interceptor; attempt multiple selectors
-      const taskId: string | null =
-        (taskResponse as any)?.data?.task_id ??
-        (taskResponse as any)?.task_id ??
-        null;
+      const taskId = (taskResponse as any)?.data?.task_id ?? (taskResponse as any)?.task_id ?? null;
 
       if (!taskId) {
-        console.error("Unexpected create-database response", taskResponse);
-        toast.error("Server did not return a task ID");
+        toast.error("Failed to start database creation");
         return;
       }
 
       setCurrentTaskId(taskId);
-
-      // Move to database creation step so the user can see progress
       setCurrentStep("database-creation");
     } catch (error) {
-      console.error("Error creating database:", error);
       toast.error("Failed to create database");
     }
+  };
+
+  const resetNewDbForm = () => {
+    setNewDbUrl("");
+    setNewDbName("");
+    setNewDbBusinessRule("");
+    setNewDbUserId("admin");
+    setSelectedFile(null);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium text-green-400">
-          Database Configuration
-        </h3>
+        <div>
+          <h3 className="text-lg font-medium text-green-400">Database Configuration</h3>
+          <p className="text-sm text-gray-400 mt-1">
+            Choose an existing database or create a new one
+          </p>
+        </div>
         <Button
           variant="outline"
           onClick={handlePrevious}
@@ -107,23 +111,23 @@ export function DatabaseConfigStep({
         <TabsList className="grid w-full grid-cols-2 bg-gray-800/50">
           <TabsTrigger
             value="existing"
-            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 cursor-pointer transition-colors"
+            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
           >
             Select Existing
           </TabsTrigger>
           <TabsTrigger
             value="new"
-            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 cursor-pointer transition-colors"
+            className="data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400"
           >
             Create New
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="existing" className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-gray-300">Select Database *</Label>
+          <div className="space-y-3">
+            <Label className="text-gray-300">Select Database</Label>
             {mssqlLoading ? (
-              <div className="flex items-center gap-2 p-3 bg-gray-800/50 rounded-lg">
+              <div className="flex items-center gap-2 p-4 bg-gray-800/50 rounded-lg">
                 <Loader2 className="w-4 h-4 animate-spin text-green-400" />
                 <span className="text-gray-400">Loading databases...</span>
               </div>
@@ -147,98 +151,77 @@ export function DatabaseConfigStep({
                 </SelectContent>
               </Select>
             )}
+            
             {databases.length === 0 && !mssqlLoading && (
-              <p className="text-sm text-gray-400">
-                No databases found. Create one to get started.
-              </p>
+              <div className="text-center py-8 text-gray-400">
+                <Database className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No databases found</p>
+                <p className="text-sm">Create one to get started</p>
+              </div>
             )}
           </div>
-
-          {selectedDbId && (
-            <div className="flex justify-end">
-              <Button
-                onClick={() => setCurrentStep("final-creation")}
-                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95"
-              >
-                Next: Create Company
-              </Button>
-            </div>
-          )}
         </TabsContent>
 
         <TabsContent value="new" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="newDbName" className="text-gray-300">
-                Database Name *
-              </Label>
+              <Label htmlFor="newDbName">Database Name *</Label>
               <Input
                 id="newDbName"
                 value={newDbName}
                 onChange={(e) => setNewDbName(e.target.value)}
                 placeholder="MyDatabase"
-                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="newDbUserId" className="text-gray-300">
-                User ID *
-              </Label>
+              <Label htmlFor="newDbUserId">User ID *</Label>
               <Input
                 id="newDbUserId"
                 value={newDbUserId}
                 onChange={(e) => setNewDbUserId(e.target.value)}
                 placeholder="admin"
-                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="newDbUrl" className="text-gray-300">
-                Database URL *
-              </Label>
-              <Input
-                id="newDbUrl"
-                value={newDbUrl}
-                onChange={(e) => setNewDbUrl(e.target.value)}
-                placeholder="mssql+pyodbc://sa:password@server:1433/database..."
-                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500"
+                className="bg-gray-800/50 border-green-400/30 text-white"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="newDbUrl">Database URL *</Label>
+            <Input
+              id="newDbUrl"
+              value={newDbUrl}
+              onChange={(e) => setNewDbUrl(e.target.value)}
+              placeholder="mssql+pyodbc://sa:password@server:1433/database..."
+              className="bg-gray-800/50 border-green-400/30 text-white"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="newDbBusinessRule" className="text-gray-300">
-                Business Rules (Optional)
-              </Label>
+              <Label htmlFor="newDbBusinessRule">Business Rules (Optional)</Label>
               <Textarea
                 id="newDbBusinessRule"
                 value={newDbBusinessRule}
                 onChange={(e) => setNewDbBusinessRule(e.target.value)}
                 placeholder="Enter business rules for this database"
-                className="bg-gray-800/50 border-green-400/30 text-white cursor-pointer placeholder:text-gray-500 min-h-[80px] resize-none"
+                className="bg-gray-800/50 border-green-400/30 text-white min-h-[80px]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-gray-300">Database File (Optional)</Label>
+              <Label>Database File (Optional)</Label>
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <Database className="w-4 h-4" />
-                  <span>
-                    Supported: .bak, .sql, .mdf, .ldf, .trn, .dmp, .dump
-                  </span>
+                <div className="text-sm text-gray-400">
+                  Supported: .bak, .sql, .mdf, .ldf, .trn, .dmp, .dump
                 </div>
                 <div className="flex items-center gap-2">
                   <Input
                     type="file"
                     accept=".bak,.sql,.mdf,.ldf,.trn,.dmp,.dump"
-                    onChange={(e) =>
-                      setSelectedFile(e.target.files?.[0] || null)
-                    }
-                    className="bg-gray-800 border-green-400/30 cursor-pointer text-white file:bg-green-600 file:text-white file:border-0 file:rounded file:px-3 file:py-1"
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                    className="bg-gray-800 border-green-400/30 text-white file:bg-green-600 file:text-white file:border-0 file:rounded file:px-3 file:py-1"
                   />
                   {selectedFile && (
                     <Button
@@ -246,7 +229,7 @@ export function DatabaseConfigStep({
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedFile(null)}
-                      className="border-gray-600 text-gray-300 hover:bg-gray-700 cursor-pointer transition-colors"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-700"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -254,27 +237,54 @@ export function DatabaseConfigStep({
                 </div>
                 {selectedFile && (
                   <div className="text-sm text-green-400">
-                    Selected: {selectedFile.name} (
-                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                    Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          <Button
-            type="button"
-            onClick={handleCreateDatabase}
-            disabled={
-              !newDbUrl.trim() || !newDbName.trim() || !newDbUserId.trim()
-            }
-            className="w-full bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Database
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              type="button"
+              onClick={handleCreateDatabase}
+              disabled={!newDbUrl.trim() || !newDbName.trim() || !newDbUserId.trim()}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Database
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetNewDbForm}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700 w-full sm:w-auto"
+            >
+              Reset
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
+
+      {/* Navigation */}
+      <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t border-gray-700">
+        <Button
+          variant="outline"
+          onClick={handlePrevious}
+          className="border-gray-600 text-gray-300 hover:bg-gray-700 w-full sm:w-auto"
+        >
+          Back
+        </Button>
+        
+        {selectedDbId && (
+          <Button
+            onClick={handleNext}
+            className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+          >
+            Continue to Vector Config
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

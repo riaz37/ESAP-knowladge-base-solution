@@ -158,6 +158,31 @@ export default function FileQueryResultsPage() {
 
         {/* Results Display */}
         <div className="space-y-6">
+          {/* Main Answer Display */}
+          {queryResult.result && queryResult.result.data && queryResult.result.data.answer && (
+            <Card className="bg-gray-800/50 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-green-400" />
+                  File Query Answer
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-700/50 rounded-lg">
+                    <p className="text-white text-lg leading-relaxed">
+                      {queryResult.result.data.answer}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-gray-400">
+                    <span>Confidence: <Badge variant="outline">{queryResult.result.data.confidence}</Badge></span>
+                    <span>Sources Used: <Badge variant="outline">{queryResult.result.data.sourcesUsed}</Badge></span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Tabs defaultValue="table" className="w-full">
             <TabsList className="grid w-full grid-cols-3 bg-gray-800/50">
               <TabsTrigger value="table" className="text-gray-300 data-[state=active]:text-white">
@@ -177,33 +202,43 @@ export default function FileQueryResultsPage() {
                   <CardTitle className="text-white">Table View</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {queryResult.result && queryResult.result.data && Array.isArray(queryResult.result.data) && queryResult.result.data.length > 0 ? (
+                  {queryResult.result && queryResult.result.data && queryResult.result.data.sources && Array.isArray(queryResult.result.data.sources) && queryResult.result.data.sources.length > 0 ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-sm">
                         <Badge className="bg-green-500/20 text-green-400 border-green-400/30">
                           <FileText className="w-3 h-3 mr-1" />
-                          {queryResult.result.data.length} records found
+                          {queryResult.result.data.sources.length} sources found
                         </Badge>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="min-w-full bg-gray-800/50 border border-gray-700 rounded-lg text-sm text-gray-300">
                           <thead>
                             <tr className="bg-gray-700/50 border-b border-gray-600">
-                              {Object.keys(queryResult.result.data[0]).map((header) => (
-                                <th key={header} className="py-2 px-4 text-left">
-                                  {header}
-                                </th>
-                              ))}
+                              <th className="py-2 px-4 text-left">Source</th>
+                              <th className="py-2 px-4 text-left">Content</th>
+                              <th className="py-2 px-4 text-left">Relevance</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {queryResult.result.data.map((row: any, index: number) => (
+                            {queryResult.result.data.sources.map((source: any, index: number) => (
                               <tr key={index} className="border-b border-gray-600 hover:bg-gray-700/30">
-                                {Object.values(row).map((value: any, colIndex: number) => (
-                                  <td key={colIndex} className="py-2 px-4">
-                                    {value}
-                                  </td>
-                                ))}
+                                <td className="py-2 px-4">
+                                  <Badge variant="outline" className="text-xs">
+                                    Source {index + 1}
+                                  </Badge>
+                                </td>
+                                <td className="py-2 px-4">
+                                  <div className="max-w-md">
+                                    <p className="text-sm line-clamp-3">
+                                      {typeof source === 'string' ? source : JSON.stringify(source)}
+                                    </p>
+                                  </div>
+                                </td>
+                                <td className="py-2 px-4">
+                                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-400/30">
+                                    {queryResult.result.data.confidence}
+                                  </Badge>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -213,8 +248,8 @@ export default function FileQueryResultsPage() {
                   ) : (
                     <div className="text-center py-8 text-gray-400">
                       <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>No table data available</p>
-                      <p className="text-sm">The file query result doesn't contain tabular data</p>
+                      <p>No sources available</p>
+                      <p className="text-sm">The file query result doesn't contain source data</p>
                       {queryResult.result && (
                         <div className="mt-4 p-3 bg-gray-700/50 rounded-lg text-left">
                           <p className="text-xs text-gray-300 mb-2">Raw result structure:</p>

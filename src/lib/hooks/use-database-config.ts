@@ -18,7 +18,7 @@ interface UseDatabaseConfigReturn {
   error: string | null;
 
   // Actions
-  fetchDatabaseConfigs: () => Promise<void>;
+  fetchDatabaseConfigs: () => Promise<{ configs: DatabaseConfigData[]; count: number }>;
   fetchDatabaseConfig: (id: number) => Promise<void>;
   createDatabaseConfig: (
     config: DatabaseConfig,
@@ -53,11 +53,24 @@ export function useDatabaseConfig(): UseDatabaseConfigReturn {
 
     try {
       const response = await DatabaseConfigService.getDatabaseConfigs();
-      setDatabaseConfigs(response.configs || []);
+      
+      // Since API client interceptor already extracts .data, response should be the data structure
+      if (response && response.configs && Array.isArray(response.configs)) {
+        setDatabaseConfigs(response.configs);
+        return response; // Return the response for the calling component
+      } else if (Array.isArray(response)) {
+        // If response is directly an array
+        setDatabaseConfigs(response);
+        return { configs: response, count: response.length }; // Return structured response
+      } else {
+        setDatabaseConfigs([]);
+        return { configs: [], count: 0 }; // Return empty response
+      }
     } catch (err: any) {
       console.error("Error fetching database configs:", err);
       setError(err.message || "Failed to fetch database configurations");
       setDatabaseConfigs([]);
+      return { configs: [], count: 0 }; // Return empty response on error
     } finally {
       setIsLoading(false);
     }

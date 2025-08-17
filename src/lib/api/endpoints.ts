@@ -62,6 +62,13 @@ export const API_ENDPOINTS = {
   GET_USER_CONFIGS: `${baseUrl}/user-config`,
   GET_USER_CONFIG: (userId: string) =>
     `${baseUrl}/user-config/${encodeURIComponent(userId)}`,
+  UPDATE_USER_CONFIG: (userId: string) =>
+    `${baseUrl}/user-config/${encodeURIComponent(userId)}`,
+
+  // Vector Database endpoints
+  GET_VECTOR_DB_CONFIGS: `${baseUrl}/user-config`,
+  GET_USER_TABLE_NAMES: (userId: string) =>
+    `${baseUrl}/user/${encodeURIComponent(userId)}/table-names`,
   GET_USER_CONFIG_BY_DB: (userId: string, dbId: number) =>
     `${baseUrl}/user-config/${encodeURIComponent(userId)}/${dbId}`,
   GET_CONFIG_BY_ID: (id: number) => `${baseUrl}/config/${id}`,
@@ -69,8 +76,6 @@ export const API_ENDPOINTS = {
 
   // User Table Names endpoints
   ADD_USER_TABLE_NAME: (userId: string) =>
-    `${baseUrl}/user/${encodeURIComponent(userId)}/table-names`,
-  GET_USER_TABLE_NAMES: (userId: string) =>
     `${baseUrl}/user/${encodeURIComponent(userId)}/table-names`,
   DELETE_USER_TABLE_NAME: (userId: string, tableName: string) =>
     `${baseUrl}/user/${encodeURIComponent(userId)}/table-names/${encodeURIComponent(tableName)}`,

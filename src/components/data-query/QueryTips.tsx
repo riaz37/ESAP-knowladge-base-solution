@@ -13,10 +13,13 @@ interface QueryTipsProps {
 }
 
 export function QueryTips({ 
-  tips, 
+  tips = [], 
   title = "Query Tips",
   icon = <Lightbulb className="h-5 w-5" />
 }: QueryTipsProps) {
+  // Safety check to ensure tips is always an array
+  const safeTips = Array.isArray(tips) ? tips : [];
+  
   return (
     <Card>
       <CardHeader>
@@ -26,7 +29,7 @@ export function QueryTips({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {tips.map((tip, index) => (
+        {safeTips.map((tip, index) => (
           <div key={index} className="flex items-start gap-2">
             <span className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">•</span>
             <p className="text-xs text-gray-600 dark:text-gray-400">

@@ -32,7 +32,6 @@ const CompanyNode = ({ data, selected }: { data: any; selected: boolean }) => {
     <CompanyCard
       company={data.company}
       onAddSubCompany={data.onAddSubCompany}
-      onUpload={data.onUpload}
       isSelected={selected}
       onSelect={() => data.onSelect?.(data.company.id)}
       level={data.level}
@@ -81,35 +80,15 @@ function CompanyTreeViewContent({ onCompanyCreated }: CompanyTreeViewProps) {
   const [selectedParentForFlow, setSelectedParentForFlow] = useState<
     string | null
   >(null);
+  // Company creation state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"parent" | "sub">("parent");
-  const [parentCompanyId, setParentCompanyId] = useState<number | undefined>();
-
-  // Upload modal state
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [uploadCompanyName, setUploadCompanyName] = useState("");
-  const [uploadCompanyType, setUploadCompanyType] = useState<"parent" | "sub">(
-    "parent",
-  );
+  const [parentCompanyId, setParentCompanyId] = useState<number | null>(null);
 
   // Load companies on mount
   useEffect(() => {
     loadCompanies();
   }, []);
-
-  // Handle upload modal
-  const handleUpload = useCallback(
-    (
-      _companyId: string,
-      companyName: string,
-      companyType: "parent" | "sub",
-    ) => {
-      setUploadCompanyName(companyName);
-      setUploadCompanyType(companyType);
-      setUploadModalOpen(true);
-    },
-    [],
-  );
 
   const loadCompanies = async () => {
     try {
@@ -177,7 +156,7 @@ function CompanyTreeViewContent({ onCompanyCreated }: CompanyTreeViewProps) {
             data: {
               onAddParentCompany: () => {
                 setModalType("parent");
-                setParentCompanyId(undefined);
+                setParentCompanyId(null);
                 setModalOpen(true);
               },
             },
@@ -216,7 +195,6 @@ function CompanyTreeViewContent({ onCompanyCreated }: CompanyTreeViewProps) {
             setParentCompanyId(numericId);
             setModalOpen(true);
           },
-          onUpload: handleUpload,
         },
         selected: selectedCompany === company.id,
         draggable: true,
@@ -424,7 +402,6 @@ function CompanyTreeViewContent({ onCompanyCreated }: CompanyTreeViewProps) {
               setParentCompanyId(numericId);
               setModalOpen(true);
             }}
-            onUpload={handleUpload}
           />
         </div>
       </div>
@@ -436,14 +413,6 @@ function CompanyTreeViewContent({ onCompanyCreated }: CompanyTreeViewProps) {
         onSubmit={handleCompanySubmit}
         type={modalType}
         parentCompanyId={parentCompanyId}
-      />
-
-      {/* Company Upload Modal */}
-      <CompanyUploadModal
-        isOpen={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
-        companyName={uploadCompanyName}
-        companyType={uploadCompanyType}
       />
     </div>
   );

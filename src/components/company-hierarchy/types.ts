@@ -31,6 +31,7 @@ export type WorkflowStep =
   | "company-info"
   | "database-config"
   | "database-creation"
+  | "vector-config"
   | "final-creation";
 
 export interface CompanyTreeViewProps {
@@ -96,4 +97,15 @@ export interface DatabaseConfigStepProps {
   setCurrentStep: (step: WorkflowStep) => void;
   setDatabaseCreationData: (data: any) => void;
   setCurrentTaskId: (taskId: string | null) => void;
+}
+
+export interface VectorConfigStepProps {
+  currentStep: WorkflowStep;
+  setCurrentStep: (step: WorkflowStep) => void;
+  selectedUserConfigId: number | null;
+  setSelectedUserConfigId: (id: number | null) => void;
+  userConfigs: DatabaseConfigData[];
+  userConfigLoading: boolean;
+  createDatabaseConfig: (config: any) => Promise<any>;
+  refreshUserConfigs: () => Promise<void>;
 }

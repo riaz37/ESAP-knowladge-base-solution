@@ -37,7 +37,7 @@ export function CompanyInfoStep({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {/* Company Name */}
         <div className="space-y-2">
           <Label
@@ -114,10 +114,10 @@ export function CompanyInfoStep({
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-4">
         <Button
           onClick={handleNext}
-          className="bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95"
+          className="bg-green-600 hover:bg-green-700 text-white cursor-pointer transition-colors active:scale-95 w-full sm:w-auto"
         >
           Next: Configure Database
         </Button>

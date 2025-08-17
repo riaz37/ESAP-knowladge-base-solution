@@ -174,27 +174,80 @@ export default function FileQueryPage() {
             />
 
             {/* Query Results */}
-            {queryResults && queryResults.length > 0 && (
+            {queryResults && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+                    <FileText className="w-5 h-5" />
                     Query Results
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {queryResults.map((result, index) => (
-                      <div key={index} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    {/* Main Answer */}
+                    {queryResults.data && queryResults.data.answer && (
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                          Result {index + 1}
+                          Answer
                         </h3>
-                        <p className="text-gray-800 dark:text-gray-200">{result.text}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                          Confidence: {result.confidence.toFixed(2)}
+                        <p className="text-gray-800 dark:text-gray-200 mb-3">
+                          {queryResults.data.answer}
                         </p>
+                        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                          <span>Confidence: <Badge variant="outline">{queryResults.data.confidence}</Badge></span>
+                          <span>Sources: <Badge variant="outline">{queryResults.data.sourcesUsed}</Badge></span>
+                        </div>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Sources */}
+                    {queryResults.data && queryResults.data.sources && queryResults.data.sources.length > 0 && (
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                          Sources ({queryResults.data.sources.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {queryResults.data.sources.map((source: any, index: number) => (
+                            <div key={index} className="border-l-2 border-blue-500 pl-3">
+                              <p className="text-sm text-gray-700 dark:text-gray-300">
+                                {typeof source === 'string' ? source : JSON.stringify(source)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Metadata */}
+                    {queryResults.metadata && (
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                          Query Details
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400">Query ID:</span>
+                            <span className="ml-2 text-gray-800 dark:text-gray-200">{queryResults.id}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                            <Badge variant={queryResults.status === 'success' ? 'default' : 'destructive'}>
+                              {queryResults.status}
+                            </Badge>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400">Row Count:</span>
+                            <span className="ml-2 text-gray-800 dark:text-gray-200">{queryResults.metadata.rowCount}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600 dark:text-gray-400">Executed:</span>
+                            <span className="ml-2 text-gray-800 dark:text-gray-200">
+                              {new Date(queryResults.timestamp).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -217,7 +270,17 @@ export default function FileQueryPage() {
           {/* Right Column - Examples & History */}
           <div className="space-y-6">
             {/* Example Queries */}
-            <QueryTips />
+            <QueryTips 
+              tips={[
+                { text: "Use specific keywords to find relevant content in documents" },
+                { text: "Try different query formats: questions, statements, or keywords" },
+                { text: "Upload multiple file types: PDF, DOC, TXT for comprehensive search" },
+                { text: "Use quotes for exact phrase matching" },
+                { text: "Combine multiple concepts for better search results" }
+              ]}
+              title="File Query Tips"
+              icon={<FileText className="h-5 w-5" />}
+            />
             {/* Query History */}
             <QueryHistoryPanel
               history={fileQueryHistory}

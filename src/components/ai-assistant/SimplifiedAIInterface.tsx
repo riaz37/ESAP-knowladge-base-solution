@@ -255,12 +255,15 @@ export default function SimplifiedAIInterface({
           userId: userId,
         });
 
+        // Get the result from the store
+        const fileResult = useQueryStore.getState().queryResults;
+
         // Store file query result for results page
         sessionStorage.setItem(
           "aiQueryResult",
           JSON.stringify({
             query: query.trim(),
-            result: { data: "File query executed successfully" }, // Placeholder result
+            result: fileResult, // Use actual result from store
             timestamp: new Date().toISOString(),
             userId: userId,
             fileId: selectedFile!.name,

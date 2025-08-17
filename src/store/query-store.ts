@@ -161,11 +161,19 @@ export const useQueryStore = create<QueryStore>()(
           const queryResult: QueryResult = {
             id: query.id,
             queryId: query.id,
-            data: result.data || [],
+            data: {
+              answer: result.answer?.answer || "No answer available",
+              sources: result.answer?.sources || [],
+              confidence: result.answer?.confidence || "unknown",
+              sourcesUsed: result.answer?.sources_used || 0,
+              query: result.query,
+              userId: result.user_id_used,
+              databaseConfig: result.database_config
+            },
             metadata: {
-              rowCount: result.data?.length || 0,
+              rowCount: result.answer?.sources?.length || 0,
               executionTime: 0, // API doesn't provide this
-              columns: Object.keys(result.data?.[0] || {}),
+              columns: ['answer', 'sources', 'confidence', 'sourcesUsed', 'query', 'userId', 'databaseConfig'],
             },
             timestamp: new Date(),
             status: 'success',
