@@ -48,9 +48,9 @@ export default function DashboardPage() {
         </OpeningAnimation>
       ) : (
         <main className="flex-1 animate-[fadeIn_0.5s_ease-out_forwards]">
-          <EnhancedBackground intensity="medium" className="min-h-screen">
+         
             <Dashboard />
-          </EnhancedBackground>
+         
         </main>
       )}
     </>

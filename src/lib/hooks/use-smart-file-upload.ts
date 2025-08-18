@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { FileService } from "@/lib/api/services/file-service";
 import {
   SmartFileSystemResponse,
@@ -15,6 +15,8 @@ interface UseFileOperationsReturn {
   searchResults: FilesSearchResponse | null;
   isLoading: boolean;
   error: string | null;
+  isPolling: boolean;
+  uploadProgress: number;
   uploadSmartFileSystem: (
     files: File[],
     fileDescriptions: string[],
@@ -26,11 +28,14 @@ interface UseFileOperationsReturn {
   searchFiles: (
     request: FilesSearchRequest,
   ) => Promise<FilesSearchResponse | null>;
+  startPolling: (bundleId: string, interval?: number) => void;
+  stopPolling: () => void;
   clearError: () => void;
+  reset: () => void;
 }
 
 /**
- * Custom hook for managing file operations
+ * Custom hook for managing file operations with progress tracking and polling
  */
 export function useFileOperations(): UseFileOperationsReturn {
   const [uploadResponse, setUploadResponse] =
@@ -43,10 +48,54 @@ export function useFileOperations(): UseFileOperationsReturn {
     useState<FilesSearchResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+
+  const reset = useCallback(() => {
+    stopPolling();
+    setUploadResponse(null);
+    setBundleStatus(null);
+    setAllBundleStatuses(null);
+    setSearchResults(null);
+    setError(null);
+    setUploadProgress(0);
+  }, []);
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    setIsPolling(false);
+  }, []);
+
+  const startPolling = useCallback((bundleId: string, interval: number = 2000) => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+
+    setIsPolling(true);
+    pollingRef.current = setInterval(async () => {
+      try {
+        const response = await FileService.getBundleTaskStatus(bundleId);
+        setBundleStatus(response);
+        
+        // Stop polling if processing is complete
+        if (response.status === "COMPLETED" || response.status === "FAILED") {
+          stopPolling();
+        }
+      } catch (err) {
+        console.error("Error polling bundle status:", err);
+        // Don't stop polling on error, just log it
+      }
+    }, interval);
+  }, [stopPolling]);
 
   const uploadSmartFileSystem = useCallback(
     async (
@@ -69,27 +118,49 @@ export function useFileOperations(): UseFileOperationsReturn {
 
       setIsLoading(true);
       setError(null);
+      setUploadProgress(0);
 
       try {
+        // Simulate upload progress
+        const progressInterval = setInterval(() => {
+          setUploadProgress((prev) => {
+            if (prev >= 90) {
+              clearInterval(progressInterval);
+              return prev;
+            }
+            return prev + 10;
+          });
+        }, 200);
+
         const response = await FileService.uploadSmartFileSystem(
           files,
           fileDescriptions,
           tableNames,
           userIds,
         );
+        
+        clearInterval(progressInterval);
+        setUploadProgress(100);
         setUploadResponse(response);
+        
+        // Start polling for status updates
+        if (response.bundle_id) {
+          startPolling(response.bundle_id);
+        }
+        
         return response;
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "An unexpected error occurred";
         setError(errorMessage);
         console.error("Error uploading files to smart file system:", err);
+        setUploadProgress(0);
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [],
+    [startPolling],
   );
 
   const getBundleTaskStatus = useCallback(async (bundleId: string) => {
@@ -157,6 +228,13 @@ export function useFileOperations(): UseFileOperationsReturn {
     [],
   );
 
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, [stopPolling]);
+
   return {
     uploadResponse,
     bundleStatus,
@@ -164,11 +242,16 @@ export function useFileOperations(): UseFileOperationsReturn {
     searchResults,
     isLoading,
     error,
+    isPolling,
+    uploadProgress,
     uploadSmartFileSystem,
     getBundleTaskStatus,
     getAllBundleTaskStatus,
     searchFiles,
+    startPolling,
+    stopPolling,
     clearError,
+    reset,
   };
 }
 

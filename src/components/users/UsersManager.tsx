@@ -5,13 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersManagerHeader } from "./UsersManagerHeader";
 import { DatabaseAccessTab } from "./DatabaseAccessTab";
 import { VectorDBAccessTab } from "./VectorDBAccessTab";
-import { AccessTypeSelectorModal } from "./modals/AccessTypeSelectorModal";
+import { CreateDatabaseAccessModal } from "./modals/CreateDatabaseAccessModal";
 import { useUsersManager } from "./hooks/useUsersManager";
 
 export function UsersManager() {
   const [activeTab, setActiveTab] = useState("database");
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAccessModalOpen, setIsAccessModalOpen] = useState(false);
+  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
+  const [selectedUserForDatabase, setSelectedUserForDatabase] = useState<string>("");
 
   const {
     // Core state
@@ -24,7 +25,6 @@ export function UsersManager() {
     loadUserAccessConfigs,
     loadUserConfigs,
     loadDatabaseConfigs,
-    handleCreateAccess,
     handleManageVectorDBAccess,
     handleCloseVectorDBAccess,
     selectedUserForVectorDB,
@@ -75,7 +75,20 @@ export function UsersManager() {
     // Refresh data
     loadUserAccessConfigs();
     loadUserConfigs();
-    setIsAccessModalOpen(false);
+    setIsDatabaseModalOpen(false);
+    setSelectedUserForDatabase("");
+  };
+
+  // Handle create database access
+  const handleCreateDatabaseAccess = () => {
+    setSelectedUserForDatabase("");
+    setIsDatabaseModalOpen(true);
+  };
+
+  // Handle edit database access
+  const handleEditDatabaseAccess = (userId: string) => {
+    setSelectedUserForDatabase(userId);
+    setIsDatabaseModalOpen(true);
   };
 
   return (
@@ -180,8 +193,8 @@ export function UsersManager() {
               isLoading={isLoading}
               onManageVectorDBAccess={handleManageVectorDBAccess}
               searchTerm={searchTerm}
-              onEditAccess={(userId) => handleEditAccess(userId, setIsAccessModalOpen)}
-              onCreateAccess={() => handleCreateAccess(setIsAccessModalOpen)}
+              onEditAccess={handleEditDatabaseAccess}
+              onCreateAccess={handleCreateDatabaseAccess}
             />
           </TabsContent>
 
@@ -199,11 +212,12 @@ export function UsersManager() {
           </TabsContent>
         </Tabs>
 
-        {/* Access Type Selection Modal */}
-        <AccessTypeSelectorModal
-          isOpen={isAccessModalOpen}
-          onClose={() => setIsAccessModalOpen(false)}
+        {/* Database Access Creation Modal */}
+        <CreateDatabaseAccessModal
+          isOpen={isDatabaseModalOpen}
+          onClose={() => setIsDatabaseModalOpen(false)}
           onSuccess={handleAccessSuccess}
+          selectedUser={selectedUserForDatabase}
         />
       </div>
     </div>

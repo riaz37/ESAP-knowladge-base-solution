@@ -48,11 +48,6 @@ export class ExcelToDBService {
       const response = await apiClient.post(
         API_ENDPOINTS.EXCEL_TO_DB_PUSH_DATA,
         formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
       );
       
       // API client returns just the data portion, so we need to wrap it
@@ -82,11 +77,6 @@ export class ExcelToDBService {
       const response = await apiClient.post(
         API_ENDPOINTS.EXCEL_TO_DB_GET_AI_MAPPING,
         formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
       );
       
       // API client returns just the data portion, so we need to wrap it

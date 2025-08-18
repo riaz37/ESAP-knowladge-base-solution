@@ -48,11 +48,6 @@ export class FileService {
       const response = await apiClient.post(
         API_ENDPOINTS.SMART_FILE_SYSTEM,
         formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        },
       );
       return response;
     } catch (error) {

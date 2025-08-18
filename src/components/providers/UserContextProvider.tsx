@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { UserCurrentDBService } from '@/lib/api/services/user-current-db-service';
-import { BusinessRulesService } from '@/lib/api/services/business-rules-service';
+import { MSSQLConfigService } from '@/lib/api/services/mssql-config-service';
 
 interface UserContextData {
   userId: string;
@@ -14,6 +14,7 @@ interface UserContextData {
   error: string | null;
   refreshUserConfig: () => Promise<void>;
   setUserId: (userId: string) => void;
+  updateBusinessRules: (businessRules: string) => void;
 }
 
 const UserContext = createContext<UserContextData | null>(null);
@@ -78,8 +79,15 @@ export function UserContextProvider({ children }: { children: React.ReactNode })
         const currentDB = await UserCurrentDBService.getUserCurrentDB(userId);
         if (currentDB && currentDB.db_id) {
           setDatabaseId(currentDB.db_id);
-          // You might want to fetch the actual database name from your database service
-          setDatabaseName(`Database ${currentDB.db_id}`);
+          
+          // Get the actual database name from MSSQL config
+          try {
+            const dbConfig = await MSSQLConfigService.getMSSQLConfig(currentDB.db_id);
+            setDatabaseName(dbConfig.db_name);
+          } catch (dbError) {
+            console.log("Could not fetch database name, using ID:", currentDB.db_id);
+            setDatabaseName(`Database ${currentDB.db_id}`);
+          }
         } else {
           setDatabaseId(null);
           setDatabaseName("");
@@ -90,10 +98,14 @@ export function UserContextProvider({ children }: { children: React.ReactNode })
         setDatabaseName("");
       }
 
-      // Load business rules
+      // Load business rules from the user-current-db endpoint
       try {
-        const rules = await BusinessRulesService.getBusinessRules(userId);
-        setBusinessRules(rules || "");
+        const currentDB = await UserCurrentDBService.getUserCurrentDB(userId);
+        if (currentDB && currentDB.business_rule) {
+          setBusinessRules(currentDB.business_rule);
+        } else {
+          setBusinessRules("");
+        }
       } catch (error) {
         console.log("No business rules configured for user:", userId);
         setBusinessRules("");
@@ -115,6 +127,11 @@ export function UserContextProvider({ children }: { children: React.ReactNode })
     localStorage.setItem("currentUserId", newUserId);
   }, []);
 
+  const updateBusinessRules = useCallback((newBusinessRules: string) => {
+    setBusinessRules(newBusinessRules);
+    // Optionally, save to localStorage or backend
+  }, []);
+
   const hasBusinessRules = businessRules.trim().length > 0;
 
   const value: UserContextData = {
@@ -126,7 +143,8 @@ export function UserContextProvider({ children }: { children: React.ReactNode })
     isLoading,
     error,
     refreshUserConfig,
-    setUserId
+    setUserId,
+    updateBusinessRules
   };
 
   return (

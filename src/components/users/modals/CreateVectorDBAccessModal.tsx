@@ -285,7 +285,6 @@ export function CreateVectorDBAccessModal({
     setIsFetchingUserTables(false);
     setUserTablesError("");
     setAvailableDatabases([]);
-    setIsLoadingDatabases(false);
   };
 
   // Handle close

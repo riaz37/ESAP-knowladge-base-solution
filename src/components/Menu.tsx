@@ -21,7 +21,6 @@ import {
 import { useUIStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
 
-
 export default function Menu() {
   const pathname = usePathname();
   const { setShowSidebar } = useUIStore();
@@ -34,20 +33,18 @@ export default function Menu() {
       icon: Square,
       isActive: pathname === "/",
     },
+
     {
-      name: "Data Query",
-      path: "/data-query",
-      icon: Search,
-      isActive: pathname.startsWith("/data-query"),
-      children: [
-        { name: "Query Dashboard", path: "/data-query", icon: Search },
-        { name: "File Queries", path: "/data-query/file-query", icon: FileText },
-        { name: "Database Queries", path: "/data-query/database-query", icon: Database },
-        { name: "Query Builder", path: "/data-query/query-builder", icon: Palette },
-        { name: "Query History", path: "/data-query/query-history", icon: History },
-        { name: "Saved Queries", path: "/data-query/saved-queries", icon: Bookmark },
-      ],
+      name: "File Queries",
+      path: "/file-query",
+      icon: FileText,
     },
+    {
+      name: "Database Queries",
+      path: "/database-query",
+      icon: Database,
+    },
+
     {
       name: "Report & Analysis",
       path: "/ai-results",
@@ -105,7 +102,7 @@ export default function Menu() {
   const renderMenuItem = (item: any) => {
     const isActive = item.isActive;
     const hasChildren = item.children && item.children.length > 0;
-    
+
     return (
       <div key={item.name}>
         <Link
@@ -118,19 +115,25 @@ export default function Menu() {
               : "text-gray-300 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10"
           )}
         >
-          <item.icon className={cn(
-            "h-5 w-5 transition-all duration-200",
-            isActive ? "text-green-400" : "text-gray-400 group-hover:text-white"
-          )} />
+          <item.icon
+            className={cn(
+              "h-5 w-5 transition-all duration-200",
+              isActive
+                ? "text-green-400"
+                : "text-gray-400 group-hover:text-white"
+            )}
+          />
           <span className="flex-1">{item.name}</span>
           {hasChildren && (
-            <div className={cn(
-              "w-2 h-2 rounded-full transition-all duration-200",
-              isActive ? "bg-green-400" : "bg-gray-500 group-hover:bg-white"
-            )} />
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full transition-all duration-200",
+                isActive ? "bg-green-400" : "bg-gray-500 group-hover:bg-white"
+              )}
+            />
           )}
         </Link>
-        
+
         {/* Render children if they exist and parent is active */}
         {hasChildren && isActive && (
           <div className="ml-6 mt-2 space-y-1">
@@ -146,10 +149,14 @@ export default function Menu() {
                     : "text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent hover:border-white/5"
                 )}
               >
-                <child.icon className={cn(
-                  "h-4 w-4 transition-all duration-200",
-                  pathname === child.path ? "text-green-300" : "text-gray-500 group-hover:text-gray-300"
-                )} />
+                <child.icon
+                  className={cn(
+                    "h-4 w-4 transition-all duration-200",
+                    pathname === child.path
+                      ? "text-green-300"
+                      : "text-gray-500 group-hover:text-gray-300"
+                  )}
+                />
                 <span className="flex-1">{child.name}</span>
               </Link>
             ))}
@@ -174,9 +181,7 @@ export default function Menu() {
       >
         {/* Menu Items */}
         <div className="p-4">
-          <div className="space-y-1">
-            {menuItems.map(renderMenuItem)}
-          </div>
+          <div className="space-y-1">{menuItems.map(renderMenuItem)}</div>
         </div>
       </div>
     </div>

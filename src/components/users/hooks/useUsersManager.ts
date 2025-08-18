@@ -12,10 +12,6 @@ export function useUsersManager() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [activeTab, setActiveTab] = useState("database");
   const [selectedUserForVectorDB, setSelectedUserForVectorDB] = useState<string>("");
-  
-  // Modal states
-  const [isUserAccessModalOpen, setIsUserAccessModalOpen] = useState(false);
-  const [selectedUserForAccess, setSelectedUserForAccess] = useState<string>("");
 
   // Hooks
   const { 
@@ -68,20 +64,6 @@ export function useUsersManager() {
       console.error("Error loading database configs:", error);
     }
   }, [fetchDatabaseConfigs]);
-
-  const handleCreateAccess = useCallback((setModalOpen: (open: boolean) => void) => {
-    setSelectedUserForAccess("");
-    setModalOpen(true);
-  }, []);
-
-  const handleEditAccess = useCallback((userEmail: string, setModalOpen: (open: boolean) => void) => {
-    setSelectedUserForAccess(userEmail);
-    setModalOpen(true);
-  }, []);
-
-  const handleAccessSuccess = useCallback(() => {
-    loadUserAccessConfigs();
-  }, [loadUserAccessConfigs]);
 
   const handleManageVectorDBAccess = useCallback((userId: string) => {
     setSelectedUserForVectorDB(userId);
@@ -164,9 +146,6 @@ export function useUsersManager() {
     loadUserAccessConfigs,
     loadUserConfigs,
     loadDatabaseConfigs,
-    handleCreateAccess,
-    handleEditAccess,
-    handleAccessSuccess,
     handleManageVectorDBAccess,
     handleCloseVectorDBAccess,
     handleSelectAll,

@@ -1,44 +1,35 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import BusinessRulesEditor from "@/components/business-rules/BusinessRulesEditor";
+import { DatabaseSelector } from "@/components/business-rules/DatabaseSelector";
 import { useBusinessRules } from "@/lib/hooks/use-business-rules";
 
 export function BusinessRulesManager() {
-  const {
-    businessRulesError,
-    fetchBusinessRules,
-    businessRulesText,
-    businessRulesLoading,
-  } = useBusinessRules();
+  const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(null);
+  const [selectedDatabaseName, setSelectedDatabaseName] = useState<string>("");
 
-  // Default user ID - you can replace this with actual user context later
-  const [userId, setUserId] = useState<string>("default-user");
+  const { businessRulesError } = useBusinessRules();
 
-  const handleRefresh = useCallback(
-    (userId: string) => {
-      if (userId.trim()) {
-        fetchBusinessRules(userId);
-      }
-    },
-    [fetchBusinessRules]
-  );
-
-  // Load business rules when component mounts
-  useEffect(() => {
-    if (userId.trim()) {
-      fetchBusinessRules(userId);
-    }
-  }, [userId, fetchBusinessRules]);
+  const handleDatabaseSelect = (databaseId: number, databaseName: string) => {
+    setSelectedDatabaseId(databaseId);
+    setSelectedDatabaseName(databaseName);
+  };
 
   return (
     <div className="space-y-6 relative">
-      {/* Business Rules Editor */}
-      <BusinessRulesEditor userId={userId} />
+      <DatabaseSelector
+        onDatabaseSelect={handleDatabaseSelect}
+        selectedDatabaseId={selectedDatabaseId}
+      />
 
-      {/* Status Alerts */}
+      <BusinessRulesEditor
+        databaseId={selectedDatabaseId}
+        databaseName={selectedDatabaseName}
+      />
+
       {businessRulesError && (
         <Alert className="border-red-400/30 bg-red-900/20">
           <AlertCircle className="h-4 w-4 text-red-400" />

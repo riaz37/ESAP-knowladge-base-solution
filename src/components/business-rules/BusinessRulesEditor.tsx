@@ -6,15 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, Save, Upload, Download, Loader2, AlertCircle, Clock, Keyboard } from "lucide-react";
+import { FileText, Save, Upload, Download, Loader2, AlertCircle, Clock, Keyboard, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useBusinessRules } from "@/lib/hooks/use-business-rules"; // Assuming this hook exists
+import { useBusinessRules } from "@/lib/hooks/use-business-rules";
 
 interface BusinessRulesEditorProps {
-  userId: string;
+  databaseId: number | null;
+  databaseName?: string;
 }
 
-export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
+export function BusinessRulesEditor({ databaseId, databaseName }: BusinessRulesEditorProps) {
   const [editedContent, setEditedContent] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -32,14 +33,15 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
     updateBusinessRules,
   } = useBusinessRules();
 
-  // Load business rules when component mounts or userId changes
   useEffect(() => {
-    if (userId.trim()) {
-      fetchBusinessRules(userId);
+    if (databaseId) {
+      fetchBusinessRules(databaseId);
+    } else {
+      setEditedContent("");
+      setHasUnsavedChanges(false);
     }
-  }, [userId, fetchBusinessRules]);
+  }, [databaseId, fetchBusinessRules]);
 
-  // Update edited content when business rules are loaded
   useEffect(() => {
     setEditedContent(businessRulesText);
     setHasUnsavedChanges(false);
@@ -51,29 +53,31 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
   };
 
   const handleSave = useCallback(async () => {
+    if (!databaseId) {
+      toast.error("Please select a database first");
+      return;
+    }
+
     if (!hasUnsavedChanges) {
       toast.info("No unsaved changes to save.");
       return;
     }
 
-    const success = await updateBusinessRules(editedContent, userId);
+    const success = await updateBusinessRules(editedContent, databaseId);
     if (success) {
       toast.success("Business rules updated successfully");
       setHasUnsavedChanges(false);
       setLastSaved(new Date());
     } else {
-      toast.error(
-        "Failed to update business rules. Please check the console for details."
-      );
+      toast.error("Failed to update business rules. Please check the console for details.");
     }
-  }, [userId, editedContent, updateBusinessRules, hasUnsavedChanges]);
+  }, [databaseId, editedContent, updateBusinessRules, hasUnsavedChanges]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "s") {
         event.preventDefault();
-        if (hasUnsavedChanges && !uploadingRules) {
+        if (hasUnsavedChanges && !uploadingRules && databaseId) {
           handleSave();
         }
       }
@@ -81,11 +85,16 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleSave, hasUnsavedChanges, uploadingRules]);
+  }, [handleSave, hasUnsavedChanges, uploadingRules, databaseId]);
 
   const handleDownload = async () => {
+    if (!databaseId) {
+      toast.error("Please select a database first");
+      return;
+    }
+
     try {
-      await downloadBusinessRules();
+      await downloadBusinessRules(databaseId);
       toast.success("Business rules file downloaded");
     } catch (error) {
       toast.error("Failed to download business rules file");
@@ -96,7 +105,6 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.name.endsWith(".md") && !file.name.endsWith(".txt")) {
       toast.error("Please upload a .md or .txt file");
       return;
@@ -113,13 +121,25 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
     };
     reader.readAsText(file);
 
-    // Reset file input
     event.target.value = "";
   };
 
+  if (!databaseId) {
+    return (
+      <Card className="bg-gray-900/50 border-green-400/30">
+        <CardContent className="pt-6">
+          <div className="text-center py-12 text-gray-400">
+            <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <h3 className="text-lg font-medium mb-2">No Database Selected</h3>
+            <p>Please select a database from the dropdown above to view and edit its business rules.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="bg-gray-900/50 border-green-400/30">
-      {/* Sticky Header with Actions */}
       <div className="sticky top-20 z-40 bg-gray-900/95 backdrop-blur-sm border-b border-green-400/30 rounded-t-lg">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -127,11 +147,16 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
               <CardTitle className="flex items-center gap-2 text-green-400">
                 <FileText className="w-5 h-5" />
                 Business Rules Editor
+                {databaseName && (
+                  <span className="text-sm text-gray-400 font-normal">
+                    - {databaseName}
+                  </span>
+                )}
               </CardTitle>
               <CardDescription className="text-gray-400 flex items-center gap-4">
                 <span>
                   Edit business rules that will affect database queries and
-                  operations
+                  operations for the selected database
                 </span>
                 {lastSaved && (
                   <span className="flex items-center gap-1 text-xs text-green-400">
@@ -142,11 +167,10 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              {/* Save Button - Always visible in header */}
               <Button
                 onClick={handleSave}
                 disabled={
-                  businessRulesLoading || uploadingRules || !hasUnsavedChanges || !userId.trim()
+                  businessRulesLoading || uploadingRules || !hasUnsavedChanges || !databaseId
                 }
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
@@ -163,7 +187,6 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
                 )}
               </Button>
 
-              {/* File Upload */}
               <div className="relative">
                 <input
                   type="file"
@@ -181,10 +204,9 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
                 </Button>
               </div>
 
-              {/* Download */}
               <Button
                 onClick={handleDownload}
-                disabled={downloadingRules}
+                disabled={downloadingRules || !databaseId}
                 variant="outline"
                 size="sm"
                 className="border-green-400/30 text-green-400 hover:bg-green-400/10"
@@ -199,7 +221,6 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
             </div>
           </div>
 
-          {/* Status Bar */}
           <div className="flex items-center justify-between pt-2 text-xs">
             <div className="flex items-center gap-4">
               <span className="text-gray-400">
@@ -246,6 +267,7 @@ export function BusinessRulesEditor({ userId }: BusinessRulesEditorProps) {
           )}
         </div>
       </CardContent>
+      
       {businessRulesError && (
         <Alert className="border-red-400/30 bg-red-900/20">
           <AlertCircle className="h-4 w-4 text-red-400" />

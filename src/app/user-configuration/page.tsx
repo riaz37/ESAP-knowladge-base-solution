@@ -18,48 +18,59 @@ import {
   AlertCircle, 
   Loader2,
   RefreshCw,
-  Shield,
-  Key
+  Key,
+  Building2,
+  Building
 } from "lucide-react";
 import { toast } from "sonner";
 import { UserCurrentDBService } from "@/lib/api/services/user-current-db-service";
-import { BusinessRulesService } from "@/lib/api/services/business-rules-service";
 import { useUserContext } from "@/lib/hooks";
-import { UserAccessService } from "@/lib/api/services/user-access-service";
+import { ParentCompanyService } from "@/lib/api/services/parent-company-service";
+import { SubCompanyService } from "@/lib/api/services/sub-company-service";
 
 interface UserConfig {
   userId: string;
+  parentCompanyId: number | null;
+  subCompanyId: number | null;
   databaseId: number | null;
   databaseName: string;
   databaseUrl: string;
-  businessRules: string;
 }
 
-interface DatabaseOption {
-  id: number;
-  name: string;
+interface ParentCompanyOption {
+  parent_company_id: number;
+  company_name: string;
   description: string;
-  url: string;
+  db_id: number;
+}
+
+interface SubCompanyOption {
+  sub_company_id: number;
+  company_name: string;
+  description: string;
+  db_id: number;
+  parent_company_name: string;
 }
 
 export default function UserConfigurationPage() {
-  const { userId, databaseId, databaseName, businessRules, refreshUserConfig } = useUserContext();
+  const { userId, databaseId, databaseName, refreshUserConfig, updateBusinessRules } = useUserContext();
   
   const [userConfig, setUserConfig] = useState<UserConfig>({
     userId: userId || "",
+    parentCompanyId: null,
+    subCompanyId: null,
     databaseId: databaseId || null,
     databaseName: databaseName || "",
-    databaseUrl: "",
-    businessRules: businessRules || ""
+    databaseUrl: ""
   });
 
-  const [availableDatabases, setAvailableDatabases] = useState<DatabaseOption[]>([]);
+  const [parentCompanies, setParentCompanies] = useState<ParentCompanyOption[]>([]);
+  const [subCompanies, setSubCompanies] = useState<SubCompanyOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [hasEnteredUserId, setHasEnteredUserId] = useState(false);
-  const [loadingBusinessRules, setLoadingBusinessRules] = useState(false);
 
   // Update local state when context changes
   useEffect(() => {
@@ -68,21 +79,14 @@ export default function UserConfigurationPage() {
       userId: userId || "",
       databaseId: databaseId || null,
       databaseName: databaseName || "",
-      businessRules: businessRules || ""
+      databaseUrl: "" // Removed businessRules from here
     }));
-  }, [userId, databaseId, databaseName, businessRules]);
+  }, [userId, databaseId, databaseName]);
 
-  // Load available databases and current user configuration
-  // useEffect(() => {
-  //   // Only load data if we have a user ID
-  //   if (userConfig.userId && userConfig.userId.trim()) {
-  //     loadInitialData();
-  //   }
-  // }, [userConfig.userId]);
-
-  const loadInitialData = async () => {
+  // Load parent companies and sub companies
+  const loadCompanyData = async () => {
     if (!userConfig.userId || !userConfig.userId.trim()) {
-      console.log('No user ID provided, skipping database load');
+      console.log('No user ID provided, skipping company data load');
       return;
     }
 
@@ -90,88 +94,43 @@ export default function UserConfigurationPage() {
     setError(null);
 
     try {
-      // Load available databases for this specific user
+      // Load parent companies
       try {
-        console.log('Fetching accessible databases for user:', userConfig.userId);
-        console.log('API endpoint:', `GET /mssql-config/user-access/${userConfig.userId}`);
+        console.log('Fetching parent companies...');
+        const parentCompaniesResponse = await ParentCompanyService.getParentCompanies();
+        console.log('Parent companies response:', parentCompaniesResponse);
         
-        const databasesResponse = await UserAccessService.getUserAccessibleDatabases(userConfig.userId);
-        console.log('Raw databases API response:', databasesResponse);
-        console.log('Response type:', typeof databasesResponse);
-        console.log('Response keys:', Object.keys(databasesResponse || {}));
-        
-        if (databasesResponse) {
-          console.log('Response data:', databasesResponse.data);
-          console.log('Response status:', databasesResponse.status);
-          console.log('Response message:', databasesResponse.message);
-          
-          if (databasesResponse.data) {
-            console.log('Data type:', typeof databasesResponse.data);
-            console.log('Data length:', Array.isArray(databasesResponse.data) ? databasesResponse.data.length : 'Not an array');
-            console.log('Data keys:', Array.isArray(databasesResponse.data) ? 'Array' : Object.keys(databasesResponse.data || {}));
-            
-            if (Array.isArray(databasesResponse.data)) {
-              const databases: DatabaseOption[] = databasesResponse.data.map((db: any, index: number) => {
-                console.log(`Database ${index}:`, db);
-                return {
-                  id: db.id || db.db_id,
-                  name: db.name || db.db_name || `Database ${db.id || db.db_id}`,
-                  description: db.description || `Database ${db.id || db.db_id}`,
-                  url: db.url || db.connection_string || `Database ${db.id || db.db_id}`
-                };
-              });
-              console.log('Mapped databases:', databases);
-              setAvailableDatabases(databases);
-            } else {
-              console.log('Data is not an array, trying to convert...');
-              // Try to handle case where data might be an object with database properties
-              const dataObj = databasesResponse.data;
-              const databases: DatabaseOption[] = Object.keys(dataObj).map((key, index) => {
-                const db = dataObj[key];
-                console.log(`Database ${index} (${key}):`, db);
-                return {
-                  id: db.id || db.db_id || index + 1,
-                  name: db.name || db.db_name || `Database ${db.id || db.db_id || index + 1}`,
-                  description: db.description || `Database ${db.id || db.db_id || index + 1}`,
-                  url: db.url || db.connection_string || `Database ${db.id || db.db_id || index + 1}`
-                };
-              });
-              console.log('Converted databases:', databases);
-              setAvailableDatabases(databases);
-            }
-          } else {
-            console.log('No data property in response');
-            // Fallback to empty array if no databases found
-            setAvailableDatabases([]);
-          }
+        if (parentCompaniesResponse && parentCompaniesResponse.companies) {
+          setParentCompanies(parentCompaniesResponse.companies);
         } else {
-          console.log('No response received');
-          setAvailableDatabases([]);
+          setParentCompanies([]);
         }
       } catch (error: any) {
-        console.error("Failed to load databases:", error);
-        console.error("Error details:", {
-          message: error.message,
-          response: error.response,
-          status: error.response?.status,
-          data: error.response?.data
-        });
-        
-        // Fallback to sample databases for testing
-        console.log('Using fallback sample databases for testing');
-        const fallbackDatabases: DatabaseOption[] = [
-          { id: 1, name: "Production Database", description: "Main production database", url: "prod-db.example.com" },
-          { id: 2, name: "Development Database", description: "Development and testing database", url: "dev-db.example.com" },
-          { id: 3, name: "Analytics Database", description: "Data warehouse and analytics", url: "analytics-db.example.com" }
-        ];
-        setAvailableDatabases(fallbackDatabases);
+        console.error("Failed to load parent companies:", error);
+        setParentCompanies([]);
       }
 
-      // Try to load current user configuration
+      // Load sub companies
+      try {
+        console.log('Fetching sub companies...');
+        const subCompaniesResponse = await SubCompanyService.getSubCompanies();
+        console.log('Sub companies response:', subCompaniesResponse);
+        
+        if (subCompaniesResponse && subCompaniesResponse.companies) {
+          setSubCompanies(subCompaniesResponse.companies);
+        } else {
+          setSubCompanies([]);
+        }
+      } catch (error: any) {
+        console.error("Failed to load sub companies:", error);
+        setSubCompanies([]);
+      }
+
+      // Try to load current user configuration after companies are loaded
       await loadCurrentUserConfig();
     } catch (error) {
-      console.error("Failed to load initial data:", error);
-      setError("Failed to load configuration data");
+      console.error("Failed to load company data:", error);
+      setError("Failed to load company data");
     } finally {
       setLoading(false);
     }
@@ -184,28 +143,40 @@ export default function UserConfigurationPage() {
       if (currentUserId) {
         setUserConfig(prev => ({ ...prev, userId: currentUserId }));
 
-        // Try to get current database configuration
+        // Try to get current database configuration and business rules
         try {
           const currentDB = await UserCurrentDBService.getUserCurrentDB(currentUserId);
           if (currentDB && currentDB.db_id) {
             setUserConfig(prev => ({ 
               ...prev, 
               databaseId: currentDB.db_id,
-              databaseName: availableDatabases.find(db => db.id === currentDB.db_id)?.name || ""
+              databaseName: `Database ${currentDB.db_id}`
             }));
+
+            // Update business rules in the context if available
+            if (currentDB.business_rule) {
+              updateBusinessRules(currentDB.business_rule);
+            }
+
+            // Now that we have companies loaded, try to find which company this database belongs to
+            const parentCompany = parentCompanies.find(pc => pc.db_id === currentDB.db_id);
+            if (parentCompany) {
+              setUserConfig(prev => ({ 
+                ...prev, 
+                parentCompanyId: parentCompany.parent_company_id 
+              }));
+            }
+
+            const subCompany = subCompanies.find(sc => sc.db_id === currentDB.db_id);
+            if (subCompany) {
+              setUserConfig(prev => ({ 
+                ...prev, 
+                subCompanyId: subCompany.sub_company_id 
+              }));
+            }
           }
         } catch (error) {
           console.log("No current database configured for user");
-        }
-
-        // Try to load business rules
-        try {
-          const businessRules = await BusinessRulesService.getBusinessRules(currentUserId);
-          if (businessRules) {
-            setUserConfig(prev => ({ ...prev, businessRules }));
-          }
-        } catch (error) {
-          console.log("No business rules configured for user");
         }
       }
     } catch (error) {
@@ -213,52 +184,84 @@ export default function UserConfigurationPage() {
     }
   };
 
-  const handleDatabaseChange = (databaseId: string) => {
-    const dbId = parseInt(databaseId);
-    const selectedDB = availableDatabases.find(db => db.id === dbId);
+  const handleParentCompanyChange = (parentCompanyId: string) => {
+    const pcId = parseInt(parentCompanyId);
+    const selectedParentCompany = parentCompanies.find(pc => pc.parent_company_id === pcId);
     
-    if (selectedDB) {
+    if (selectedParentCompany) {
       setUserConfig(prev => ({
         ...prev,
-        databaseId: dbId,
-        databaseName: selectedDB.name,
-        databaseUrl: selectedDB.url
+        parentCompanyId: pcId,
+        subCompanyId: null, // Reset sub company when parent changes
+        databaseId: selectedParentCompany.db_id,
+        databaseName: selectedParentCompany.company_name,
+        databaseUrl: `Database ${selectedParentCompany.db_id}`
       }));
 
-      // Automatically fetch business rules for the selected database
-      loadBusinessRulesForDatabase(dbId);
+      // Set the database for the user and get business rules
+      setDatabaseForUser(selectedParentCompany.db_id);
     }
   };
 
-  // Load business rules for a specific database
-  const loadBusinessRulesForDatabase = async (dbId: number) => {
+  const handleSubCompanyChange = (subCompanyId: string) => {
+    const scId = parseInt(subCompanyId);
+    const selectedSubCompany = subCompanies.find(sc => sc.sub_company_id === scId);
+    
+    if (selectedSubCompany) {
+      setUserConfig(prev => ({
+        ...prev,
+        subCompanyId: scId,
+        parentCompanyId: null, // Reset parent company when sub company is selected
+        databaseId: selectedSubCompany.db_id,
+        databaseName: selectedSubCompany.company_name,
+        databaseUrl: `Database ${selectedSubCompany.db_id}`
+      }));
+
+      // Set the database for the user and get business rules
+      setDatabaseForUser(selectedSubCompany.db_id);
+    }
+  };
+
+  // Set the database for the user and get business rules
+  const setDatabaseForUser = async (dbId: number) => {
     if (!userConfig.userId.trim() || !dbId) return;
 
-    setLoadingBusinessRules(true);
+    setLoading(true);
     
     try {
-      console.log('Fetching business rules for database:', dbId);
-      console.log('API endpoint:', `GET /mssql-config/mssql-config/${dbId}`);
+      console.log('Setting database for user:', { userId: userConfig.userId, dbId });
       
-      const businessRules = await BusinessRulesService.getBusinessRules(userConfig.userId);
-      console.log('Business rules response:', businessRules);
+      // Step 1: Set the database for the user using PUT endpoint
+      const setDbResponse = await UserCurrentDBService.setUserCurrentDB(userConfig.userId, {
+        db_id: dbId
+      });
       
-      if (businessRules && businessRules.trim()) {
-        setUserConfig(prev => ({ ...prev, businessRules }));
+      console.log('Database set response:', setDbResponse);
+      toast.success(`Database ${dbId} set for user ${userConfig.userId}`);
+
+      // Step 2: Get the business rules using GET endpoint
+      console.log('Getting business rules for user:', userConfig.userId);
+      const getDbResponse = await UserCurrentDBService.getUserCurrentDB(userConfig.userId);
+      
+      console.log('Get database response:', getDbResponse);
+      
+      if (getDbResponse && getDbResponse.business_rule) {
+        // Update the business rules in the user context
+        updateBusinessRules(getDbResponse.business_rule);
+        console.log('Business rules loaded:', getDbResponse.business_rule);
         toast.success(`Business rules loaded for Database ${dbId}`);
       } else {
-        setUserConfig(prev => ({ ...prev, businessRules: "" }));
+        console.log('No business rules found for database');
+        updateBusinessRules(""); // Clear business rules if none found
         toast.info(`No business rules configured for Database ${dbId}`);
       }
+
     } catch (error: any) {
-      console.error('Failed to load business rules for database:', error);
-      const errorMessage = error?.response?.data?.detail || error?.message || "Failed to load business rules";
-      toast.error(`Failed to load business rules: ${errorMessage}`);
-      
-      // Clear business rules on error
-      setUserConfig(prev => ({ ...prev, businessRules: "" }));
+      console.error('Failed to set database or get business rules:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || "Failed to set database";
+      toast.error(`Failed to set database: ${errorMessage}`);
     } finally {
-      setLoadingBusinessRules(false);
+      setLoading(false);
     }
   };
 
@@ -269,7 +272,7 @@ export default function UserConfigurationPage() {
     }
 
     if (!userConfig.databaseId) {
-      toast.error("Please select a database");
+      toast.error("Please select a company to get database access");
       return;
     }
 
@@ -281,7 +284,7 @@ export default function UserConfigurationPage() {
       console.log('Saving user configuration:', {
         userId: userConfig.userId,
         databaseId: userConfig.databaseId,
-        businessRules: userConfig.businessRules
+        // Removed businessRules from here
       });
 
       // Save user's current database using real API
@@ -295,21 +298,6 @@ export default function UserConfigurationPage() {
       });
       
       console.log('Database response:', dbResponse);
-
-      // Save business rules if they exist using real API
-      if (userConfig.businessRules.trim()) {
-        console.log('Calling updateBusinessRules with:', {
-          businessRules: userConfig.businessRules,
-          userId: userConfig.userId
-        });
-        
-        const rulesResponse = await BusinessRulesService.updateBusinessRules(
-          userConfig.businessRules,
-          userConfig.userId
-        );
-        
-        console.log('Business rules response:', rulesResponse);
-      }
 
       // Save user ID to localStorage
       localStorage.setItem("currentUserId", userConfig.userId);
@@ -340,10 +328,11 @@ export default function UserConfigurationPage() {
     // Reset local state
     setUserConfig({
       userId: "",
+      parentCompanyId: null,
+      subCompanyId: null,
       databaseId: null,
       databaseName: "",
-      databaseUrl: "",
-      businessRules: ""
+      databaseUrl: ""
     });
     
     // Clear success/error messages
@@ -356,16 +345,19 @@ export default function UserConfigurationPage() {
   const handleUserIdChange = (newUserId: string) => {
     setUserConfig(prev => ({ ...prev, userId: newUserId }));
     
-    // Clear previous database selection when user ID changes
+    // Clear previous selections when user ID changes
     setUserConfig(prev => ({ 
       ...prev, 
+      parentCompanyId: null,
+      subCompanyId: null,
       databaseId: null,
       databaseName: "",
       databaseUrl: ""
     }));
     
-    // Clear available databases when user ID changes
-    setAvailableDatabases([]);
+    // Clear company data when user ID changes
+    setParentCompanies([]);
+    setSubCompanies([]);
     
     // Clear success/error messages
     setSuccess(null);
@@ -385,7 +377,7 @@ export default function UserConfigurationPage() {
             <div className="flex items-center gap-3">
               <Loader2 className="h-6 w-6 animate-spin text-green-500" />
               <span className="text-lg text-gray-600 dark:text-gray-300">
-                Loading user configuration...
+                Loading company data...
               </span>
             </div>
           </div>
@@ -396,25 +388,25 @@ export default function UserConfigurationPage() {
 
   return (
     <EnhancedBackground intensity="medium" className="min-h-screen">
-      <div className="container mx-auto px-6 py-8">
+     <div className="container mx-auto px-6 py-8" style={{ paddingTop: "120px" }}>
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
             User Configuration
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Configure your database connection and user settings for AI queries
+            Configure your database access by selecting your company. Business rules are automatically loaded.
           </p>
           <div className="mt-2 p-3 bg-blue-900/20 border border-blue-500/20 rounded-lg">
             <p className="text-sm text-blue-300">
-              🔗 <strong>Real API Integration:</strong> This page connects to your backend services to fetch available databases and save your configuration.
+              🔗 <strong>Database Selection:</strong> Choose one database from your parent company or sub company. Business rules are automatically loaded from the user-current-db endpoint.
             </p>
           </div>
         </div>
 
         {/* Configuration Form */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - User and Database Configuration */}
+          {/* Left Column - User and Company Configuration */}
           <div className="space-y-6">
             {/* User ID Configuration */}
             <Card>
@@ -437,7 +429,7 @@ export default function UserConfigurationPage() {
                       onChange={(e) => handleUserIdChange(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && userConfig.userId.trim() && !loading) {
-                          loadInitialData();
+                          loadCompanyData();
                         }
                       }}
                       placeholder="Enter your user ID"
@@ -446,7 +438,7 @@ export default function UserConfigurationPage() {
                     <Button
                       onClick={() => {
                         if (userConfig.userId.trim()) {
-                          loadInitialData();
+                          loadCompanyData();
                         } else {
                           toast.error("Please enter a User ID first");
                         }
@@ -457,7 +449,7 @@ export default function UserConfigurationPage() {
                       {loading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        "Enter"
+                        "Load Databases"
                       )}
                     </Button>
                   </div>
@@ -471,17 +463,17 @@ export default function UserConfigurationPage() {
               </CardContent>
             </Card>
 
-            {/* Database Configuration */}
+            {/* Company Selection */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Database Connection
+                  <Building2 className="h-5 w-5" />
+                  Database Selection
                 </CardTitle>
                 <CardDescription>
                   {!userConfig.userId.trim() 
                     ? "Enter your User ID above to see available databases"
-                    : "Select the database you want to connect to for queries"
+                    : "Select your company to get access to its database"
                   }
                 </CardDescription>
               </CardHeader>
@@ -493,25 +485,25 @@ export default function UserConfigurationPage() {
                       <span className="text-sm text-blue-400">User ID Required</span>
                     </div>
                     <p className="text-xs text-blue-300 mt-1">
-                      Please enter your User ID above and click "Enter" to see the databases you have access to.
+                      Please enter your User ID above and click "Load Companies" to see available databases.
                     </p>
                   </div>
-                ) : hasEnteredUserId && availableDatabases.length === 0 && !loading ? (
+                ) : hasEnteredUserId && parentCompanies.length === 0 && subCompanies.length === 0 && !loading ? (
                   <div className="p-3 bg-blue-900/20 border border-blue-500/20 rounded-lg">
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-blue-400" />
-                      <span className="text-sm text-blue-400">Ready to Fetch Databases</span>
+                      <span className="text-sm text-blue-400">Ready to Load Databases</span>
                     </div>
                     <p className="text-xs text-blue-300 mt-1">
-                      You've entered "{userConfig.userId}". Click the "Enter" button above to fetch your accessible databases.
+                      You've entered "{userConfig.userId}". Click the "Load Companies" button above to fetch available databases.
                     </p>
                   </div>
                 ) : loading ? (
                   <div className="flex items-center gap-2 p-3 bg-gray-800/50 rounded-lg">
                     <Loader2 className="h-4 w-4 animate-spin text-green-400" />
-                    <span className="text-sm text-gray-300">Loading your accessible databases...</span>
+                    <span className="text-sm text-gray-300">Loading available databases...</span>
                   </div>
-                ) : availableDatabases.length === 0 ? (
+                ) : parentCompanies.length === 0 && subCompanies.length === 0 ? (
                   <div className="p-3 bg-yellow-900/20 border border-yellow-500/20 rounded-lg">
                     <div className="flex items-center gap-2">
                       <AlertCircle className="h-4 w-4 text-yellow-400" />
@@ -523,26 +515,73 @@ export default function UserConfigurationPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="space-y-2">
-                      <Label htmlFor="database-select">Select Database</Label>
-                      <Select 
-                        value={userConfig.databaseId?.toString() || ""} 
-                        onValueChange={handleDatabaseChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose a database" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableDatabases.map((db) => (
-                            <SelectItem key={db.id} value={db.id.toString()}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{db.name}</span>
-                                <span className="text-xs text-gray-500">{db.description}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    {/* Database Selection - Parent Companies */}
+                    {parentCompanies.length > 0 && (
+                      <div className="space-y-2">
+                        <Label htmlFor="parent-company-select">Parent Company Database</Label>
+                        <Select 
+                          value={userConfig.parentCompanyId?.toString() || ""} 
+                          onValueChange={handleParentCompanyChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a parent company database" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {parentCompanies.map((pc) => (
+                              <SelectItem key={pc.parent_company_id} value={pc.parent_company_id.toString()}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{pc.company_name}</span>
+                                  <span className="text-xs text-gray-500">Database ID: {pc.db_id}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500">
+                          Select a parent company to access its database
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Database Selection - Sub Companies */}
+                    {subCompanies.length > 0 && (
+                      <div className="space-y-2">
+                        <Label htmlFor="sub-company-select">Sub Company Database</Label>
+                        <Select 
+                          value={userConfig.subCompanyId?.toString() || ""} 
+                          onValueChange={handleSubCompanyChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose a sub company database" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subCompanies.map((sc) => (
+                              <SelectItem key={sc.sub_company_id} value={sc.sub_company_id.toString()}>
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{sc.company_name}</span>
+                                  <span className="text-xs text-gray-500">
+                                    Database ID: {sc.db_id} (Parent: {sc.parent_company_name})
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500">
+                          Select a sub company to access its database
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Database Selection Info */}
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-2">
+                        <Database className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm text-blue-800 dark:text-blue-200 font-medium">Database Selection</span>
+                      </div>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                        Choose only one database from either parent company or sub company.
+                      </p>
                     </div>
 
                     {userConfig.databaseId && (
@@ -550,14 +589,11 @@ export default function UserConfigurationPage() {
                         <div className="flex items-center gap-2">
                           <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                           <span className="text-sm text-green-800 dark:text-green-200">
-                            Selected: {userConfig.databaseName}
+                            Database Selected: {userConfig.databaseName}
                           </span>
                         </div>
                         <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                          {userConfig.databaseUrl}
-                        </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">
-                          💡 Business rules will be loaded automatically for this database.
+                          Database ID: {userConfig.databaseId}
                         </p>
                       </div>
                     )}
@@ -569,59 +605,6 @@ export default function UserConfigurationPage() {
 
           {/* Right Column - Business Rules and Actions */}
           <div className="space-y-6">
-            {/* Business Rules Configuration */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Business Rules
-                </CardTitle>
-                <CardDescription>
-                  {userConfig.databaseId 
-                    ? `Business rules for Database ${userConfig.databaseId} (${userConfig.databaseName})`
-                    : "Select a database above to load its business rules"
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {loadingBusinessRules ? (
-                  <div className="flex items-center gap-2 p-3 bg-gray-800/50 rounded-lg">
-                    <Loader2 className="h-4 w-4 animate-spin text-green-400" />
-                    <span className="text-sm text-gray-300">Loading business rules for Database {userConfig.databaseId}...</span>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="businessRules">Business Rules Content</Label>
-                      <textarea
-                        id="businessRules"
-                        value={userConfig.businessRules}
-                        onChange={(e) => setUserConfig(prev => ({ ...prev, businessRules: e.target.value }))}
-                        placeholder={
-                          userConfig.databaseId 
-                            ? "Business rules will be loaded automatically when you select a database"
-                            : "Enter business rules (e.g., 'no salary access', 'audit required')"
-                        }
-                        className="w-full min-h-[120px] p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm resize-y"
-                        disabled={!userConfig.databaseId}
-                      />
-                      <p className="text-xs text-gray-500">
-                        {userConfig.databaseId 
-                          ? "Business rules for the selected database. You can modify these rules if needed."
-                          : "Business rules help enforce security and compliance policies"
-                        }
-                      </p>
-                      {userConfig.databaseId && !userConfig.businessRules.trim() && (
-                        <p className="text-xs text-yellow-500">
-                          ⚠️ No business rules configured for this database. You can add custom rules above.
-                        </p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Configuration Status */}
             <Card>
               <CardHeader>
@@ -641,13 +624,13 @@ export default function UserConfigurationPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 dark:text-gray-300">Database</span>
                     <Badge variant={userConfig.databaseId ? "default" : "secondary"}>
-                      {userConfig.databaseId ? "Connected" : "Not Selected"}
+                      {userConfig.databaseId ? `Selected (ID: ${userConfig.databaseId})` : "Not Selected"}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600 dark:text-gray-300">Business Rules</span>
-                    <Badge variant={userConfig.businessRules.trim() ? "default" : "secondary"}>
-                      {userConfig.businessRules.trim() ? "Configured" : "Not Set"}
+                    <Badge variant={userConfig.databaseId ? "default" : "secondary"}>
+                      {userConfig.databaseId ? "Auto-loaded" : "Not Available"}
                     </Badge>
                   </div>
                 </div>

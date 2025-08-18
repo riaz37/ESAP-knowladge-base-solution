@@ -44,7 +44,18 @@ export interface FileQueryRequest {
   fileId: string;
   query: string;
   userId: string;
-  parameters?: Record<string, any>;
+  parameters?: {
+    table_specific?: boolean;
+    tables?: string[];
+    use_intent_reranker?: boolean;
+    use_chunk_reranker?: boolean;
+    use_dual_embeddings?: boolean;
+    intent_top_k?: number;
+    chunk_top_k?: number;
+    chunk_source?: string;
+    max_chunks_for_answer?: number;
+    answer_style?: string;
+  };
 }
 
 export interface DatabaseQueryRequest {
@@ -148,14 +159,50 @@ export const useQueryStore = create<QueryStore>()(
             parameters: queryRequest.parameters,
           };
           
-          // Use REAL FileService.searchFiles API
-          const result = await FileService.searchFiles({
+          // Use REAL FileService.searchFiles API with enhanced parameters
+          const searchParams: any = {
             query: queryRequest.query,
             user_id: queryRequest.userId,
             intent_top_k: 20,
             chunk_top_k: 40,
             max_chunks_for_answer: 40,
-          });
+          };
+
+          // Add table-specific parameters if provided
+          if (queryRequest.parameters) {
+            if (queryRequest.parameters.table_specific !== undefined) {
+              searchParams.table_specific = queryRequest.parameters.table_specific;
+            }
+            if (queryRequest.parameters.tables && queryRequest.parameters.tables.length > 0) {
+              searchParams.tables = queryRequest.parameters.tables;
+            }
+            if (queryRequest.parameters.use_intent_reranker !== undefined) {
+              searchParams.use_intent_reranker = queryRequest.parameters.use_intent_reranker;
+            }
+            if (queryRequest.parameters.use_chunk_reranker !== undefined) {
+              searchParams.use_chunk_reranker = queryRequest.parameters.use_chunk_reranker;
+            }
+            if (queryRequest.parameters.use_dual_embeddings !== undefined) {
+              searchParams.use_dual_embeddings = queryRequest.parameters.use_dual_embeddings;
+            }
+            if (queryRequest.parameters.intent_top_k !== undefined) {
+              searchParams.intent_top_k = queryRequest.parameters.intent_top_k;
+            }
+            if (queryRequest.parameters.chunk_top_k !== undefined) {
+              searchParams.chunk_top_k = queryRequest.parameters.chunk_top_k;
+            }
+            if (queryRequest.parameters.chunk_source !== undefined) {
+              searchParams.chunk_source = queryRequest.parameters.chunk_source;
+            }
+            if (queryRequest.parameters.max_chunks_for_answer !== undefined) {
+              searchParams.max_chunks_for_answer = queryRequest.parameters.max_chunks_for_answer;
+            }
+            if (queryRequest.parameters.answer_style !== undefined) {
+              searchParams.answer_style = queryRequest.parameters.answer_style;
+            }
+          }
+
+          const result = await FileService.searchFiles(searchParams);
           
           // Transform API response to our QueryResult format
           const queryResult: QueryResult = {
@@ -167,7 +214,7 @@ export const useQueryStore = create<QueryStore>()(
               confidence: result.answer?.confidence || "unknown",
               sourcesUsed: result.answer?.sources_used || 0,
               query: result.query,
-              userId: result.user_id_used,
+              userId: queryRequest.userId, // Use the actual user ID from context, not from backend response
               databaseConfig: result.database_config
             },
             metadata: {
