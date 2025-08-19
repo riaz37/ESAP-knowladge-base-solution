@@ -28,7 +28,7 @@ import {
   Plus,
   Search,
 } from "lucide-react";
-import { useUserConfig } from "@/lib/hooks/use-user-config";
+import { useAuthContext } from "@/components/providers";
 import { useDatabaseConfig } from "@/lib/hooks/use-database-config";
 import { UserConfigCreateRequest } from "@/types/api";
 import { VectorDBService } from "@/lib/api/services/vector-db-service";
@@ -65,7 +65,16 @@ export function CreateVectorDBAccessModal({
   const [availableDatabases, setAvailableDatabases] = useState<any[]>([]);
 
   // Hooks
-  const { createUserConfig, isLoading, error } = useUserConfig();
+  const { user } = useAuthContext();
+  
+  // Placeholder state - will be implemented with proper database context
+  const isLoading = false;
+  const error = null;
+  
+  const createUserConfig = async (data: UserConfigCreateRequest) => {
+    // TODO: Implement with database context
+    console.log('Creating user config:', data);
+  };
   const { databaseConfigs, fetchDatabaseConfigs, isLoading: isLoadingDatabases } = useDatabaseConfig();
 
   // Load data when modal opens

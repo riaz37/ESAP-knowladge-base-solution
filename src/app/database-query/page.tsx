@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 
 import { useQueryStore } from "@/store/query-store";
-import { useUserContext } from "@/components/providers/UserContextProvider";
+import { useAuthContext } from "@/components/providers";
 import { toast } from "sonner";
 import { QueryHistoryPanel, QueryInputForm } from "@/components/data-query";
 import { QueryService } from "@/lib/api/services/query-service";
@@ -58,7 +58,11 @@ export default function DatabaseQueryPage() {
   } = useQueryStore();
 
   // Get user context
-  const { userId, databaseId, databaseName, isLoading: userLoading, error: userError } = useUserContext();
+  const { user, isLoading: userLoading } = useAuthContext();
+  const userId = user?.id;
+  const databaseId = null; // Will be handled by database context later
+  const databaseName = ""; // Will be handled by database context later
+  const userError = null; // Will be handled by error context later
 
   const queryTips = [
     "Ask specific questions like 'What were the top 10 sales last month?'",

@@ -5,6 +5,12 @@ const baseUrl =
  * API endpoint definitions
  */
 export const API_ENDPOINTS = {
+  // Authentication endpoints
+  AUTH_SIGNUP: `${baseUrl}/Auth/signup`,
+  AUTH_LOGIN: `${baseUrl}/Auth/login`,
+  AUTH_PROFILE: `${baseUrl}/Auth/profile`,
+  AUTH_CHANGE_PASSWORD: `${baseUrl}/Auth/change-password`,
+
   // Query endpoints
   SEARCH: `${baseUrl}/search`,
   QUERY: `${baseUrl}/mssql/query`,

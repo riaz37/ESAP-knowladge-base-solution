@@ -1,4 +1,5 @@
 // Custom React Hooks
+export { useAuth } from "./use-auth";
 export { useBusinessRules } from "./use-business-rules";
 export { useDatabaseConfig } from "./use-database-config";
 export { useDatabaseOperations } from "./use-database-operations";
@@ -15,9 +16,7 @@ export { useSmartFileUpload } from "./use-smart-file-upload";
 export { useSubCompanies } from "./use-sub-companies";
 export { useToast } from "./use-toast";
 export { useUserAccess } from "./use-user-access";
-export { useUserConfig } from "./use-user-config";
-export { useUserContext } from "./use-user-context";
-export { useUserCurrentDB } from "./use-user-current-db";
+
 export { useUserSettings } from "./use-user-settings";
 export { useThemeTransition } from "./useThemeTransition";
 export { useVectorDB } from "./use-vector-db";

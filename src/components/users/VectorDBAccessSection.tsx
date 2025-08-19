@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useVectorDB } from "@/lib/hooks/use-vector-db";
 import { useDatabaseConfig } from "@/lib/hooks/use-database-config";
-import { useUserConfig } from "@/lib/hooks/use-user-config";
+import { useAuthContext } from "@/components/providers";
 
 
 interface VectorDBAccessSectionProps {
@@ -53,11 +53,15 @@ export function VectorDBAccessSection({
     getDatabaseConfigs,
   } = useDatabaseConfig();
 
-  const {
-    userConfigs,
-    isLoading: userConfigLoading,
-    getUserConfigs,
-  } = useUserConfig();
+  const { user } = useAuthContext();
+  
+  // Placeholder state - will be implemented with proper database context
+  const userConfigs = { configs: [] };
+  const userConfigLoading = false;
+  
+  const getUserConfigs = async () => {
+    // TODO: Implement with database context
+  };
 
   const isLoading = vectorDBLoading || dbLoading || userConfigLoading;
 

@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeStoreProvider } from "@/components/ThemeStoreProvider";
 import { ThemeTransitionProvider } from "@/components/ThemeTransitionProvider";
-import { UserContextProvider } from "@/components/providers";
+import { AuthContextProvider } from "@/components/providers";
 import Navbar from "@/components/Navbar";
 import Menu from "@/components/Menu";
 import { Toaster } from "@/components/ui/sonner";
@@ -28,7 +28,7 @@ export default function RootLayout({
       >
         <ThemeStoreProvider>
           <ThemeTransitionProvider>
-            <UserContextProvider>
+                        <AuthContextProvider>
               <Navbar />
 
               {/* Menu Overlay */}
@@ -56,7 +56,7 @@ export default function RootLayout({
                   <ErrorBoundary>{children}</ErrorBoundary>
                 </div>
               </div>
-            </UserContextProvider>
+            </AuthContextProvider>
           </ThemeTransitionProvider>
           <Toaster />
         </ThemeStoreProvider>

@@ -25,7 +25,7 @@ import {
 
 import { useQueryStore } from "@/store/query-store";
 import { useFileOperations } from "@/lib/hooks/use-smart-file-upload";
-import { useUserContext } from "@/lib/hooks/use-user-context";
+import { useAuthContext } from "@/components/providers";
 import { toast } from "sonner";
 import {
   QueryHistoryPanel,
@@ -80,7 +80,8 @@ export default function FileQueryPage() {
   } = useFileOperations();
 
   // Get userId from user context
-  const { userId } = useUserContext();
+  const { user } = useAuthContext();
+  const userId = user?.id;
 
   useEffect(() => {
     loadQueryHistory(userId, 'file');

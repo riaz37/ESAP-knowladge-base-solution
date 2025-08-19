@@ -6,7 +6,7 @@ import { Database, FileText } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDatabaseOperations } from "@/lib/hooks";
 import { useQueryStore } from "@/store/query-store";
-import { useUserContext } from "@/lib/hooks";
+import { useAuthContext } from "@/components/providers";
 import { toast } from "sonner";
 import { BusinessRulesService } from "@/lib/api/services/business-rules-service";
 import { BusinessRulesValidator } from "@/lib/utils/business-rules-validator";
@@ -37,7 +37,11 @@ export default function SimplifiedAIInterface({
   const router = useRouter();
   const databaseOps = useDatabaseOperations();
   const { executeFileQuery, executeDatabaseQuery } = useQueryStore();
-  const { userId, databaseId, databaseName, businessRules: userBusinessRules } = useUserContext();
+  const { user } = useAuthContext();
+  const userId = user?.id;
+  const databaseId = null; // Will be handled by database context later
+  const databaseName = ""; // Will be handled by database context later
+  const userBusinessRules = ""; // Will be handled by business rules context later
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Query state
