@@ -9,7 +9,6 @@ export { CompanyTreeSidebar } from "./ui/CompanyTreeSidebar";
 
 // Modals
 export { CompanyCreationModal } from "./CompanyCreationModal";
-export { CompanyUploadModal } from "./CompanyUploadModal";
 
 // Types
 export type { Company, CompanyFormData, CompanyTreeViewProps, CompanyCardProps, EmptyStateProps } from "./types";

@@ -1,108 +1,227 @@
-import { useState } from "react";
-import { ParentCompanyService } from "../api/services/parent-company-service";
+import { useState, useCallback } from "react";
+import { ServiceRegistry } from "../api";
 import {
   ParentCompanyCreateRequest,
-  ParentCompanyResponse,
   ParentCompanyData,
 } from "@/types/api";
 
-interface UseParentCompaniesReturn {
-  createParentCompany: (
-    company: ParentCompanyCreateRequest
-  ) => Promise<ParentCompanyResponse | null>;
-  getParentCompanies: () => Promise<ParentCompanyData[] | null>;
-  getParentCompany: (id: number) => Promise<ParentCompanyData | null>;
-  isLoading: boolean;
-  error: string | null;
-  success: boolean;
-  clearError: () => void;
-  clearSuccess: () => void;
-}
-
-export function useParentCompanies(): UseParentCompaniesReturn {
-  const [isLoading, setIsLoading] = useState(false);
+/**
+ * Hook for Parent Company operations using standardized ServiceRegistry
+ */
+export function useParentCompanies() {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [parentCompanies, setParentCompanies] = useState<ParentCompanyData[]>([]);
 
-  const createParentCompany = async (
-    company: ParentCompanyCreateRequest
-  ): Promise<ParentCompanyResponse | null> => {
-    setIsLoading(true);
+  /**
+   * Get all parent companies
+   */
+  const getParentCompanies = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await ServiceRegistry.parentCompanies.getParentCompanies();
+      
+      if (response.success) {
+        setParentCompanies(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to fetch parent companies');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch parent companies");
+      setParentCompanies([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Create a new parent company
+   */
+  const createParentCompany = useCallback(async (companyData: ParentCompanyCreateRequest) => {
+    setLoading(true);
     setError(null);
     setSuccess(false);
 
     try {
-      // Validate company data before sending
-      const validation = ParentCompanyService.validateParentCompany(company);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(", "));
+      const response = await ServiceRegistry.parentCompanies.createParentCompany(companyData);
+      
+      if (response.success) {
+        setSuccess(true);
+        // Refresh the list
+        await getParentCompanies();
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to create parent company');
       }
-
-      const response = await ParentCompanyService.createParentCompany(company);
-      setSuccess(true);
-      return response;
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to create parent company";
-      setError(errorMessage);
+    } catch (e: any) {
+      setError(e.message || "Failed to create parent company");
       return null;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, [getParentCompanies]);
 
-  const getParentCompanies = async (): Promise<ParentCompanyData[] | null> => {
-    setIsLoading(true);
+  /**
+   * Update a parent company
+   */
+  const updateParentCompany = useCallback(async (
+    companyId: number,
+    companyData: Partial<ParentCompanyCreateRequest>
+  ) => {
+    setLoading(true);
     setError(null);
+    setSuccess(false);
 
     try {
-      const response = await ParentCompanyService.getParentCompanies();
-      // With the API client interceptor, response now contains just the data portion
-      // The response structure is: {companies: ParentCompanyData[], count: number}
-      console.log("Hook: Parent companies response:", response);
-      return (response as any).companies || null;
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to fetch parent companies";
-      setError(errorMessage);
+      const response = await ServiceRegistry.parentCompanies.updateParentCompany(companyId, companyData);
+      
+      if (response.success) {
+        setSuccess(true);
+        // Refresh the list
+        await getParentCompanies();
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to update parent company');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to update parent company");
       return null;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, [getParentCompanies]);
 
-  const getParentCompany = async (
-    id: number
-  ): Promise<ParentCompanyData | null> => {
-    setIsLoading(true);
+  /**
+   * Delete a parent company
+   */
+  const deleteParentCompany = useCallback(async (companyId: number) => {
+    setLoading(true);
     setError(null);
+    setSuccess(false);
 
     try {
-      const response = await ParentCompanyService.getParentCompany(id);
-      // With the API client interceptor, response now contains just the data portion
-      // Cast to ParentCompanyData since the interceptor extracts the data
-      return (response as any) || null;
-    } catch (err: any) {
-      const errorMessage =
-        err?.message || `Failed to fetch parent company ${id}`;
-      setError(errorMessage);
-      return null;
+      const response = await ServiceRegistry.parentCompanies.deleteParentCompany(companyId);
+      
+      if (response.success) {
+        setSuccess(true);
+        // Refresh the list
+        await getParentCompanies();
+        return true;
+      } else {
+        throw new Error(response.error || 'Failed to delete parent company');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to delete parent company");
+      return false;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, [getParentCompanies]);
 
-  const clearError = () => setError(null);
-  const clearSuccess = () => setSuccess(false);
+  /**
+   * Get parent company by ID
+   */
+  const getParentCompany = useCallback(async (companyId: number) => {
+    setError(null);
+    try {
+      const response = await ServiceRegistry.parentCompanies.getParentCompany(companyId);
+      
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to get parent company');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get parent company");
+      throw e;
+    }
+  }, []);
+
+  /**
+   * Get parent companies by database ID
+   */
+  const getParentCompaniesByDatabase = useCallback(async (databaseId: number) => {
+    setError(null);
+    try {
+      const response = await ServiceRegistry.parentCompanies.getParentCompaniesByDatabase(databaseId);
+      
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to get parent companies by database');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get parent companies by database");
+      throw e;
+    }
+  }, []);
+
+  /**
+   * Get parent company statistics
+   */
+  const getParentCompanyStats = useCallback(async () => {
+    setError(null);
+    try {
+      const response = await ServiceRegistry.parentCompanies.getParentCompanyStats();
+      
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to get parent company stats');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get parent company stats");
+      throw e;
+    }
+  }, []);
+
+  /**
+   * Validate parent company data
+   */
+  const validateParentCompany = useCallback((companyData: ParentCompanyCreateRequest) => {
+    return ServiceRegistry.parentCompanies.validateParentCompanyData(companyData);
+  }, []);
+
+  // Clear functions
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  const clearSuccess = useCallback(() => {
+    setSuccess(false);
+  }, []);
+
+  const reset = useCallback(() => {
+    setError(null);
+    setSuccess(false);
+    setParentCompanies([]);
+  }, []);
 
   return {
-    createParentCompany,
-    getParentCompanies,
-    getParentCompany,
-    isLoading,
+    // State
+    loading,
     error,
     success,
+    parentCompanies,
+
+    // Actions
+    getParentCompanies,
+    createParentCompany,
+    updateParentCompany,
+    deleteParentCompany,
+    getParentCompany,
+    getParentCompaniesByDatabase,
+    getParentCompanyStats,
+    validateParentCompany,
+
+    // Utilities
     clearError,
     clearSuccess,
+    reset,
   };
 }
-
-export default useParentCompanies;

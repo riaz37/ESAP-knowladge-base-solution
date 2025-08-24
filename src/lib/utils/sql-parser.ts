@@ -137,8 +137,6 @@ function extractCreateTableStatements(responseText: string): string[] {
  */
 export function parseApiResponse(apiResponse: any): ParsedApiResponse {
   try {
-    console.log("Parsing API response:", apiResponse);
-
     // Handle different response formats
     let responseText = "";
 
@@ -149,26 +147,54 @@ export function parseApiResponse(apiResponse: any): ParsedApiResponse {
         apiResponse.table_info.tables &&
         Array.isArray(apiResponse.table_info.tables)
       ) {
-        console.log("Found structured table data");
-        return {
-          tables: apiResponse.table_info.tables.map((table: any) => ({
-            name: formatTableName(table.table_name || table.name || "Unknown"),
-            full_name:
-              table.full_name ||
-              `dbo.${table.table_name || table.name || "unknown"}`,
-            columns: table.columns || [],
-            relationships: table.relationships || [],
-          })),
-          metadata: {
-            total_tables:
-              apiResponse.table_info.metadata?.total_tables ||
-              apiResponse.table_info.tables.length,
-            matched_tables:
-              apiResponse.table_info.metadata?.processed_tables || 0,
-            unmatched_tables:
-              apiResponse.table_info.metadata?.failed_tables || 0,
-          },
-        };
+        // Check if the tables have proper structure (not just table names)
+        const firstTable = apiResponse.table_info.tables[0];
+        if (firstTable && (firstTable.table_name || firstTable.name) && firstTable.table_name !== "Unknown") {
+          return {
+            tables: apiResponse.table_info.tables.map((table: any) => ({
+              name: formatTableName(table.table_name || table.name || "Unknown"),
+              full_name:
+                table.full_name ||
+                `dbo.${table.table_name || table.name || "unknown"}`,
+              columns: Array.isArray(table.columns) ? table.columns.map((col: any) => ({
+                name: col.name || col.column_name || "unknown",
+                type: col.type || col.data_type || col.Type || "unknown",
+                is_primary: col.is_primary || false,
+                is_foreign: col.is_foreign || false,
+                is_required: col.is_required || !col.is_nullable || false,
+              })) : [],
+              relationships: Array.isArray(table.relationships) ? table.relationships : [],
+            })),
+            metadata: {
+              total_tables:
+                apiResponse.table_info.metadata?.total_tables ||
+                apiResponse.table_info.tables.length,
+              matched_tables:
+                apiResponse.table_info.metadata?.processed_tables || apiResponse.table_info.tables.length,
+              unmatched_tables:
+                apiResponse.table_info.metadata?.failed_tables || 0,
+            },
+          };
+        } else {
+          // This is likely an array of table names, not full table objects
+          const tables: ParsedTable[] = apiResponse.table_info.tables
+            .filter((tableName: any) => typeof tableName === 'string' && tableName !== "Unknown")
+            .map((tableName: string) => ({
+              name: formatTableName(tableName),
+              full_name: `dbo.${tableName}`,
+              columns: [],
+              relationships: [],
+            }));
+
+          return {
+            tables,
+            metadata: {
+              total_tables: apiResponse.table_info.metadata?.total_tables || tables.length,
+              matched_tables: tables.length,
+              unmatched_tables: 0,
+            },
+          };
+        }
       }
 
       // If table_info is a string (SQL statements)
@@ -197,10 +223,6 @@ export function parseApiResponse(apiResponse: any): ParsedApiResponse {
     }
 
     if (!responseText) {
-      console.warn(
-        "No SQL text found in API response, trying to extract from schema_tables"
-      );
-
       // Try to extract from schema_tables list if available
       if (
         apiResponse.schema_tables &&
@@ -226,7 +248,6 @@ export function parseApiResponse(apiResponse: any): ParsedApiResponse {
         };
       }
 
-      console.warn("Unable to extract any table data from API response");
       return {
         tables: [],
         metadata: {
@@ -237,13 +258,8 @@ export function parseApiResponse(apiResponse: any): ParsedApiResponse {
       };
     }
 
-    console.log("Parsing SQL statements from response text");
-
     // Extract CREATE TABLE statements
     const createTableStatements = extractCreateTableStatements(responseText);
-    console.log(
-      `Found ${createTableStatements.length} CREATE TABLE statements`
-    );
 
     // Parse each CREATE TABLE statement
     const tables: ParsedTable[] = [];
@@ -253,8 +269,6 @@ export function parseApiResponse(apiResponse: any): ParsedApiResponse {
         tables.push(parsedTable);
       }
     }
-
-    console.log(`Successfully parsed ${tables.length} tables`);
 
     // Extract metadata if available
     let metadata = {

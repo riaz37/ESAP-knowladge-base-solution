@@ -1,205 +1,274 @@
-import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../endpoints";
-import { MSSQLConfigResponse } from "@/types/api";
-import { UserCurrentDBService } from "./user-current-db-service";
+import { BaseService, ServiceResponse } from "./base";
+import {
+  MSSQLConfigData,
+  MSSQLConfigUpdateRequest,
+  MSSQLConfigTaskResponse,
+  TaskStatusResponse,
+} from "@/types/api";
 
 /**
- * Service for managing business rules through MSSQL configuration
+ * Service for managing business rules
+ * All methods use JWT authentication - user ID is extracted from token on backend
  */
-export class BusinessRulesService {
+export class BusinessRulesService extends BaseService {
+  protected readonly serviceName = 'BusinessRulesService';
+
   /**
-   * Get business rules for a user by fetching from MSSQL config
+   * Get business rules for a specific database
    */
-  static async getBusinessRules(userId?: string): Promise<string> {
+  async getBusinessRules(databaseId: number): Promise<ServiceResponse<string>> {
+    this.validateRequired({ databaseId }, ['databaseId']);
+    this.validateTypes({ databaseId }, { databaseId: 'number' });
+
+    if (databaseId <= 0) {
+      throw this.createValidationError('Database ID must be positive');
+    }
+
     try {
-      if (!userId) {
-        throw new Error("User ID is required to fetch business rules");
-      }
-
-      // Get the user's current database
-      let userCurrentDB;
-      try {
-        userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
-      } catch (error) {
-        console.log("No current database set for user:", userId);
-        // Return empty string if no database is configured
-        return "";
-      }
-
-      if (!userCurrentDB || !userCurrentDB.db_id) {
-        console.log("No database ID found for user:", userId);
-        return "";
-      }
-
-      const dbId = userCurrentDB.db_id; // With API client interceptor, no .data needed
-      const response = await apiClient.get<MSSQLConfigResponse>(
-        API_ENDPOINTS.GET_MSSQL_CONFIG(dbId)
+      const response = await this.get<MSSQLConfigData>(
+        API_ENDPOINTS.GET_MSSQL_CONFIG(databaseId)
       );
 
-      console.log("Business Rules Service - Full response:", response);
+      // Extract business rule from the response
+      const businessRule = response.data?.business_rule || "";
 
-      // With API client interceptor, response now contains just the data portion
-      if (response && response.business_rule !== undefined) {
-        console.log(
-          "Business Rules Service - Found business rule:",
-          response.business_rule
-        );
-        return response.business_rule || "";
-      }
-
-      console.error(
-        "Business Rules Service - Unexpected response structure:",
-        response
-      );
-      throw new Error(
-        "Failed to fetch business rules - unexpected response structure"
-      );
+      return {
+        data: businessRule,
+        success: true,
+        timestamp: new Date().toISOString(),
+      };
     } catch (error: any) {
-      console.error("Error fetching business rules:", error);
-      if (error.response?.status === 404) {
-        throw new Error("Business rules configuration not found");
+      // Handle specific error cases
+      if (error.statusCode === 404) {
+        return {
+          data: "",
+          success: true,
+          timestamp: new Date().toISOString(),
+        };
       }
-      throw new Error(
-        error.response?.data?.message || "Failed to fetch business rules"
-      );
+      
+      throw error;
     }
   }
 
   /**
-   * Update business rules by updating the MSSQL config
+   * Update business rules for a specific database
    */
-  static async updateBusinessRules(
-    content: string,
+  async updateBusinessRules(
+    content: string, 
+    databaseId: number, 
+    options: Partial<MSSQLConfigUpdateRequest> = {}
+  ): Promise<ServiceResponse<MSSQLConfigTaskResponse>> {
+    this.validateRequired({ content, databaseId }, ['content', 'databaseId']);
+    this.validateTypes({ content, databaseId }, { 
+      content: 'string', 
+      databaseId: 'number' 
+    });
+
+    if (databaseId <= 0) {
+      throw this.createValidationError('Database ID must be positive');
+    }
+
+    if (content.trim().length === 0) {
+      throw this.createValidationError('Business rules content cannot be empty');
+    }
+
+    // Validate content for security
+    const validation = this.validateBusinessRulesContent(content);
+    if (!validation.isValid) {
+      throw this.createValidationError(
+        `Business rules validation failed: ${validation.errors.join(', ')}`,
+        { validationErrors: validation.errors }
+      );
+    }
+
+    // Prepare the update request
+    const updateRequest: MSSQLConfigUpdateRequest = {
+      business_rule: content,
+      ...options,
+    };
+
+    return this.put<MSSQLConfigTaskResponse>(
+      API_ENDPOINTS.UPDATE_MSSQL_CONFIG(databaseId),
+      updateRequest
+    );
+  }
+
+  /**
+   * Get business rules for the authenticated user's current database
+   * User ID is extracted from JWT token on backend
+   */
+  async getBusinessRulesForCurrentDatabase(userId?: string): Promise<ServiceResponse<string>> {
+    try {
+      // First get the user's current database
+      const userCurrentDBResponse = await this.get<any>(
+        userId 
+          ? `${API_ENDPOINTS.GET_USER_CURRENT_DB}/${userId}`
+          : API_ENDPOINTS.GET_USER_CURRENT_DB
+      );
+
+      if (!userCurrentDBResponse.data || !userCurrentDBResponse.data.db_id) {
+        throw this.createValidationError("No current database set. Please configure a database first.");
+      }
+
+      // Then get the business rules for that database
+      return this.getBusinessRules(userCurrentDBResponse.data.db_id);
+    } catch (error: any) {
+      // Handle specific error cases
+      if (error.message?.includes("No current database")) {
+        throw this.createValidationError("No current database set. Please configure a database first.");
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Update business rules for the authenticated user's current database
+   * User ID is extracted from JWT token on backend
+   */
+  async updateBusinessRulesForCurrentDatabase(
+    content: string, 
+    options: Partial<MSSQLConfigUpdateRequest> = {},
     userId?: string
-  ): Promise<void> {
+  ): Promise<ServiceResponse<MSSQLConfigTaskResponse>> {
     try {
-      if (!userId) {
-        throw new Error("User ID is required to update business rules");
-      }
-
-      // Get the user's current database
-      const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
-      const dbId = userCurrentDB.db_id; // With API client interceptor, no .data needed
-
-      // First, get the current config to preserve other fields
-      const currentConfigResponse = await apiClient.get<MSSQLConfigResponse>(
-        API_ENDPOINTS.GET_MSSQL_CONFIG(dbId)
+      // First get the user's current database
+      const userCurrentDBResponse = await this.get<any>(
+        userId 
+          ? `${API_ENDPOINTS.GET_USER_CURRENT_DB}/${userId}`
+          : API_ENDPOINTS.GET_USER_CURRENT_DB
       );
 
-      console.log("Update Business Rules - Current config response:", currentConfigResponse);
-
-      // With API client interceptor, response now contains just the data portion
-      if (!currentConfigResponse || !currentConfigResponse.db_url) {
-        throw new Error("Failed to fetch current configuration");
+      if (!userCurrentDBResponse.data || !userCurrentDBResponse.data.db_id) {
+        throw this.createValidationError("No current database set. Please configure a database first.");
       }
 
-      const currentConfig = currentConfigResponse;
-
-      // Create form data for the update
-      const formData = new FormData();
-      formData.append("db_url", currentConfig.db_url);
-      formData.append("db_name", currentConfig.db_name);
-      formData.append("business_rule", content);
-
-      console.log("Update Business Rules - Sending form data:", {
-        db_url: currentConfig.db_url,
-        db_name: currentConfig.db_name,
-        business_rule: content
-      });
-
-      // Update the configuration
-      const response = await apiClient.put(
-        API_ENDPOINTS.UPDATE_MSSQL_CONFIG(dbId),
-        formData
-      );
-
-      console.log("Update Business Rules - Update response:", response);
-
-      // With API client interceptor, response now contains just the data portion
-      // No need to check status since interceptor handles that
-      console.log("Business rules updated successfully");
+      // Then update the business rules for that database
+      return await this.updateBusinessRules(content, userCurrentDBResponse.data.db_id, options);
     } catch (error: any) {
-      console.error("Error updating business rules:", error);
-      if (error.response?.status === 404) {
-        throw new Error("Business rules configuration not found");
+      // Handle specific error cases
+      if (error.message?.includes("No current database")) {
+        throw this.createValidationError("No current database set. Please configure a database first.");
       }
-      throw new Error(
-        error.response?.data?.message || "Failed to update business rules"
-      );
+      
+      throw error;
     }
   }
 
   /**
-   * Download business rules as a file
+   * Validate business rules content for security and format
    */
-  static async downloadBusinessRulesFileToDevice(userId?: string): Promise<void> {
-    try {
-      if (!userId) {
-        throw new Error("User ID is required to download business rules");
-      }
-
-      const businessRules = await this.getBusinessRules(userId);
-
-      if (!businessRules.trim()) {
-        throw new Error("No business rules to download");
-      }
-
-      // Create a blob with the business rules content
-      const blob = new Blob([businessRules], { type: "text/markdown" });
-      const url = window.URL.createObjectURL(blob);
-
-      // Create a temporary download link
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `business-rules-${
-        new Date().toISOString().split("T")[0]
-      }.md`;
-      document.body.appendChild(link);
-      link.click();
-
-      // Cleanup
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error: any) {
-      console.error("Error downloading business rules file:", error);
-      throw new Error("Failed to download business rules file");
-    }
-  }
-
-  /**
-   * Get the database ID for a user
-   */
-  static async getDatabaseIdForUser(userId: string): Promise<number> {
-    try {
-      const userCurrentDB = await UserCurrentDBService.getUserCurrentDB(userId);
-      // With API client interceptor, no .data needed
-      return userCurrentDB.db_id;
-    } catch (error) {
-      console.error("Error fetching user's current database:", error);
-      throw new Error("Failed to get database ID for user");
-    }
-  }
-
-  /**
-   * Validate business rules content
-   */
-  static validateBusinessRules(content: string): {
+  validateBusinessRulesContent(content: string): {
     isValid: boolean;
     errors: string[];
+    warnings: string[];
   } {
     const errors: string[] = [];
+    const warnings: string[] = [];
 
-    // Basic validation - you can extend this as needed
+    // Basic validation
+    if (typeof content !== 'string') {
+      errors.push("Business rules must be a string");
+      return { isValid: false, errors, warnings };
+    }
+
+    // Check if content is too short
+    if (content.trim().length < 10) {
+      warnings.push("Business rules content seems very short. Consider adding more detail.");
+    }
+
+    // Check if content is too long (example: 50KB limit)
     if (content.length > 50000) {
-      // 50KB limit
-      errors.push("Business rules content is too large (max 50KB)");
+      errors.push("Business rules content is too long (maximum 50KB)");
+    }
+
+    // Check for common SQL injection patterns (basic check)
+    const suspiciousPatterns = [
+      /;\s*drop\s+table/i,
+      /;\s*delete\s+from/i,
+      /;\s*truncate\s+table/i,
+      /union\s+select/i,
+    ];
+
+    for (const pattern of suspiciousPatterns) {
+      if (pattern.test(content)) {
+        errors.push("Business rules content contains potentially dangerous SQL patterns");
+        break;
+      }
     }
 
     return {
       isValid: errors.length === 0,
       errors,
+      warnings,
     };
+  }
+
+  /**
+   * Get task status for business rules operations
+   */
+  async getTaskStatus(taskId: string): Promise<ServiceResponse<TaskStatusResponse>> {
+    this.validateRequired({ taskId }, ['taskId']);
+    this.validateTypes({ taskId }, { taskId: 'string' });
+
+    if (taskId.trim().length === 0) {
+      throw this.createValidationError('Task ID cannot be empty');
+    }
+
+    return this.get<TaskStatusResponse>(API_ENDPOINTS.GET_TASK_STATUS(taskId));
+  }
+
+  /**
+   * Get all business rules for accessible databases
+   */
+  async getAllBusinessRules(): Promise<ServiceResponse<Array<{
+    databaseId: number;
+    databaseName: string;
+    businessRule: string;
+  }>>> {
+    try {
+      // Get all accessible databases
+      const databasesResponse = await this.get<any>(API_ENDPOINTS.GET_MSSQL_CONFIGS);
+      
+      const databases = Array.isArray(databasesResponse.data) 
+        ? databasesResponse.data 
+        : databasesResponse.data?.configs || [];
+
+      // Get business rules for each database
+      const businessRulesPromises = databases.map(async (db: MSSQLConfigData) => {
+        try {
+          const rulesResponse = await this.getBusinessRules(db.db_id);
+          return {
+            databaseId: db.db_id,
+            databaseName: db.db_name,
+            businessRule: rulesResponse.data,
+          };
+        } catch (error) {
+          return {
+            databaseId: db.db_id,
+            databaseName: db.db_name,
+            businessRule: "",
+          };
+        }
+      });
+
+      const businessRules = await Promise.all(businessRulesPromises);
+
+      return {
+        data: businessRules,
+        success: true,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 }
 
-export default BusinessRulesService;
+// Export singleton instance
+export const businessRulesService = new BusinessRulesService();
+
+// Export for backward compatibility
+export default businessRulesService;

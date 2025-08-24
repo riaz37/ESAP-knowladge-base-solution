@@ -9,6 +9,15 @@ export function transformResponse<T = any>(response: any): ApiResponse<T> {
     return response as ApiResponse<T>;
   }
 
+  // Handle API response format with status_code and payload
+  if (response && "status_code" in response && "payload" in response) {
+    return {
+      success: response.status_code >= 200 && response.status_code < 300,
+      data: response.payload as T,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   // Otherwise, transform to standard format
   return {
     success: true,

@@ -1,8 +1,8 @@
 import { ApiRequestConfig, ApiResponse, ApiError } from "@/types/api";
-import { NetworkError } from "@/types/error";
+import { NetworkError } from "../types/error";
 
 const baseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "https://176.9.16.194:8200";
 
 /**
  * Default request configuration
@@ -391,6 +391,32 @@ export class ApiClient {
 
 // Create and export default API client instance
 export const apiClient = new ApiClient(baseUrl);
+
+// Add authentication interceptor to include auth token in all requests
+apiClient.addRequestInterceptor((config: ApiRequestConfig) => {
+  // Get auth token from localStorage
+  try {
+    const storedTokens = localStorage.getItem('auth_tokens');
+    if (storedTokens) {
+      const tokens = JSON.parse(storedTokens);
+      if (tokens.accessToken) {
+        // Add Authorization header
+        config.headers = {
+          ...config.headers,
+          'Authorization': `Bearer ${tokens.accessToken}`,
+        };
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('API Client - Added auth header for request to:', config.url || 'unknown endpoint');
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to add auth header:', error);
+  }
+  
+  return config;
+});
 
 // Add a response interceptor to ensure consistent data structure
 apiClient.addResponseInterceptor((response: any) => {

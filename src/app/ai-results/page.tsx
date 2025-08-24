@@ -23,8 +23,9 @@ import {
   FileSpreadsheet,
   AlertCircle,
   CheckCircle,
+  Play,
+  Loader2,
 } from "lucide-react";
-import { QueryResultsDisplay } from "@/components/ai-assistant/QueryResultsDisplay";
 import { toast } from "sonner";
 
 export default function AIResultsPage() {
@@ -293,7 +294,7 @@ export default function AIResultsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+    <div className="w-full min-h-screen relative bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900">
       {/* Add top padding to account for fixed navbar */}
       <div className="pt-24 pb-8">
         <div className="container mx-auto px-4">
@@ -486,7 +487,41 @@ export default function AIResultsPage() {
                             )}
                           </div>
                         </div>
-                        <QueryResultsDisplay result={currentQuery.result} />
+                        <div className="flex flex-col gap-4">
+                          {currentQuery.result && typeof currentQuery.result === 'object' && 'success' in currentQuery.result && currentQuery.result.success === true ? (
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full bg-gray-800/50 border border-gray-700 rounded-lg text-sm text-gray-300">
+                                <thead>
+                                  <tr className="bg-gray-700/50 border-b border-gray-600">
+                                    {Object.keys(currentQuery.result.data[0]).map((header) => (
+                                      <th key={header} className="py-2 px-4 text-left">
+                                        {header}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {currentQuery.result.data.map((row: any, index: number) => (
+                                    <tr key={index} className="border-b border-gray-600 hover:bg-gray-700/30">
+                                      {Object.values(row).map((value: any, colIndex: number) => (
+                                        <td key={colIndex} className="py-2 px-4">
+                                          {value}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-12">
+                              <Loader2 className="w-12 h-12 text-green-400 animate-spin mb-4" />
+                              <p className="text-gray-400 text-lg">
+                                Loading query results...
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>

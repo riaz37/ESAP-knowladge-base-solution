@@ -1,434 +1,472 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import {
-  Search,
-  Plus,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Shield,
-  Trash2,
-} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { UserAccessModal } from "./UserAccessModal";
-import { useUserAccess } from "@/lib/hooks/use-user-access";
-import { UserAccessData } from "@/types/api";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Users, 
+  Database, 
+  Brain, 
+  Plus, 
+  Search, 
+  Edit, 
+  Trash2, 
+  Shield,
+  UserCheck,
+  AlertCircle,
+  RefreshCw,
+  Loader2
+} from "lucide-react";
+import { useUsersManager } from "./hooks/useUsersManager";
+import { CreateDatabaseAccessModal } from "./modals/CreateDatabaseAccessModal";
+import { CreateVectorDBAccessModal } from "./modals/CreateVectorDBAccessModal";
 
 export function UsersManager() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [isUserAccessModalOpen, setIsUserAccessModalOpen] = useState(false);
-  const [selectedUserForAccess, setSelectedUserForAccess] =
-    useState<string>("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [userAccessConfigs, setUserAccessConfigs] = useState<UserAccessData[]>(
-    []
-  );
-  const [isLoading, setIsLoading] = useState(true);
+  // Local state for modals
+  const [activeTab, setActiveTab] = useState("mssql");
+  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
+  const [isVectorDBModalOpen, setIsVectorDBModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<string>("");
+  const [editingUser, setEditingUser] = useState<string>("");
 
-  const { getUserAccessConfigs } = useUserAccess();
+  const {
+    searchTerm,
+    setSearchTerm,
+    userAccessConfigs,
+    userConfigs,
+    userConfigLoading,
+    loadUserAccessConfigs,
+    loadUserConfigs,
+    extractNameFromEmail,
+    availableDatabases,
+  } = useUsersManager();
 
+  // Load data on component mount
   useEffect(() => {
     loadUserAccessConfigs();
-  }, []);
+    loadUserConfigs();
+  }, [loadUserAccessConfigs, loadUserConfigs]);
 
-  const loadUserAccessConfigs = async () => {
-    setIsLoading(true);
-    try {
-      const configs = await getUserAccessConfigs();
-      if (configs) {
-        setUserAccessConfigs(configs);
-      }
-    } catch (error) {
-      console.error("Error loading user access configs:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateAccess = () => {
-    setSelectedUserForAccess("");
-    setIsUserAccessModalOpen(true);
-  };
-
-  const handleEditAccess = (userEmail: string) => {
-    setSelectedUserForAccess(userEmail);
-    setIsUserAccessModalOpen(true);
-  };
-
-  const handleAccessSuccess = () => {
-    loadUserAccessConfigs();
-  };
-
-  const extractNameFromEmail = (email: string): string => {
-    const localPart = email.split("@")[0];
-    return localPart
-      .split(/[._-]/)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join(" ");
-  };
-
-  const getAccessSummary = (config: UserAccessData): string => {
-    const parentDbCount = config.database_access?.parent_databases?.length || 0;
-    const subDbCount =
-      config.database_access?.sub_databases?.reduce(
-        (total, subDb) => total + (subDb.databases?.length || 0),
-        0
-      ) || 0;
-    const totalDbs = parentDbCount + subDbCount;
-    return `${totalDbs} database${totalDbs !== 1 ? "s" : ""}, ${
-      config.sub_company_ids?.length || 0
-    } sub-companies`;
-  };
-
-  // Filter user access configs based on search term
-  const filteredConfigs = useMemo(() => {
-    return userAccessConfigs.filter(
-      (config) =>
+  // Filtered data based on search term
+  const filteredUserAccess = useMemo(() => {
+    if (!userAccessConfigs || !Array.isArray(userAccessConfigs)) return [];
+    if (!searchTerm.trim()) return userAccessConfigs;
+    
+    return userAccessConfigs.filter(config =>
+      config && config.user_id && (
         config.user_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        extractNameFromEmail(config.user_id)
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        (config.parent_company_name &&
-          config.parent_company_name
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()))
+        extractNameFromEmail(config.user_id).toLowerCase().includes(searchTerm.toLowerCase())
+      )
     );
-  }, [userAccessConfigs, searchTerm]);
+  }, [userAccessConfigs, searchTerm, extractNameFromEmail]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredConfigs.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const paginatedConfigs = filteredConfigs.slice(
-    startIndex,
-    startIndex + rowsPerPage
-  );
+  // Filter users by access type
+  const mssqlUsers = useMemo(() => {
+    return filteredUserAccess.filter((config) =>
+      config.database_access?.parent_databases?.length > 0 ||
+      config.database_access?.sub_databases?.some((sub: any) => sub.databases?.length > 0)
+    );
+  }, [filteredUserAccess]);
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedUsers(paginatedConfigs.map((config) => config.user_id));
+  const vectorDBUsers = useMemo(() => {
+    return userConfigs.filter((config) => 
+      config.db_id && config.table_names && config.table_names.length > 0
+    );
+  }, [userConfigs]);
+
+  // Handle modal operations
+  const handleCreateMSSQLAccess = () => {
+    setSelectedUser("");
+    setEditingUser("");
+    setIsDatabaseModalOpen(true);
+  };
+
+  const handleCreateVectorDBAccess = () => {
+    setSelectedUser("");
+    setEditingUser("");
+    setIsVectorDBModalOpen(true);
+  };
+
+  const handleEditUser = (userId: string, type: 'mssql' | 'vector') => {
+    setSelectedUser(userId);
+    setEditingUser(userId);
+    if (type === 'mssql') {
+      setIsDatabaseModalOpen(true);
     } else {
-      setSelectedUsers([]);
+      setIsVectorDBModalOpen(true);
     }
   };
 
-  const handleSelectUser = (userId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedUsers((prev) => [...prev, userId]);
+  const handleModalSuccess = () => {
+    loadUserAccessConfigs();
+    loadUserConfigs();
+    setIsDatabaseModalOpen(false);
+    setIsVectorDBModalOpen(false);
+    setSelectedUser("");
+    setEditingUser("");
+  };
+
+  const handleModalClose = () => {
+    setIsDatabaseModalOpen(false);
+    setIsVectorDBModalOpen(false);
+    setSelectedUser("");
+    setEditingUser("");
+  };
+
+  // Helper functions
+  const getDatabaseName = (dbId: number) => {
+    const database = availableDatabases?.find(db => db.db_id === dbId);
+    return database ? database.db_name : `DB ${dbId}`;
+  };
+
+  const formatTableNames = (tableNames: string[]) => {
+    if (!tableNames || tableNames.length === 0) return 'No tables';
+    if (tableNames.length <= 3) return tableNames.join(', ');
+    return `${tableNames.slice(0, 3).join(', ')} +${tableNames.length - 3} more`;
+  };
+
+  const getAccessLevelBadge = (config: any) => {
+    const hasMSSQL = config.database_access?.parent_databases?.length > 0 || 
+                     config.database_access?.sub_databases?.some((sub: any) => sub.databases?.length > 0);
+    const hasVectorDB = config.access_level >= 2;
+    
+    if (hasMSSQL && hasVectorDB) {
+      return <Badge className="bg-green-600 hover:bg-green-700">Full Access</Badge>;
+    } else if (hasMSSQL) {
+      return <Badge className="bg-blue-600 hover:bg-blue-700">MSSQL Only</Badge>;
+    } else if (hasVectorDB) {
+      return <Badge className="bg-purple-600 hover:bg-purple-700">Vector DB Only</Badge>;
     } else {
-      setSelectedUsers((prev) => prev.filter((id) => id !== userId));
+      return <Badge variant="secondary">No Access</Badge>;
     }
   };
 
-  const isAllSelected =
-    paginatedConfigs.length > 0 &&
-    selectedUsers.length === paginatedConfigs.length;
-  const isIndeterminate =
-    selectedUsers.length > 0 && selectedUsers.length < paginatedConfigs.length;
+  const getDatabaseCount = (config: any) => {
+    const parentCount = config.database_access?.parent_databases?.length || 0;
+    const subCount = config.database_access?.sub_databases?.reduce((total: number, sub: any) => 
+      total + (sub.databases?.length || 0), 0) || 0;
+    return parentCount + subCount;
+  };
+
+  if (userConfigLoading || !activeTab) {
+    return (
+      <div className="w-full min-h-screen pt-24">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center py-12">
+            <Loader2 className="w-8 h-8 text-blue-400 mx-auto mb-4 animate-spin" />
+            <h2 className="text-xl font-semibold text-white mb-2">Loading Users</h2>
+            <p className="text-gray-400">Please wait while we load user access configurations...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen pt-24">
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-2">
-              User Access Management
-            </h1>
-            <p className="text-gray-400">
-              Manage database access permissions for users
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64 bg-slate-800 border-slate-600 text-white placeholder-gray-400"
-              />
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                <Users className="h-8 w-8 text-blue-400" />
+                User Access Management
+              </h1>
+              <p className="text-gray-400 mt-2">
+                Manage user access to MSSQL databases and vector databases
+              </p>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex gap-3">
               <Button
-                onClick={handleCreateAccess}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-2"
+                onClick={handleCreateMSSQLAccess}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                <Plus className="w-4 h-4" />
-                Create Access
+                <Plus className="w-4 h-4 mr-2" />
+                Add MSSQL Access
+              </Button>
+              <Button
+                onClick={handleCreateVectorDBAccess}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                <Brain className="w-4 h-4 mr-2" />
+                Add Vector DB Access
               </Button>
             </div>
           </div>
+
+          {/* Search */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search users by email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-slate-800/50 border-slate-600 text-white"
+            />
+          </div>
         </div>
 
-        {/* Table Container */}
-        <div className="bg-slate-800/50 rounded-lg border border-emerald-500/30 overflow-hidden">
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-700/50 border-b border-slate-600">
-                <tr>
-                  <th className="text-left p-4 text-gray-300 font-medium">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={isAllSelected}
-                        ref={(el) => {
-                          if (el) el.indeterminate = isIndeterminate;
-                        }}
-                        onChange={(e) => handleSelectAll(e.target.checked)}
-                        className="rounded border-gray-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500"
-                      />
-                      <span>User</span>
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </th>
-                  <th className="text-left p-4 text-gray-300 font-medium">
-                    <div className="flex items-center gap-2">
-                      Parent Company
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </th>
-                  <th className="text-left p-4 text-gray-300 font-medium">
-                    <div className="flex items-center gap-2">
-                      Access Summary
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </th>
-                  <th className="text-left p-4 text-gray-300 font-medium">
-                    <div className="flex items-center gap-2">
-                      Created
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </th>
-                  <th className="text-left p-4 text-gray-300 font-medium">
-                    <div className="flex items-center gap-2">
-                      Updated
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </th>
-                  <th className="text-left p-4 text-gray-300 font-medium">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-gray-400">
-                      Loading user access configurations...
-                    </td>
-                  </tr>
-                ) : paginatedConfigs.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-gray-400">
-                      {searchTerm
-                        ? "No user access configurations found matching your search."
-                        : "No user access configurations found. Create one to get started."}
-                    </td>
-                  </tr>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-400">Total Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">{filteredUserAccess.length}</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-400">MSSQL Access</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-400">{mssqlUsers.length}</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-400">Vector DB Access</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-400">{vectorDBUsers.length}</div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-slate-800/50 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-400">Full Access</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-400">
+                {filteredUserAccess.filter(config => 
+                  (config.database_access?.parent_databases?.length > 0 || 
+                   config.database_access?.sub_databases?.some((sub: any) => sub.databases?.length > 0)) &&
+                  config.access_level >= 2
+                ).length}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Content Tabs */}
+        <Tabs value={activeTab || "mssql"} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-slate-800/50">
+            <TabsTrigger
+              value="mssql"
+              className="flex items-center gap-2 data-[state=active]:bg-slate-700"
+            >
+              <Database className="h-4 w-4" />
+              MSSQL Database Access
+            </TabsTrigger>
+            <TabsTrigger
+              value="vector"
+              className="flex items-center gap-2 data-[state=active]:bg-slate-700"
+            >
+              <Brain className="h-4 w-4" />
+              Vector Database Access
+            </TabsTrigger>
+          </TabsList>
+
+          {/* MSSQL Database Access Tab */}
+          <TabsContent value="mssql" className="mt-6">
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Database className="h-5 w-5 text-blue-400" />
+                  MSSQL Database Access Users
+                </CardTitle>
+                <p className="text-gray-400 text-sm">
+                  Users with access to MSSQL databases for data operations
+                </p>
+              </CardHeader>
+              <CardContent>
+                {mssqlUsers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-white mb-2">No MSSQL Access Users</h3>
+                    <p className="text-gray-400 mb-4">
+                      No users have been granted access to MSSQL databases yet.
+                    </p>
+                    <Button onClick={handleCreateMSSQLAccess} className="bg-blue-600 hover:bg-blue-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Grant First Access
+                    </Button>
+                  </div>
                 ) : (
-                  paginatedConfigs.map((config) => (
-                    <tr
-                      key={config.user_id}
-                      className="border-b border-slate-700 hover:bg-slate-700/30"
-                    >
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.includes(config.user_id)}
-                            onChange={(e) =>
-                              handleSelectUser(config.user_id, e.target.checked)
-                            }
-                            className="rounded border-gray-600 bg-slate-700 text-emerald-500 focus:ring-emerald-500"
-                          />
-                          <div className="flex flex-col">
-                            <span className="text-white font-medium">
-                              {extractNameFromEmail(config.user_id)}
-                            </span>
-                            <span className="text-gray-400 text-sm">
-                              {config.user_id}
-                            </span>
+                  <div className="space-y-4">
+                    {mssqlUsers.map((config) => (
+                      <div
+                        key={config.user_id}
+                        className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg border border-slate-600"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                            <UserCheck className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-3 mb-1">
+                              <h4 className="font-medium text-white">
+                                {extractNameFromEmail(config.user_id)}
+                              </h4>
+                              {getAccessLevelBadge(config)}
+                            </div>
+                            <p className="text-sm text-gray-400">{config.user_id}</p>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                              <span>Databases: {getDatabaseCount(config)}</span>
+                              <span>Sub-companies: {config.sub_company_ids?.length || 0}</span>
+                            </div>
                           </div>
                         </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-col">
-                          <span className="text-gray-300">
-                            {config.parent_company_name ||
-                              `Company ${config.parent_company_id}`}
-                          </span>
-                          <span className="text-gray-500 text-sm">
-                            ID: {config.parent_company_id}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex flex-col gap-1">
-                          <span className="text-gray-300 text-sm">
-                            {getAccessSummary(config)}
-                          </span>
-                          <div className="flex gap-1">
-                            <Badge
-                              variant="secondary"
-                              className="bg-blue-600/20 text-blue-400 text-xs"
-                            >
-                              {config.database_access?.parent_databases
-                                ?.length || 0}{" "}
-                              parent DBs
-                            </Badge>
-                            <Badge
-                              variant="secondary"
-                              className="bg-purple-600/20 text-purple-400 text-xs"
-                            >
-                              {config.database_access?.sub_databases?.length ||
-                                0}{" "}
-                              sub DBs
-                            </Badge>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-gray-400 text-sm">
-                          {new Date(config.created_at).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-gray-400 text-sm">
-                          {new Date(config.updated_at).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td className="p-4">
                         <div className="flex items-center gap-2">
                           <Button
-                            size="sm"
+                            onClick={() => handleEditUser(config.user_id, 'mssql')}
                             variant="outline"
-                            onClick={() => handleEditAccess(config.user_id)}
-                            className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+                            size="sm"
+                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
                           >
-                            <Shield className="w-4 h-4 mr-1" />
+                            <Edit className="w-4 h-4 mr-2" />
                             Edit
                           </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Vector Database Access Tab */}
+          <TabsContent value="vector" className="mt-6">
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Brain className="h-5 w-5 text-purple-400" />
+                  Vector Database Access Users
+                </CardTitle>
+                <p className="text-gray-400 text-sm">
+                  Users with access to vector databases for AI and ML operations
+                </p>
+                <div className="flex justify-end mt-2">
+                  <Button
+                    onClick={loadUserConfigs}
+                    variant="outline"
+                    size="sm"
+                    className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                    disabled={userConfigLoading}
+                  >
+                    {userConfigLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {userConfigLoading ? (
+                  <div className="text-center py-12">
+                    <Loader2 className="h-12 w-12 text-purple-400 mx-auto mb-4 animate-spin" />
+                    <h3 className="text-lg font-medium text-white mb-2">Loading Vector DB Access Users</h3>
+                    <p className="text-gray-400">
+                      Fetching user configurations from the server...
+                    </p>
+                  </div>
+                ) : vectorDBUsers.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-white mb-2">No Vector DB Access Users</h3>
+                    <p className="text-gray-400 mb-4">
+                      No users have been granted access to vector databases yet.
+                    </p>
+                    <Button onClick={handleCreateVectorDBAccess} className="bg-purple-600 hover:bg-purple-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Grant First Access
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {vectorDBUsers.map((config) => (
+                      <div
+                        key={config.user_id}
+                        className="flex items-center justify-between p-4 bg-slate-700/30 rounded-lg border border-slate-600"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center">
+                            <Brain className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-3 mb-1">
+                              <h4 className="font-medium text-white">
+                                {extractNameFromEmail(config.user_id)}
+                              </h4>
+                              {getAccessLevelBadge(config)}
+                            </div>
+                            <p className="text-sm text-gray-400">{config.user_id}</p>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                              <span>Access Level: {config.access_level}</span>
+                              <span>Database: {getDatabaseName(config.db_id)}</span>
+                              <span>Tables: {formatTableNames(config.table_names)}</span>
+                            </div>
+                            {config.table_names && config.table_names.length > 3 && (
+                              <div className="mt-2 text-xs text-gray-400">
+                                <details className="cursor-pointer">
+                                  <summary className="hover:text-gray-300">Show all tables</summary>
+                                  <div className="mt-2 pl-4">
+                                    {config.table_names.map((table, index) => (
+                                      <div key={index} className="text-gray-400">
+                                        • {table}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </details>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <Button
-                            size="sm"
+                            onClick={() => handleEditUser(config.user_id, 'vector')}
                             variant="outline"
-                            className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                            size="sm"
+                            className="border-slate-600 text-slate-300 hover:bg-slate-700"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
                           </Button>
                         </div>
-                      </td>
-                    </tr>
-                  ))
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between p-4 bg-slate-700/30 border-t border-slate-600">
-            <div className="text-sm text-gray-400">
-              {selectedUsers.length} of {filteredConfigs.length} Row(s) Selected
-            </div>
+        {/* Modals */}
+        <CreateDatabaseAccessModal
+          isOpen={isDatabaseModalOpen}
+          onClose={handleModalClose}
+          onSuccess={handleModalSuccess}
+          selectedUser={selectedUser}
+          editingUser={editingUser}
+        />
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">Rows per page:</span>
-                <Select
-                  value={rowsPerPage.toString()}
-                  onValueChange={(value) => setRowsPerPage(Number(value))}
-                >
-                  <SelectTrigger className="w-16 bg-slate-700 border-slate-600 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-700 border-slate-600">
-                    <SelectItem value="5" className="text-white">
-                      5
-                    </SelectItem>
-                    <SelectItem value="10" className="text-white">
-                      10
-                    </SelectItem>
-                    <SelectItem value="20" className="text-white">
-                      20
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="text-sm text-gray-400">
-                Page {currentPage} of {totalPages}
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  className="text-gray-400 hover:text-white hover:bg-slate-700"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <ChevronLeft className="w-4 h-4 -ml-2" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={currentPage === 1}
-                  className="text-gray-400 hover:text-white hover:bg-slate-700"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  className="text-gray-400 hover:text-white hover:bg-slate-700"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  className="text-gray-400 hover:text-white hover:bg-slate-700"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                  <ChevronRight className="w-4 h-4 -ml-2" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* User Access Modal */}
-        <UserAccessModal
-          isOpen={isUserAccessModalOpen}
-          onClose={() => setIsUserAccessModalOpen(false)}
-          userId={selectedUserForAccess}
-          onSuccess={handleAccessSuccess}
+        <CreateVectorDBAccessModal
+          isOpen={isVectorDBModalOpen}
+          onClose={handleModalClose}
+          onSuccess={handleModalSuccess}
+          selectedUser={selectedUser}
+          editingUser={editingUser}
         />
       </div>
     </div>

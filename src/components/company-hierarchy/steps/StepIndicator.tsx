@@ -1,84 +1,100 @@
 "use client";
 
-import { Building2, Database, Loader2, User, CheckCircle } from "lucide-react";
-import { WorkflowStep } from "../CompanyCreationModal";
+import { Building2, Database, Brain, CheckCircle } from "lucide-react";
+import { WorkflowStep } from "../types";
 
 interface StepIndicatorProps {
   currentStep: WorkflowStep;
 }
 
-export function StepIndicator({ currentStep }: StepIndicatorProps) {
-  const steps = [
-    { key: "company-info", label: "Company Info", shortLabel: "Info", icon: Building2 },
-    { key: "database-config", label: "Database", shortLabel: "Database", icon: Database },
-    { key: "database-creation", label: "Processing", shortLabel: "Processing", icon: Loader2 },
-    { key: "user-config", label: "User Config", shortLabel: "Users", icon: User },
-    { key: "final-creation", label: "Complete", shortLabel: "Complete", icon: CheckCircle },
-  ];
+const steps = [
+  {
+    id: "company-info" as WorkflowStep,
+    title: "Company Info",
+    icon: Building2,
+    description: "Basic company details",
+  },
+  {
+    id: "database-config" as WorkflowStep,
+    title: "Database",
+    icon: Database,
+    description: "Database configuration",
+  },
+  {
+    id: "vector-config" as WorkflowStep,
+    title: "Vector Config",
+    icon: Brain,
+    description: "AI/Vector database setup",
+  },
+  {
+    id: "final-creation" as WorkflowStep,
+    title: "Create",
+    icon: CheckCircle,
+    description: "Final review & creation",
+  },
+];
 
-  const currentStepIndex = steps.findIndex((s) => s.key === currentStep);
+export function StepIndicator({ currentStep }: StepIndicatorProps) {
+  const getCurrentStepIndex = () => {
+    return steps.findIndex((step) => step.id === currentStep);
+  };
+
+  const currentIndex = getCurrentStepIndex();
 
   return (
-    <div className="w-full overflow-hidden">
-      {/* Compact View for all screen sizes */}
-      <div className="flex items-center justify-center">
+    <div className="w-full">
+      <div className="flex items-center justify-between w-full gap-2">
         {steps.map((step, index) => {
-          const isActive = currentStep === step.key;
-          const isCompleted = currentStepIndex > index;
           const Icon = step.icon;
+          const isCompleted = index < currentIndex;
+          const isCurrent = index === currentIndex;
+          const isUpcoming = index > currentIndex;
 
           return (
-            <div key={step.key} className="flex items-center">
-              <div
-                className={`flex items-center gap-2 px-2 py-2 rounded-lg transition-all duration-200 ${
-                  isActive
-                    ? "bg-green-500/20 text-green-400 border border-green-400/30"
-                    : isCompleted
-                    ? "bg-green-500/10 text-green-300"
-                    : "bg-gray-800/50 text-gray-500"
-                }`}
-              >
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  isActive
-                    ? "bg-green-500/30"
-                    : isCompleted
-                    ? "bg-green-500/20"
-                    : "bg-gray-700/50"
-                }`}>
-                  <Icon
-                    className={`w-3 h-3 ${
-                      isActive && step.key === "database-creation" ? "animate-spin" : ""
-                    }`}
-                  />
+            <div key={step.id} className="flex items-center flex-1">
+              <div className="flex flex-col items-center w-full">
+                <div
+                  className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                    isCompleted
+                      ? "bg-green-500 border-green-500 text-white"
+                      : isCurrent
+                      ? "bg-green-500/20 border-green-500 text-green-400"
+                      : "bg-gray-800 border-gray-600 text-gray-400"
+                  }`}
+                >
+                  {isCompleted ? (
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                  ) : (
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  )}
                 </div>
-                <span className="text-xs font-medium hidden sm:inline">{step.shortLabel}</span>
+                <div className="mt-2 text-center w-full">
+                  <div
+                    className={`text-xs font-medium transition-colors duration-300 ${
+                      isCompleted
+                        ? "text-green-400"
+                        : isCurrent
+                        ? "text-green-400"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {step.title}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 px-1">
+                    {step.description}
+                  </div>
+                </div>
               </div>
               {index < steps.length - 1 && (
-                <div className="flex items-center mx-1">
-                  <div
-                    className={`w-6 h-0.5 transition-colors duration-200 ${
-                      isCompleted ? "bg-green-400" : "bg-gray-600"
-                    }`}
-                  />
-                </div>
+                <div
+                  className={`flex-1 h-0.5 mx-2 transition-all duration-300 ${
+                    isCompleted ? "bg-green-500" : "bg-gray-600"
+                  }`}
+                />
               )}
             </div>
           );
         })}
-      </div>
-
-      
-      {/* Progress info for mobile */}
-      <div className="sm:hidden mt-3 text-center">
-        <div className="text-xs text-gray-400 mb-2">
-          Step {currentStepIndex + 1} of {steps.length}: {steps[currentStepIndex]?.label}
-        </div>
-        <div className="w-full bg-gray-700 rounded-full h-1">
-          <div
-            className="bg-green-400 h-1 rounded-full transition-all duration-300"
-            style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
-          />
-        </div>
       </div>
     </div>
   );

@@ -6,7 +6,6 @@ import {
   ChevronRight,
   ChevronDown,
   Plus,
-  Upload,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,11 +20,6 @@ interface CompanyTreeSidebarProps {
   onSelectParentForFlow: (parentId: string | null) => void;
   onSelectCompany: (companyId: string) => void;
   onAddSubCompany?: (parentId: string) => void;
-  onUpload?: (
-    companyId: string,
-    companyName: string,
-    companyType: "parent" | "sub"
-  ) => void;
 }
 
 export function CompanyTreeSidebar({
@@ -35,7 +29,6 @@ export function CompanyTreeSidebar({
   onSelectParentForFlow,
   onSelectCompany,
   onAddSubCompany,
-  onUpload,
 }: CompanyTreeSidebarProps) {
   if (companies.length === 0) {
     return null;
@@ -79,7 +72,6 @@ export function CompanyTreeSidebar({
             onSelectForFlow={onSelectParentForFlow}
             onSelectCompany={onSelectCompany}
             onAddSubCompany={onAddSubCompany}
-            onUpload={onUpload}
           />
         ))}
       </CardContent>
@@ -94,11 +86,6 @@ interface CompanyTreeItemProps {
   onSelectForFlow: (parentId: string | null) => void;
   onSelectCompany: (companyId: string) => void;
   onAddSubCompany?: (parentId: string) => void;
-  onUpload?: (
-    companyId: string,
-    companyName: string,
-    companyType: "parent" | "sub"
-  ) => void;
 }
 
 function CompanyTreeItem({
@@ -108,7 +95,6 @@ function CompanyTreeItem({
   onSelectForFlow,
   onSelectCompany,
   onAddSubCompany,
-  onUpload,
 }: CompanyTreeItemProps) {
   const [isExpanded, setIsExpanded] = React.useState(true);
   const hasChildren = company.children && company.children.length > 0;
@@ -168,21 +154,6 @@ function CompanyTreeItem({
 
         {/* Action Buttons */}
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {onUpload && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onUpload(company.id, company.name, companyType);
-              }}
-              className="p-1 h-auto w-auto hover:bg-emerald-400/20 cursor-pointer transition-colors"
-              title="Upload Files"
-            >
-              <Upload className="w-3 h-3 text-emerald-400" />
-            </Button>
-          )}
-
           {onAddSubCompany && (
             <Button
               variant="ghost"
@@ -243,22 +214,6 @@ function CompanyTreeItem({
                       {childType}
                     </Badge>
                   </div>
-
-                  {/* Upload Button for Sub-Company */}
-                  {onUpload && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onUpload(child.id, child.name, childType);
-                      }}
-                      className="p-1 h-auto w-auto hover:bg-emerald-400/20 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer"
-                      title="Upload Files"
-                    >
-                      <Upload className="w-3 h-3 text-emerald-400/70" />
-                    </Button>
-                  )}
                 </div>
               </div>
             );

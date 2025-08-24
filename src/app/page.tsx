@@ -3,35 +3,24 @@ import { Dashboard } from "@/components/dashboard";
 import { OpeningAnimation } from "@/components/ui/opening-animation";
 import { EnhancedBackground } from "@/components/ui/enhanced-background";
 import { useEffect, useState } from "react";
-import { useDatabaseOperations, useUserSettings } from "@/lib/hooks";
+import { useDatabaseOperations } from "@/lib/hooks";
+import { useAuthContext } from "@/components/providers/AuthContextProvider";
 
 export default function DashboardPage() {
   const [showOpeningAnimation, setShowOpeningAnimation] = useState(false);
 
   const databaseOps = useDatabaseOperations();
-  const userSettings = useUserSettings();
+  const { user, isAuthenticated } = useAuthContext();
 
   // Initialize component
   useEffect(() => {
-    // Fetch query history with default user ID on first load
-    databaseOps.fetchQueryHistory(userSettings.userId);
-
     const hasSeen =
       typeof window !== "undefined" &&
       localStorage.getItem("welcome-animation-shown");
     if (!hasSeen) {
       setShowOpeningAnimation(true);
     }
-  }, []);
-
-  // Fetch history when userId changes
-  useEffect(() => {
-    if (userSettings.userId) {
-      databaseOps.fetchQueryHistory(userSettings.userId);
-    }
-  }, [userSettings.userId]);
-
-  // toggleTheme is already available from the useTheme hook
+  }, [isAuthenticated, databaseOps]);
 
   const handleOpeningComplete = () => {
     setShowOpeningAnimation(false);
@@ -48,9 +37,8 @@ export default function DashboardPage() {
         </OpeningAnimation>
       ) : (
         <main className="flex-1 animate-[fadeIn_0.5s_ease-out_forwards]">
-          <EnhancedBackground intensity="medium" className="min-h-screen">
-            <Dashboard />
-          </EnhancedBackground>
+          <EnhancedBackground />
+          <Dashboard />
         </main>
       )}
     </>

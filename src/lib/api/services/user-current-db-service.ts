@@ -1,59 +1,61 @@
-import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../endpoints";
-import {
-  UserCurrentDBRequest,
-  UserCurrentDBResponse,
-} from "@/types/api";
+import { BaseService, ServiceResponse } from "./base";
+import { UserCurrentDBRequest, UserCurrentDBResponse } from "@/types/api";
 
 /**
- * Service for managing user current database configuration
+ * Service for managing user's current database configuration
+ * All methods use JWT authentication - user ID is extracted from token on backend
  */
-export class UserCurrentDBService {
+export class UserCurrentDBService extends BaseService {
+  protected readonly serviceName = 'UserCurrentDBService';
+
   /**
-   * Set the current database for a user
+   * Set the current database for the authenticated user
+   * User ID is extracted from JWT token on backend
    */
-  static async setUserCurrentDB(
-    userId: string,
-    request: UserCurrentDBRequest
-  ): Promise<UserCurrentDBResponse> {
-    try {
-      const response = await apiClient.put(
-        API_ENDPOINTS.SET_USER_CURRENT_DB(userId),
-        request
-      );
-      return response;
-    } catch (error) {
-      console.error(`Error setting current database for user ${userId}:`, error);
-      throw error;
+  async setUserCurrentDB(
+    request: UserCurrentDBRequest,
+    userId?: string
+  ): Promise<ServiceResponse<UserCurrentDBResponse>> {
+    // Validate request
+    const validation = this.validateRequest(request);
+    if (!validation.isValid) {
+      throw this.createValidationError(`Invalid request: ${validation.errors.join(", ")}`);
     }
+
+    // If userId is provided, include it in the URL path as required by the API
+    const endpoint = userId 
+      ? `${API_ENDPOINTS.SET_USER_CURRENT_DB}/${userId}`
+      : API_ENDPOINTS.SET_USER_CURRENT_DB;
+
+    // Use PUT method as per the API specification
+    return this.put<UserCurrentDBResponse>(endpoint, request);
   }
 
   /**
-   * Get the current database configuration for a user
+   * Get the current database for the authenticated user
+   * User ID is extracted from JWT token on backend
    */
-  static async getUserCurrentDB(userId: string): Promise<UserCurrentDBResponse> {
-    try {
-      const response = await apiClient.get(
-        API_ENDPOINTS.GET_USER_CURRENT_DB(userId)
-      );
-      return response;
-    } catch (error) {
-      console.error(`Error fetching current database for user ${userId}:`, error);
-      throw error;
-    }
+  async getUserCurrentDB(userId?: string): Promise<ServiceResponse<UserCurrentDBResponse>> {
+    // If userId is provided, include it in the URL path as required by the API
+    const endpoint = userId 
+      ? `${API_ENDPOINTS.GET_USER_CURRENT_DB}/${userId}`
+      : API_ENDPOINTS.GET_USER_CURRENT_DB;
+
+    return this.get<UserCurrentDBResponse>(endpoint);
   }
 
   /**
    * Validate user current database request
    */
-  static validateRequest(request: UserCurrentDBRequest): {
+  validateRequest(request: UserCurrentDBRequest): {
     isValid: boolean;
     errors: string[];
   } {
     const errors: string[] = [];
 
     if (!request.db_id || request.db_id <= 0) {
-      errors.push("Database ID is required and must be a positive number");
+      errors.push("Database ID is required and must be positive");
     }
 
     return {
@@ -61,6 +63,76 @@ export class UserCurrentDBService {
       errors,
     };
   }
+
+  /**
+   * Check if user has a current database set
+   */
+  async hasCurrentDatabase(userId?: string): Promise<ServiceResponse<boolean>> {
+    try {
+      const response = await this.getUserCurrentDB(userId);
+      const hasDatabase = !!(response.data && response.data.db_id);
+      
+      return {
+        data: hasDatabase,
+        success: true,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        data: false,
+        success: true,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
+   * Get current database with additional metadata
+   */
+  async getCurrentDatabaseInfo(userId?: string): Promise<ServiceResponse<{
+    database: UserCurrentDBResponse;
+    isConfigured: boolean;
+    hasBusinessRules: boolean;
+    tableCount: number;
+  }>> {
+    try {
+      const dbResponse = await this.getUserCurrentDB(userId);
+      
+      if (!dbResponse.data) {
+        return {
+          data: {
+            database: {} as UserCurrentDBResponse,
+            isConfigured: false,
+            hasBusinessRules: false,
+            tableCount: 0,
+          },
+          success: true,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      const database = dbResponse.data;
+      const hasBusinessRules = !!(database.business_rule && database.business_rule.trim().length > 0);
+      const tableCount = database.table_info?.tables?.length || 0;
+
+      return {
+        data: {
+          database,
+          isConfigured: true,
+          hasBusinessRules,
+          tableCount,
+        },
+        success: true,
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
-export default UserCurrentDBService;
+// Export singleton instance
+export const userCurrentDBService = new UserCurrentDBService();
+
+// Export for backward compatibility
+export default userCurrentDBService;

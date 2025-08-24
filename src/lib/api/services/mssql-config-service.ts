@@ -1,387 +1,218 @@
 import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../endpoints";
-import {
-  MSSQLConfigResponse,
-  MSSQLConfigsListResponse,
-  GenerateTableInfoRequest,
-  GenerateTableInfoResponse,
-  GenerateMatchedTablesRequest,
-  GenerateMatchedTablesResponse,
-  MSSQLConfigFormRequest,
-  MSSQLConfigTaskResponse,
-  MSSQLConfigTaskStatusResponse,
-} from "@/types/api";
+
+export interface MSSQLConfig {
+  id: number;
+  db_name: string;
+  db_url: string;
+  business_rule?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface MSSQLConfigsResponse {
+  configs: MSSQLConfig[];
+  count: number;
+}
+
+export interface TaskStatusResponse {
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  progress: number;
+  error?: string;
+  result?: any;
+}
+
+export interface MSSQLConfigFormRequest {
+  db_url: string;
+  db_name: string;
+  business_rule?: string;
+  file?: File;
+}
+
+export interface MSSQLConfigTaskResponse {
+  task_id: string;
+  message: string;
+}
 
 /**
- * Service for managing MSSQL database configurations
+ * Service for managing MSSQL configurations
  */
 export class MSSQLConfigService {
   /**
-   * Allowed database file extensions
+   * Get all MSSQL configurations (databases)
    */
-  static readonly ALLOWED_FILE_TYPES = [
-    ".bak",
-    ".sql",
-    ".mdf",
-    ".ldf",
-    ".trn",
-    ".dmp",
-    ".dump",
-  ];
+  static async getMSSQLConfigs(): Promise<MSSQLConfig[]> {
+    try {
+      const response = await apiClient.get<MSSQLConfigsResponse>(
+        API_ENDPOINTS.GET_MSSQL_CONFIGS
+      );
+
+      // With API client interceptor, response now contains just the data portion
+      if (response && response.configs && Array.isArray(response.configs)) {
+        return response.configs;
+      } else if (Array.isArray(response)) {
+        // If response is directly an array
+        return response;
+      } else {
+        return [];
+      }
+    } catch (error: any) {
+      console.error("Error fetching MSSQL configs:", error);
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch MSSQL configurations"
+      );
+    }
+  }
 
   /**
-   * Set MSSQL database configuration (new task-based API)
+   * Get a specific MSSQL configuration by ID
    */
-  static async setMSSQLConfig(
-    config: MSSQLConfigFormRequest & { user_id: string }
-  ): Promise<MSSQLConfigTaskResponse> {
+  static async getMSSQLConfig(id: number): Promise<MSSQLConfig> {
     try {
-      // Validate file type if file is provided
-      if (config.file) {
-        const isValidFile = this.validateDatabaseFile(config.file);
-        if (!isValidFile.isValid) {
-          throw new Error(isValidFile.error);
-        }
-      }
+      const response = await apiClient.get<MSSQLConfig>(
+        API_ENDPOINTS.GET_MSSQL_CONFIG(id)
+      );
 
+      return response;
+    } catch (error: any) {
+      console.error(`Error fetching MSSQL config ${id}:`, error);
+      throw new Error(
+        error.response?.data?.message || "Failed to fetch MSSQL configuration"
+      );
+    }
+  }
+
+  /**
+   * Set MSSQL configuration (create new database)
+   */
+  static async setMSSQLConfig(config: MSSQLConfigFormRequest & { user_id: string }): Promise<MSSQLConfigTaskResponse> {
+    try {
+      console.log("Setting MSSQL config:", { ...config, file: config.file ? 'File present' : 'No file' });
+      
       const formData = new FormData();
       formData.append("db_url", config.db_url);
       formData.append("db_name", config.db_name);
       formData.append("user_id", config.user_id);
-
+      
       if (config.business_rule) {
         formData.append("business_rule", config.business_rule);
-      } else {
-        formData.append("business_rule", "");
       }
-
+      
       if (config.file) {
         formData.append("file", config.file);
-      } else {
-        formData.append("file", "");
       }
 
-      const response = await apiClient.post(
+      console.log("FormData contents:");
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value);
+      }
+
+      console.log("Making request to:", API_ENDPOINTS.SET_MSSQL_CONFIG);
+      
+      const response = await apiClient.post<MSSQLConfigTaskResponse>(
         API_ENDPOINTS.SET_MSSQL_CONFIG,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        formData
       );
+
+      console.log("Response received:", response);
       return response;
-    } catch (error) {
-      console.error("Error setting MSSQL configuration:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update MSSQL database configuration (new task-based API)
-   */
-  static async updateMSSQLConfig(
-    id: number,
-    config: MSSQLConfigFormRequest & { user_id: string }
-  ): Promise<MSSQLConfigTaskResponse> {
-    try {
-      // Validate file type if file is provided
-      if (config.file) {
-        const isValidFile = this.validateDatabaseFile(config.file);
-        if (!isValidFile.isValid) {
-          throw new Error(isValidFile.error);
-        }
-      }
-
-      const formData = new FormData();
-      formData.append("db_url", config.db_url);
-      formData.append("db_name", config.db_name);
-      formData.append("user_id", config.user_id);
-
-      if (config.business_rule) {
-        formData.append("business_rule", config.business_rule);
-      } else {
-        formData.append("business_rule", "");
-      }
-
-      if (config.file) {
-        formData.append("file", config.file);
-      } else {
-        formData.append("file", "");
-      }
-
-      const response = await apiClient.put(
-        API_ENDPOINTS.UPDATE_MSSQL_CONFIG(id),
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+    } catch (error: any) {
+      console.error("Error setting MSSQL config:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to set MSSQL configuration"
       );
-      return response;
-    } catch (error) {
-      console.error("Error updating MSSQL configuration:", error);
-      throw error;
     }
   }
 
   /**
-   * Get all MSSQL database configurations
+   * Get task status by task ID
    */
-  static async getMSSQLConfigs(): Promise<any> {
+  static async getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
     try {
-      console.log("Making API call to:", API_ENDPOINTS.GET_MSSQL_CONFIGS);
-      const response = await apiClient.get(API_ENDPOINTS.GET_MSSQL_CONFIGS);
-      console.log("API response received:", response);
-      // With API client interceptor, response already contains the data portion
-      return response;
-    } catch (error) {
-      console.error("Error fetching MSSQL configurations:", error);
-      console.error("API endpoint:", API_ENDPOINTS.GET_MSSQL_CONFIGS);
-      throw error;
-    }
-  }
-
-  /**
-   * Get a specific MSSQL database configuration by ID
-   */
-  static async getMSSQLConfig(id: number): Promise<MSSQLConfigResponse> {
-    try {
-      const response = await apiClient.get(API_ENDPOINTS.GET_MSSQL_CONFIG(id));
-      // With API client interceptor, response already contains the data portion
-      return response;
-    } catch (error) {
-      console.error(`Error fetching MSSQL configuration ${id}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Helper method to build connection string
-   */
-  static buildConnectionString(params: {
-    server: string;
-    port?: number;
-    database: string;
-    username: string;
-    password: string;
-    driver?: string;
-    encrypt?: boolean;
-  }): string {
-    const {
-      server,
-      port = 1433,
-      database,
-      username,
-      password,
-      driver = "ODBC+Driver+18+for+SQL+Server",
-      encrypt = false,
-    } = params;
-
-    return `mssql+pyodbc://${username}:${password}@${server}:${port}/${database}?driver=${driver}&Encrypt=${
-      encrypt ? "yes" : "no"
-    }`;
-  }
-
-  /**
-   * Generate table info for a specific MSSQL database configuration
-   */
-  static async generateTableInfo(
-    id: number,
-    request: GenerateTableInfoRequest
-  ): Promise<GenerateTableInfoResponse> {
-    try {
-      const response = await apiClient.post(
-        API_ENDPOINTS.GENERATE_TABLE_INFO(id),
-        request
-      );
-      // With API client interceptor, response already contains the data portion
-      return response;
-    } catch (error) {
-      console.error(`Error generating table info for database ${id}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get task status by task ID (new API structure)
-   */
-  static async getTaskStatus(taskId: string): Promise<MSSQLConfigTaskStatusResponse> {
-    try {
-      const response = await apiClient.get(
+      console.log("Getting task status for task ID:", taskId);
+      console.log("Requesting from endpoint:", API_ENDPOINTS.GET_TASK_STATUS(taskId));
+      
+      const response = await apiClient.get<TaskStatusResponse>(
         API_ENDPOINTS.GET_TASK_STATUS(taskId)
       );
+      
+      console.log("Task status response received:", response);
       return response;
-    } catch (error) {
-      console.error(`Error fetching task status ${taskId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Poll task status until completion
-   */
-  static async pollTaskStatus(
-    taskId: string,
-    onProgress?: (progress: number, status: string) => void,
-    maxAttempts: number = 60,
-    intervalMs: number = 2000
-  ): Promise<MSSQLConfigTaskStatusResponse> {
-    let attempts = 0;
-    
-    while (attempts < maxAttempts) {
-      try {
-        const response = await this.getTaskStatus(taskId);
-        const taskData = response.data;
-        
-        if (onProgress) {
-          onProgress(taskData.progress, taskData.status);
-        }
-        
-        if (taskData.status === 'success' || taskData.status === 'failed') {
-          return response;
-        }
-        
-        // Wait before next poll
-        await new Promise(resolve => setTimeout(resolve, intervalMs));
-        attempts++;
-      } catch (error) {
-        console.error(`Error polling task status ${taskId}:`, error);
-        attempts++;
-        if (attempts >= maxAttempts) {
-          throw error;
-        }
-        await new Promise(resolve => setTimeout(resolve, intervalMs));
-      }
-    }
-    
-    throw new Error(`Task ${taskId} did not complete within ${maxAttempts} attempts`);
-  }
-
-  /**
-   * Set MSSQL config and wait for completion
-   */
-  static async setMSSQLConfigAndWait(
-    config: MSSQLConfigFormRequest & { user_id: string },
-    onProgress?: (progress: number, status: string) => void
-  ): Promise<MSSQLConfigTaskStatusResponse> {
-    const taskResponse = await this.setMSSQLConfig(config);
-    const taskId = taskResponse.data.task_id;
-    return await this.pollTaskStatus(taskId, onProgress);
-  }
-
-  /**
-   * Update MSSQL config and wait for completion
-   */
-  static async updateMSSQLConfigAndWait(
-    id: number,
-    config: MSSQLConfigFormRequest & { user_id: string },
-    onProgress?: (progress: number, status: string) => void
-  ): Promise<MSSQLConfigTaskStatusResponse> {
-    const taskResponse = await this.updateMSSQLConfig(id, config);
-    const taskId = taskResponse.data.task_id;
-    return await this.pollTaskStatus(taskId, onProgress);
-  }
-
-  /**
-   * Generate matched tables for a specific MSSQL database configuration
-   */
-  static async generateMatchedTables(
-    id: number,
-    request: GenerateMatchedTablesRequest
-  ): Promise<GenerateMatchedTablesResponse> {
-    try {
-      const response = await apiClient.post(
-        API_ENDPOINTS.GENERATE_MATCHED_TABLES(id),
-        request
+    } catch (error: any) {
+      console.error(`Error fetching task status for ${taskId}:`, error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to fetch task status"
       );
-      // With API client interceptor, response already contains the data portion
-      return response;
-    } catch (error) {
-      console.error(
-        `Error generating matched tables for database ${id}:`,
-        error
-      );
-      throw error;
     }
   }
 
   /**
-   * Validate database file type
+   * Validate form configuration
    */
-  static validateDatabaseFile(file: File): {
-    isValid: boolean;
-    error?: string;
-  } {
-    if (!file) {
-      return { isValid: false, error: "No file provided" };
-    }
-
-    const fileName = file.name.toLowerCase();
-    const hasValidExtension = this.ALLOWED_FILE_TYPES.some((ext) =>
-      fileName.endsWith(ext.toLowerCase())
-    );
-
-    if (!hasValidExtension) {
-      return {
-        isValid: false,
-        error: `Invalid file type. Allowed types: ${this.ALLOWED_FILE_TYPES.join(
-          ", "
-        )}`,
-      };
-    }
-
-    // Check file size (optional - you can adjust the limit as needed)
-    const maxSizeInMB = 500; // 500MB limit
-    const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
-
-    if (file.size > maxSizeInBytes) {
-      return {
-        isValid: false,
-        error: `File size exceeds ${maxSizeInMB}MB limit`,
-      };
-    }
-
-    return { isValid: true };
-  }
-
-
-
-  /**
-   * Validate MSSQL form configuration before creating
-   */
-  static validateFormConfig(config: MSSQLConfigFormRequest): {
+  static validateFormConfig(config: MSSQLConfigFormRequest & { user_id: string }): {
     isValid: boolean;
     errors: string[];
   } {
     const errors: string[] = [];
 
-    if (!config.db_url || config.db_url.trim() === "") {
+    if (!config.db_url?.trim()) {
       errors.push("Database URL is required");
     }
 
-    if (!config.db_name || config.db_name.trim() === "") {
+    if (!config.db_name?.trim()) {
       errors.push("Database name is required");
     }
 
-    // Validate connection string format
-    if (config.db_url && !config.db_url.startsWith("mssql+pyodbc://")) {
-      errors.push("Database URL must be a valid MSSQL connection string");
-    }
-
-    // Validate file if provided
-    if (config.file) {
-      const fileValidation = this.validateDatabaseFile(config.file);
-      if (!fileValidation.isValid && fileValidation.error) {
-        errors.push(fileValidation.error);
-      }
+    if (!config.user_id?.trim()) {
+      errors.push("User ID is required");
     }
 
     return {
       isValid: errors.length === 0,
-      errors,
+      errors
     };
+  }
+
+  /**
+   * Update an MSSQL configuration
+   */
+  static async updateMSSQLConfig(
+    id: number,
+    updates: Partial<MSSQLConfig>
+  ): Promise<MSSQLConfig> {
+    try {
+      const formData = new FormData();
+      
+      if (updates.db_name) formData.append("db_name", updates.db_name);
+      if (updates.db_url) formData.append("db_url", updates.db_url);
+      if (updates.business_rule !== undefined) formData.append("business_rule", updates.business_rule);
+
+      const response = await apiClient.put(
+        API_ENDPOINTS.UPDATE_MSSQL_CONFIG(id),
+        formData
+      );
+
+      return response;
+    } catch (error: any) {
+      console.error(`Error updating MSSQL config ${id}:`, error);
+      throw new Error(
+        error.response?.data?.message || "Failed to update MSSQL configuration"
+      );
+    }
   }
 }
 

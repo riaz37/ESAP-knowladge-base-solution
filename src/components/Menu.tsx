@@ -12,6 +12,14 @@ import {
   FileText,
   Bot,
   Database,
+  Search,
+  Bookmark,
+  Palette,
+  Home,
+  Shield,
+  Building2,
+  Plane,
+  Users,
 } from "lucide-react";
 
 import { useUIStore } from "@/store/uiStore";
@@ -21,54 +29,125 @@ export default function Menu() {
   const pathname = usePathname();
   const { setShowSidebar } = useUIStore();
 
-  // Menu items matching your image
+  // Menu items with proper icons
   const menuItems = [
     {
+      icon: Home,
       name: "Dashboard",
       path: "/",
-      icon: Square,
       isActive: pathname === "/",
     },
     {
-      name: "Report & Analysis",
-      path: "/ai-results",
-      icon: BarChart3,
-      isActive: pathname === "/ai-results",
+      icon: Search,
+      name: "Database Query",
+      path: "/database-query",
+      isActive: pathname === "/database-query",
     },
     {
-      name: "Company Structure",
-      path: "/company-structure",
-      icon: Upload,
-      isActive: pathname === "/company-structure",
-    },
-    {
-      name: "Users",
-      path: "/users",
-      icon: User,
-      isActive: pathname === "/users",
-    },
-    {
-      name: "Business Rules",
-      path: "/business-rules",
       icon: FileText,
-      isActive: pathname === "/business-rules",
+      name: "File Query",
+      path: "/file-query",
+      isActive: pathname === "/file-query",
     },
     {
+      icon: Database,
       name: "Tables",
       path: "/tables",
-      icon: Database,
       isActive: pathname === "/tables",
     },
     {
-      name: "History Log",
-      path: "/database-hierarchy",
-      icon: History,
-      isActive: pathname === "/database-hierarchy",
+      icon: Building2,
+      name: "Company Struture",
+      path: "/company-structure",
+      isActive: pathname === "/company-structure",
+    },
+    {
+      icon: Plane,
+      name: "User Configuration",
+      path: "/user-configuration",
+      isActive: pathname === "/user-configuration",
+    },
+    {
+      icon: Users,
+      name: "Users",
+      path: "/users",
+      isActive: pathname === "/users",
     },
   ];
 
   const handleMenuItemClick = () => {
     setShowSidebar(false);
+  };
+
+  const renderMenuItem = (item: any) => {
+    const isActive = item.isActive;
+    const hasChildren = item.children && item.children.length > 0;
+    const IconComponent = item.icon;
+
+    return (
+      <div key={item.name}>
+        <Link
+          href={item.path}
+          onClick={handleMenuItemClick}
+          className={cn(
+            "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group relative",
+            isActive
+              ? "bg-green-500/20 text-green-400 border border-green-500/30 shadow-lg"
+              : "text-gray-300 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10"
+          )}
+        >
+          <IconComponent
+            className={cn(
+              "h-5 w-5 transition-all duration-200",
+              isActive
+                ? "text-green-400"
+                : "text-gray-400 group-hover:text-white"
+            )}
+          />
+          <span className="flex-1">{item.name}</span>
+          {hasChildren && (
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full transition-all duration-200",
+                isActive ? "bg-green-400" : "bg-gray-500 group-hover:bg-white"
+              )}
+            />
+          )}
+        </Link>
+
+        {/* Render children if they exist and parent is active */}
+        {hasChildren && isActive && (
+          <div className="ml-6 mt-2 space-y-1">
+            {item.children.map((child: any) => {
+              const ChildIconComponent = child.icon;
+              return (
+                <Link
+                  key={child.name}
+                  href={child.path}
+                  onClick={handleMenuItemClick}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group relative",
+                    pathname === child.path
+                      ? "bg-green-500/10 text-green-300 border border-green-500/20"
+                      : "text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent hover:border-white/5"
+                  )}
+                >
+                  <ChildIconComponent
+                    className={cn(
+                      "h-4 w-4 transition-all duration-200",
+                      pathname === child.path
+                        ? "text-green-300"
+                        : "text-gray-500 group-hover:text-gray-300"
+                    )}
+                  />
+                  <span className="flex-1">{child.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -86,61 +165,7 @@ export default function Menu() {
       >
         {/* Menu Items */}
         <div className="p-4">
-          <div className="space-y-1">
-            {menuItems.map((item) => (
-              <Link
-                href={item.path}
-                key={item.name}
-                onClick={handleMenuItemClick}
-                className="block group"
-              >
-                <div
-                  className={cn(
-                    "flex items-center p-3 rounded-xl transition-all duration-300 cursor-pointer relative overflow-hidden",
-                    item.isActive
-                      ? "bg-gradient-to-r from-green-500/30 to-green-600/20 border border-green-400/40 shadow-lg shadow-green-500/20"
-                      : "bg-black/20 hover:bg-green-500/10 hover:border hover:border-green-500/30 border border-transparent"
-                  )}
-                >
-                  {/* Background glow for active item */}
-                  {item.isActive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-green-400/10 to-transparent opacity-50" />
-                  )}
-
-                  {/* Icon */}
-                  <div className="mr-3 relative z-10">
-                    <item.icon
-                      className={cn(
-                        "w-5 h-5 transition-colors",
-                        item.isActive
-                          ? "text-green-400"
-                          : "text-gray-300 group-hover:text-green-300"
-                      )}
-                    />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 relative z-10">
-                    <h3
-                      className={cn(
-                        "text-sm font-medium transition-colors",
-                        item.isActive
-                          ? "text-white"
-                          : "text-gray-200 group-hover:text-white"
-                      )}
-                    >
-                      {item.name}
-                    </h3>
-                  </div>
-
-                  {/* Active indicator dot */}
-                  {item.isActive && (
-                    <div className="w-2 h-2 bg-green-400 rounded-full relative z-10 shadow-lg shadow-green-400/50" />
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
+          <div className="space-y-1">{menuItems.map(renderMenuItem)}</div>
         </div>
       </div>
     </div>

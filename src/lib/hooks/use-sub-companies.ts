@@ -1,104 +1,267 @@
-import { useState } from "react";
-import { SubCompanyService } from "../api/services/sub-company-service";
+import { useState, useCallback } from "react";
+import { ServiceRegistry } from "../api";
 import {
   SubCompanyCreateRequest,
-  SubCompanyResponse,
   SubCompanyData,
 } from "@/types/api";
 
-interface UseSubCompaniesReturn {
-  createSubCompany: (
-    company: SubCompanyCreateRequest
-  ) => Promise<SubCompanyResponse | null>;
-  getSubCompanies: () => Promise<SubCompanyData[] | null>;
-  getSubCompany: (id: number) => Promise<SubCompanyData | null>;
-  isLoading: boolean;
-  error: string | null;
-  success: boolean;
-  clearError: () => void;
-  clearSuccess: () => void;
-}
-
-export function useSubCompanies(): UseSubCompaniesReturn {
-  const [isLoading, setIsLoading] = useState(false);
+/**
+ * Hook for Sub Company operations using standardized ServiceRegistry
+ */
+export function useSubCompanies() {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [subCompanies, setSubCompanies] = useState<SubCompanyData[]>([]);
 
-  const createSubCompany = async (
-    company: SubCompanyCreateRequest
-  ): Promise<SubCompanyResponse | null> => {
-    setIsLoading(true);
+  /**
+   * Get all sub companies
+   */
+  const getSubCompanies = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await ServiceRegistry.subCompanies.getSubCompanies();
+      
+      if (response.success) {
+        setSubCompanies(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to fetch sub companies');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch sub companies");
+      setSubCompanies([]);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Create a new sub company
+   */
+  const createSubCompany = useCallback(async (companyData: SubCompanyCreateRequest) => {
+    setLoading(true);
     setError(null);
     setSuccess(false);
 
     try {
-      // Validate company data before sending
-      const validation = SubCompanyService.validateSubCompany(company);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(", "));
+      const response = await ServiceRegistry.subCompanies.createSubCompany(companyData);
+      
+      if (response.success) {
+        setSuccess(true);
+        // Refresh the list
+        await getSubCompanies();
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to create sub company');
       }
-
-      const response = await SubCompanyService.createSubCompany(company);
-      setSuccess(true);
-      return response;
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to create sub company";
-      setError(errorMessage);
+    } catch (e: any) {
+      setError(e.message || "Failed to create sub company");
       return null;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, [getSubCompanies]);
 
-  const getSubCompanies = async (): Promise<SubCompanyData[] | null> => {
-    setIsLoading(true);
+  /**
+   * Update a sub company
+   */
+  const updateSubCompany = useCallback(async (
+    companyId: number,
+    companyData: Partial<SubCompanyCreateRequest>
+  ) => {
+    setLoading(true);
     setError(null);
+    setSuccess(false);
 
     try {
-      const response = await SubCompanyService.getSubCompanies();
-      // With the API client interceptor, response now contains just the data portion
-      // The response structure is: {companies: SubCompanyData[], count: number}
-      console.log("Hook: Sub companies response:", response);
-      return (response as any).companies || null;
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to fetch sub companies";
-      setError(errorMessage);
+      const response = await ServiceRegistry.subCompanies.updateSubCompany(companyId, companyData);
+      
+      if (response.success) {
+        setSuccess(true);
+        // Refresh the list
+        await getSubCompanies();
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to update sub company');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to update sub company");
       return null;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, [getSubCompanies]);
 
-  const getSubCompany = async (id: number): Promise<SubCompanyData | null> => {
-    setIsLoading(true);
+  /**
+   * Delete a sub company
+   */
+  const deleteSubCompany = useCallback(async (companyId: number) => {
+    setLoading(true);
     setError(null);
+    setSuccess(false);
 
     try {
-      const response = await SubCompanyService.getSubCompany(id);
-      // With the API client interceptor, response now contains just the data portion
-      return (response as any) || null;
-    } catch (err: any) {
-      const errorMessage = err?.message || `Failed to fetch sub company ${id}`;
-      setError(errorMessage);
-      return null;
+      const response = await ServiceRegistry.subCompanies.deleteSubCompany(companyId);
+      
+      if (response.success) {
+        setSuccess(true);
+        // Refresh the list
+        await getSubCompanies();
+        return true;
+      } else {
+        throw new Error(response.error || 'Failed to delete sub company');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to delete sub company");
+      return false;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, [getSubCompanies]);
 
-  const clearError = () => setError(null);
-  const clearSuccess = () => setSuccess(false);
+  /**
+   * Get sub company by ID
+   */
+  const getSubCompany = useCallback(async (companyId: number) => {
+    setError(null);
+    try {
+      const response = await ServiceRegistry.subCompanies.getSubCompany(companyId);
+      
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to get sub company');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get sub company");
+      throw e;
+    }
+  }, []);
+
+  /**
+   * Get sub companies by parent company ID
+   */
+  const getSubCompaniesByParent = useCallback(async (parentCompanyId: number) => {
+    setError(null);
+    try {
+      const response = await ServiceRegistry.subCompanies.getSubCompaniesByParent(parentCompanyId);
+      
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to get sub companies by parent');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get sub companies by parent");
+      throw e;
+    }
+  }, []);
+
+  /**
+   * Get sub companies by database ID
+   */
+  const getSubCompaniesByDatabase = useCallback(async (databaseId: number) => {
+    setError(null);
+    try {
+      const response = await ServiceRegistry.subCompanies.getSubCompaniesByDatabase(databaseId);
+      
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to get sub companies by database');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get sub companies by database");
+      throw e;
+    }
+  }, []);
+
+  /**
+   * Get sub company statistics
+   */
+  const getSubCompanyStats = useCallback(async () => {
+    setError(null);
+    try {
+      const response = await ServiceRegistry.subCompanies.getSubCompanyStats();
+      
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to get sub company stats');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get sub company stats");
+      throw e;
+    }
+  }, []);
+
+  /**
+   * Check if a sub company can be created under a parent
+   */
+  const canCreateSubCompany = useCallback(async (parentCompanyId: number) => {
+    setError(null);
+    try {
+      const response = await ServiceRegistry.subCompanies.canCreateSubCompany(parentCompanyId);
+      
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Failed to check sub company creation eligibility');
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to check sub company creation eligibility");
+      throw e;
+    }
+  }, []);
+
+  /**
+   * Validate sub company data
+   */
+  const validateSubCompany = useCallback((companyData: SubCompanyCreateRequest) => {
+    return ServiceRegistry.subCompanies.validateSubCompanyData(companyData);
+  }, []);
+
+  // Clear functions
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  const clearSuccess = useCallback(() => {
+    setSuccess(false);
+  }, []);
+
+  const reset = useCallback(() => {
+    setError(null);
+    setSuccess(false);
+    setSubCompanies([]);
+  }, []);
 
   return {
-    createSubCompany,
-    getSubCompanies,
-    getSubCompany,
-    isLoading,
+    // State
+    loading,
     error,
     success,
+    subCompanies,
+
+    // Actions
+    getSubCompanies,
+    createSubCompany,
+    updateSubCompany,
+    deleteSubCompany,
+    getSubCompany,
+    getSubCompaniesByParent,
+    getSubCompaniesByDatabase,
+    getSubCompanyStats,
+    canCreateSubCompany,
+    validateSubCompany,
+
+    // Utilities
     clearError,
     clearSuccess,
+    reset,
   };
 }
-
-export default useSubCompanies;

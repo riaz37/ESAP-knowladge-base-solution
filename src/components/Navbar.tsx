@@ -1,13 +1,16 @@
 "use client";
 import React from "react";
 import Image from "next/image";
-import { Bell, User } from "lucide-react";
+import { Bell, User, LogOut, LogIn, Settings } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { useAuthContext } from "@/components/providers/AuthContextProvider";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function Navbar() {
-  const { showSidebar, setShowSidebar, showAIAssistant, setShowAIAssistant } =
-    useUIStore();
+  const { showSidebar, setShowSidebar, showAIAssistant, setShowAIAssistant } = useUIStore();
+  const { isAuthenticated, user, logout } = useAuthContext();
 
   const handleMenuClick = () => {
     setShowSidebar(!showSidebar);
@@ -15,7 +18,7 @@ export default function Navbar() {
 
   return (
     <nav
-      className="fixed top-4 left-4 right-4 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-between shadow-2xl shadow-black/20 max-w-7xl mx-auto"
+      className="fixed top-6 left-4 right-4 z-50 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full flex items-center justify-between shadow-2xl shadow-black/20 max-w-7xl mx-auto"
       style={{
         height: "64px",
         paddingLeft: "20px",
@@ -110,9 +113,42 @@ export default function Navbar() {
         />
 
         {/* User Avatar */}
-        <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center border border-gray-600/30 hover:bg-gray-600/50 transition-colors cursor-pointer">
-          <User className="w-5 h-5 text-white/90" />
-        </div>
+        {isAuthenticated && user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="w-10 h-10 bg-gray-700/50 rounded-full flex items-center justify-center border border-gray-600/30 hover:bg-gray-600/50 transition-colors cursor-pointer">
+                <User className="w-5 h-5 text-white/90" />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-3 py-2">
+                <p className="text-sm font-medium">{user.username}</p>
+                <p className="text-xs text-gray-500">{user.email}</p>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => window.location.href = '/user-configuration'}>
+                <Settings className="w-4 h-4 mr-2" />
+                Configuration
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = '/auth'}>
+                <User className="w-4 h-4 mr-2" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button
+            onClick={() => window.location.href = '/auth'}
+            className="text-white/90 hover:text-white hover:bg-gray-600/50"
+          >
+            <LogIn className="w-4 h-4 mr-2" />
+            Sign In
+          </Button>
+        )}
       </div>
     </nav>
   );

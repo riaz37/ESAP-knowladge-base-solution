@@ -1,170 +1,202 @@
-import { useState } from "react";
-import { ExcelToDBService } from "../api/services/excel-to-db-service";
-import {
-  ExcelToDBHealthResponse,
-  ExcelToDBPushDataRequest,
-  ExcelToDBPushDataResponse,
-  ExcelToDBGetAIMappingRequest,
-  ExcelToDBGetAIMappingResponse,
-} from "@/types/api";
+import { useState, useCallback } from "react";
+import { ServiceRegistry } from "../api";
 
-interface UseExcelToDBReturn {
-  // Health check
-  checkHealth: () => Promise<ExcelToDBHealthResponse | null>;
-  
-  // Push data operations
-  pushDataToDatabase: (
-    request: ExcelToDBPushDataRequest
-  ) => Promise<ExcelToDBPushDataResponse | null>;
-  
-  // AI mapping operations
-  getAIMapping: (
-    request: ExcelToDBGetAIMappingRequest
-  ) => Promise<ExcelToDBGetAIMappingResponse | null>;
-  
-  // State management
-  isLoading: boolean;
-  error: string | null;
-  success: boolean;
-  
-  // Progress tracking for file operations
-  uploadProgress: number;
-  
-  // Utility functions
-  clearError: () => void;
-  clearSuccess: () => void;
-}
-
-export function useExcelToDB(): UseExcelToDBReturn {
+/**
+ * Hook for Excel to Database operations using standardized ServiceRegistry
+ */
+export function useExcelToDB() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [response, setResponse] = useState<any>(null);
+  const [healthStatus, setHealthStatus] = useState<any>(null);
+  const [aiMapping, setAiMapping] = useState<any>(null);
+  const [validationResult, setValidationResult] = useState<any>(null);
 
-  const checkHealth = async (): Promise<ExcelToDBHealthResponse | null> => {
+  /**
+   * Check health status of Excel to Database service
+   */
+  const checkHealth = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    setSuccess(false);
 
     try {
-      const response = await ExcelToDBService.checkHealth();
-      setSuccess(true);
-      return response;
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to check service health";
-      setError(errorMessage);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const pushDataToDatabase = async (
-    request: ExcelToDBPushDataRequest
-  ): Promise<ExcelToDBPushDataResponse | null> => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-    setUploadProgress(0);
-
-    try {
-      // Validate request before sending
-      const validation = ExcelToDBService.validatePushDataRequest(request);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(", "));
+      const result = await ServiceRegistry.excelToDB.checkHealth();
+      
+      if (result.success) {
+        setHealthStatus(result.data);
+        return result.data;
+      } else {
+        throw new Error(result.error || "Health check failed");
       }
-
-      // Simulate upload progress (since we can't track actual progress easily)
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      const response = await ExcelToDBService.pushDataToDatabase(request);
-      
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      setSuccess(true);
-      
-      return response;
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to push data to database";
-      setError(errorMessage);
-      setUploadProgress(0);
+    } catch (e: any) {
+      setError(e.message || "Health check failed");
       return null;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const getAIMapping = async (
-    request: ExcelToDBGetAIMappingRequest
-  ): Promise<ExcelToDBGetAIMappingResponse | null> => {
+  /**
+   * Push Excel data to database
+   */
+  const pushDataToDatabase = useCallback(async (request: {
+    table_full_name: string;
+    column_mapping: Record<string, string>;
+    excel_file: File;
+    skip_first_row?: boolean;
+  }) => {
     setIsLoading(true);
     setError(null);
-    setSuccess(false);
-    setUploadProgress(0);
+    setResponse(null);
 
     try {
-      // Validate request before sending
-      const validation = ExcelToDBService.validateAIMappingRequest(request);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(", "));
+      const result = await ServiceRegistry.excelToDB.pushDataToDatabase(request);
+      
+      if (result.success) {
+        setResponse(result.data);
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to push data to database");
       }
-
-      // Simulate upload progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return prev;
-          }
-          return prev + 15;
-        });
-      }, 150);
-
-      const response = await ExcelToDBService.getAIMapping(request);
-      
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      setSuccess(true);
-      
-      return response;
-    } catch (err: any) {
-      const errorMessage = err?.message || "Failed to get AI mapping suggestions";
-      setError(errorMessage);
-      setUploadProgress(0);
+    } catch (e: any) {
+      setError(e.message || "Failed to push data to database");
       return null;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const clearError = () => {
+  /**
+   * Get AI-powered column mapping suggestions
+   */
+  const getAIMapping = useCallback(async (request: {
+    table_full_name: string;
+    excel_file: File;
+  }) => {
+    setIsLoading(true);
     setError(null);
-  };
+    setAiMapping(null);
 
-  const clearSuccess = () => {
-    setSuccess(false);
-    setUploadProgress(0);
-  };
+    try {
+      const result = await ServiceRegistry.excelToDB.getAIMapping(request);
+      
+      if (result.success) {
+        setAiMapping(result.data);
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to get AI mapping");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get AI mapping");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * Validate Excel file
+   */
+  const validateExcelFile = useCallback(async (file: File) => {
+    setIsLoading(true);
+    setError(null);
+    setValidationResult(null);
+
+    try {
+      const result = await ServiceRegistry.excelToDB.validateExcelFile(file);
+      
+      if (result.success) {
+        setValidationResult(result.data);
+        return result.data;
+      } else {
+        throw new Error(result.error || "File validation failed");
+      }
+    } catch (e: any) {
+      setError(e.message || "File validation failed");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  /**
+   * Get supported file formats
+   */
+  const getSupportedFormats = useCallback(() => {
+    const result = ServiceRegistry.excelToDB.getSupportedFormats();
+    return result.data;
+  }, []);
+
+  /**
+   * Preview Excel file data
+   */
+  const previewExcelData = useCallback(async (file: File, maxRows: number = 10) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await ServiceRegistry.excelToDB.previewExcelData(file, maxRows);
+      
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to preview Excel data");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to preview Excel data");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Clear functions
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  const clearResponse = useCallback(() => {
+    setResponse(null);
+  }, []);
+
+  const clearAiMapping = useCallback(() => {
+    setAiMapping(null);
+  }, []);
+
+  const clearValidation = useCallback(() => {
+    setValidationResult(null);
+  }, []);
+
+  const reset = useCallback(() => {
+    setError(null);
+    setResponse(null);
+    setHealthStatus(null);
+    setAiMapping(null);
+    setValidationResult(null);
+  }, []);
 
   return {
+    // State
+    isLoading,
+    error,
+    response,
+    healthStatus,
+    aiMapping,
+    validationResult,
+
+    // Actions
     checkHealth,
     pushDataToDatabase,
     getAIMapping,
-    isLoading,
-    error,
-    success,
-    uploadProgress,
+    validateExcelFile,
+    getSupportedFormats,
+    previewExcelData,
+
+    // Utilities
     clearError,
-    clearSuccess,
+    clearResponse,
+    clearAiMapping,
+    clearValidation,
+    reset,
   };
 }
-
-export default useExcelToDB;

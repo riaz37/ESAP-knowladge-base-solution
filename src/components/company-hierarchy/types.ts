@@ -1,4 +1,4 @@
-import { MSSQLConfigData, UserConfigCreateRequest, UserConfigData } from "@/types/api";
+import { MSSQLConfigData } from "@/types/api";
 
 export interface Company {
   id: string;
@@ -31,7 +31,7 @@ export type WorkflowStep =
   | "company-info"
   | "database-config"
   | "database-creation"
-  | "user-config"
+  | "vector-config"
   | "final-creation";
 
 export interface CompanyTreeViewProps {
@@ -44,7 +44,7 @@ export interface CompanyCardProps {
   onUpload?: (
     companyId: string,
     companyName: string,
-    companyType: "parent" | "sub"
+    companyType: "parent" | "sub",
   ) => void;
   isSelected?: boolean;
   onSelect?: () => void;
@@ -69,7 +69,7 @@ export interface CompanyTreeProps {
     name: string,
     description: string,
     contactDatabase: string,
-    parentId?: string
+    parentId?: string,
   ) => void;
   selectedCompany: string | null;
   onSelectCompany: (id: string | null) => void;
@@ -87,16 +87,6 @@ export interface CompanyInfoStepProps {
   setCurrentStep: (step: WorkflowStep) => void;
 }
 
-export interface UserConfigStepProps {
-  selectedUserConfigId: number | null;
-  setSelectedUserConfigId: (id: number | null) => void;
-  userConfigs: UserConfigData[];
-  userConfigLoading: boolean;
-  createUserConfig: (request: UserConfigCreateRequest) => Promise<any>;
-  loadUserConfigs: () => Promise<void>;
-  setCurrentStep: (step: WorkflowStep) => void;
-}
-
 export interface DatabaseConfigStepProps {
   selectedDbId: number | null;
   setSelectedDbId: (id: number | null) => void;
@@ -107,4 +97,16 @@ export interface DatabaseConfigStepProps {
   setCurrentStep: (step: WorkflowStep) => void;
   setDatabaseCreationData: (data: any) => void;
   setCurrentTaskId: (taskId: string | null) => void;
+  refreshUserConfigs: () => Promise<void>;
+}
+
+export interface VectorConfigStepProps {
+  currentStep: WorkflowStep;
+  setCurrentStep: (step: WorkflowStep) => void;
+  selectedUserConfigId: number | null;
+  setSelectedUserConfigId: (id: number | null) => void;
+  userConfigs: DatabaseConfigData[];
+  userConfigLoading: boolean;
+  createDatabaseConfig: (config: any) => Promise<any>;
+  refreshUserConfigs: () => Promise<void>;
 }
