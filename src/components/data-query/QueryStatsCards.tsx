@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, BarChart3, Clock, CheckCircle, AlertTriangle, FileText } from "lucide-react";
 
 interface StatCard {
   title: string;
@@ -13,11 +13,100 @@ interface StatCard {
 }
 
 interface QueryStatsCardsProps {
-  stats: StatCard[];
+  // New interface for stats array
+  stats?: StatCard[];
   columns?: 2 | 3 | 4 | 5;
+  
+  // Legacy props for backward compatibility
+  totalQueries?: number;
+  isExecuting?: boolean;
+  hasResults?: boolean;
+  resultCount?: number;
+  executionTime?: number;
+  hasWarnings?: boolean;
 }
 
-export function QueryStatsCards({ stats, columns = 5 }: QueryStatsCardsProps) {
+export function QueryStatsCards({ 
+  stats, 
+  columns = 5,
+  // Legacy props
+  totalQueries,
+  isExecuting,
+  hasResults,
+  resultCount,
+  executionTime,
+  hasWarnings
+}: QueryStatsCardsProps) {
+  
+  // Generate stats from legacy props if stats array is not provided
+  const getStatsFromLegacyProps = (): StatCard[] => {
+    const legacyStats: StatCard[] = [];
+    
+    if (totalQueries !== undefined) {
+      legacyStats.push({
+        title: "Total Queries",
+        value: totalQueries,
+        description: "Total queries executed",
+        icon: BarChart3
+      });
+    }
+    
+    if (resultCount !== undefined) {
+      legacyStats.push({
+        title: "Results",
+        value: resultCount,
+        description: "Query results found",
+        icon: FileText
+      });
+    }
+    
+    if (executionTime !== undefined) {
+      legacyStats.push({
+        title: "Execution Time",
+        value: `${executionTime}ms`,
+        description: "Query execution time",
+        icon: Clock
+      });
+    }
+    
+    if (hasResults !== undefined) {
+      legacyStats.push({
+        title: "Status",
+        value: hasResults ? "Success" : "No Results",
+        description: "Query execution status",
+        icon: hasResults ? CheckCircle : AlertTriangle
+      });
+    }
+    
+    if (isExecuting !== undefined) {
+      legacyStats.push({
+        title: "Status",
+        value: isExecuting ? "Executing..." : "Ready",
+        description: "Current execution status",
+        icon: isExecuting ? Clock : CheckCircle
+      });
+    }
+    
+    if (hasWarnings !== undefined) {
+      legacyStats.push({
+        title: "Warnings",
+        value: hasWarnings ? "Yes" : "No",
+        description: "Query warnings detected",
+        icon: hasWarnings ? AlertTriangle : CheckCircle
+      });
+    }
+    
+    return legacyStats;
+  };
+  
+  // Use provided stats or generate from legacy props
+  const finalStats = stats || getStatsFromLegacyProps();
+  
+  // If no stats available, return null
+  if (finalStats.length === 0) {
+    return null;
+  }
+  
   const getGridCols = () => {
     switch (columns) {
       case 2: return "grid-cols-1 md:grid-cols-2";
@@ -30,7 +119,7 @@ export function QueryStatsCards({ stats, columns = 5 }: QueryStatsCardsProps) {
 
   return (
     <div className={`grid ${getGridCols()} gap-6`}>
-      {stats.map((stat, index) => (
+      {finalStats.map((stat, index) => (
         <Card key={index}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>

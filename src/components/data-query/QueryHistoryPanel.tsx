@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { History, Clock, CheckCircle, XCircle } from "lucide-react";
+import { History, Clock, CheckCircle, XCircle, FileText, Database } from "lucide-react";
 import { QueryHistoryItem } from "@/store/query-store";
 
 interface QueryHistoryPanelProps {
@@ -101,7 +101,4 @@ export function QueryHistoryPanel({
       </CardContent>
     </Card>
   );
-}
-
-// Import for the icon
-import { FileText, Database } from "lucide-react"; 
+} 

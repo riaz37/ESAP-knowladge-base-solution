@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { QueryService, SearchQueryParams } from "../api";
+import { ServiceRegistry } from "../api";
+import type { SearchQueryParams } from "../api";
 
 /**
- * Hook for making file queries
+ * Hook for making file queries using standardized ServiceRegistry
  */
 export function useFileQuery() {
   const [loading, setLoading] = useState(false);
@@ -13,17 +14,27 @@ export function useFileQuery() {
   /**
    * Send a query to the API
    */
-  const sendQuery = async (params: SearchQueryParams) => {
+  const sendQuery = async (params: SearchQueryParams & { user_id?: string }) => {
     setLoading(true);
     setError(null);
     setResponse(null);
     setRawResponse(null);
 
     try {
-      const result = await QueryService.search(params);
-      setRawResponse(result);
-      // With API client interceptor, result now contains just the data portion
-      setResponse((result as any).answer || result);
+      // Ensure user_id is included in the search params
+      const searchParams = {
+        ...params,
+        user_id: params.user_id, // Pass user_id to the API
+      };
+      
+      const result = await ServiceRegistry.query.search(searchParams);
+      
+      if (result.success) {
+        setRawResponse(result);
+        setResponse(result.data?.answer || result.data);
+      } else {
+        throw new Error(result.error || "Query failed");
+      }
     } catch (err: any) {
       setError(err.message || "Failed to process query");
     } finally {
@@ -38,5 +49,6 @@ export function useFileQuery() {
     rawResponse,
     sendQuery,
     setResponse,
+    clearError: () => setError(null),
   };
 }

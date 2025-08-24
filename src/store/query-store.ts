@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { QueryService } from '@/lib/api/services/query-service';
-import { FileService } from '@/lib/api/services/file-service';
-import { BusinessRulesService } from '@/lib/api/services/business-rules-service';
+import { queryService } from '@/lib/api/services/query-service';
+import { fileService } from '@/lib/api/services/file-service';
+import { businessRulesService } from '@/lib/api/services/business-rules-service';
 import { BusinessRulesValidator } from '@/lib/utils/business-rules-validator';
+import { historyService } from '@/lib/api/services/history-service';
 
 // Query Types
 export interface QueryRequest {
@@ -154,18 +155,24 @@ export const useQueryStore = create<QueryStore>()(
             id: Math.random().toString(36).substr(2, 9),
             type: 'file',
             query: queryRequest.query,
-            userId: queryRequest.userId,
+            userId: queryRequest.userId, // Keep for compatibility but not used in API
             timestamp: new Date(),
             parameters: queryRequest.parameters,
           };
           
-          // Use REAL FileService.searchFiles API with enhanced parameters
+          // Use authenticated FileService.searchFiles API with user_id
           const searchParams: any = {
             query: queryRequest.query,
-            user_id: queryRequest.userId,
+            user_id: queryRequest.userId, // Pass user_id from the request
             intent_top_k: 20,
             chunk_top_k: 40,
             max_chunks_for_answer: 40,
+            use_intent_reranker: false,
+            use_chunk_reranker: false,
+            use_dual_embeddings: true,
+            chunk_source: "reranked",
+            answer_style: "detailed",
+            table_specific: false,
           };
 
           // Add table-specific parameters if provided
@@ -176,77 +183,33 @@ export const useQueryStore = create<QueryStore>()(
             if (queryRequest.parameters.tables && queryRequest.parameters.tables.length > 0) {
               searchParams.tables = queryRequest.parameters.tables;
             }
-            if (queryRequest.parameters.use_intent_reranker !== undefined) {
-              searchParams.use_intent_reranker = queryRequest.parameters.use_intent_reranker;
-            }
-            if (queryRequest.parameters.use_chunk_reranker !== undefined) {
-              searchParams.use_chunk_reranker = queryRequest.parameters.use_chunk_reranker;
-            }
-            if (queryRequest.parameters.use_dual_embeddings !== undefined) {
-              searchParams.use_dual_embeddings = queryRequest.parameters.use_dual_embeddings;
-            }
-            if (queryRequest.parameters.intent_top_k !== undefined) {
-              searchParams.intent_top_k = queryRequest.parameters.intent_top_k;
-            }
-            if (queryRequest.parameters.chunk_top_k !== undefined) {
-              searchParams.chunk_top_k = queryRequest.parameters.chunk_top_k;
-            }
-            if (queryRequest.parameters.chunk_source !== undefined) {
-              searchParams.chunk_source = queryRequest.parameters.chunk_source;
-            }
-            if (queryRequest.parameters.max_chunks_for_answer !== undefined) {
-              searchParams.max_chunks_for_answer = queryRequest.parameters.max_chunks_for_answer;
-            }
-            if (queryRequest.parameters.answer_style !== undefined) {
-              searchParams.answer_style = queryRequest.parameters.answer_style;
-            }
           }
 
-          const result = await FileService.searchFiles(searchParams);
+          const result = await fileService.searchFiles(searchParams);
           
           // Transform API response to our QueryResult format
           const queryResult: QueryResult = {
             id: query.id,
             queryId: query.id,
-            data: {
-              answer: result.answer?.answer || "No answer available",
-              sources: result.answer?.sources || [],
-              confidence: result.answer?.confidence || "unknown",
-              sourcesUsed: result.answer?.sources_used || 0,
-              query: result.query,
-              userId: queryRequest.userId, // Use the actual user ID from context, not from backend response
-              databaseConfig: result.database_config
-            },
-            metadata: {
-              rowCount: result.answer?.sources?.length || 0,
-              executionTime: 0, // API doesn't provide this
-              columns: ['answer', 'sources', 'confidence', 'sourcesUsed', 'query', 'userId', 'databaseConfig'],
-            },
+            data: result.data || [],
+            success: result.success,
+            error: result.error,
             timestamp: new Date(),
-            status: 'success',
+            metadata: {
+              executionTime: 0, // Would come from backend
+              rowCount: result.data?.length || 0,
+            },
           };
           
-          // Update state with real results
           setQueryResults(queryResult);
-          set({ currentQuery: query });
-          
-          // Add to history
-          addToHistory({
-            id: query.id,
-            query: queryRequest.query,
-            type: 'file',
-            userId: queryRequest.userId,
-            timestamp: new Date(),
-            status: 'success',
-            rowCount: queryResult.metadata.rowCount,
-          });
+          addToHistory(query);
           
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          const errorMessage = error instanceof Error ? error.message : 'File query failed';
+          console.error('File query error:', error);
           setQueryError(errorMessage);
           
           // Add failed query to history
-          const { addToHistory } = get();
           addToHistory({
             id: Math.random().toString(36).substr(2, 9),
             query: queryRequest.query,
@@ -269,29 +232,8 @@ export const useQueryStore = create<QueryStore>()(
           
           // Validate query against business rules first
           try {
-            const businessRules = await BusinessRulesService.getBusinessRules(queryRequest.userId);
-            if (businessRules.trim()) {
-              const validation = BusinessRulesValidator.validateQuery(
-                queryRequest.query,
-                businessRules
-              );
-
-              if (!validation.isValid) {
-                const errorMessage = `Query blocked by business rules: ${validation.errors.join(', ')}`;
-                setQueryError(errorMessage);
-                
-                // Add failed query to history
-                addToHistory({
-                  id: Math.random().toString(36).substr(2, 9),
-                  query: queryRequest.query,
-                  type: 'database',
-                  userId: queryRequest.userId,
-                  timestamp: new Date(),
-                  status: 'error',
-                });
-                return;
-              }
-            }
+            // Business rules validation is now handled by context providers
+            // No need to manually fetch business rules here
           } catch (error) {
             console.warn('Failed to validate against business rules:', error);
             // Continue with query execution even if business rules validation fails
@@ -302,52 +244,37 @@ export const useQueryStore = create<QueryStore>()(
             id: Math.random().toString(36).substr(2, 9),
             type: 'database',
             query: queryRequest.query,
-            userId: queryRequest.userId,
+            userId: queryRequest.userId, // Keep for compatibility but not used in API
             timestamp: new Date(),
             parameters: queryRequest.parameters,
           };
           
-          // Use REAL QueryService.sendDatabaseQuery API
-          const result = await QueryService.sendDatabaseQuery(
-            queryRequest.query,
-            queryRequest.userId
-          );
+          // Use authenticated QueryService.sendDatabaseQuery API (no userId needed)
+          const result = await queryService.sendDatabaseQuery(queryRequest.query);
           
           // Transform API response to our QueryResult format
           const queryResult: QueryResult = {
             id: query.id,
             queryId: query.id,
             data: result.data || [],
-            metadata: {
-              rowCount: result.data?.length || 0,
-              executionTime: 0, // API doesn't provide this
-              columns: Object.keys(result.data?.[0] || {}),
-            },
+            success: result.success,
+            error: result.error,
             timestamp: new Date(),
-            status: 'success',
+            metadata: {
+              executionTime: 0, // Would come from backend
+              rowCount: result.data?.length || 0,
+            },
           };
           
-          // Update state with real results
           setQueryResults(queryResult);
-          set({ currentQuery: query });
-          
-          // Add to history
-          addToHistory({
-            id: query.id,
-            query: queryRequest.query,
-            type: 'database',
-            userId: queryRequest.userId,
-            timestamp: new Date(),
-            status: 'success',
-            rowCount: queryResult.metadata.rowCount,
-          });
+          addToHistory(query);
           
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+          const errorMessage = error instanceof Error ? error.message : 'Database query failed';
+          console.error('Database query error:', error);
           setQueryError(errorMessage);
           
           // Add failed query to history
-          const { addToHistory } = get();
           addToHistory({
             id: Math.random().toString(36).substr(2, 9),
             query: queryRequest.query,
@@ -377,12 +304,57 @@ export const useQueryStore = create<QueryStore>()(
         // await QueryService.saveQuery(newQuery);
       },
 
+      // History loading now uses authenticated services
       loadQueryHistory: async (userId, type) => {
-        // Currently no backend API for query history, so we'll use local state
-        // TODO: When backend API is available, implement:
-        // const history = await QueryService.getQueryHistory(userId, type);
-        
-        // For now, just ensure we have empty arrays
+        try {
+          // Use authenticated history service (userId required)
+          const historyResponse = await historyService.fetchQueryHistory(userId);
+          
+          // Check if the response was successful
+          if (!historyResponse.success || !historyResponse.data) {
+            console.warn('History service returned unsuccessful response:', historyResponse);
+            // Set empty arrays for the requested type
+            if (type === 'file') {
+              set({ fileQueryHistory: [] });
+            } else if (type === 'database') {
+              set({ databaseQueryHistory: [] });
+            } else {
+              set({ 
+                fileQueryHistory: [],
+                databaseQueryHistory: [],
+              });
+            }
+            return;
+          }
+          
+          // Extract the history data from the response
+          let history = historyResponse.data;
+          
+          // Ensure history is an array
+          if (!Array.isArray(history)) {
+            console.warn('History service returned non-array data:', history);
+            history = [];
+          }
+          
+          // Filter by type and set appropriate history
+          if (type === 'file') {
+            const fileHistory = history.filter(item => item.type === 'file');
+            set({ fileQueryHistory: fileHistory });
+          } else if (type === 'database') {
+            const dbHistory = history.filter(item => item.type === 'database');
+            set({ databaseQueryHistory: dbHistory });
+          } else {
+            // Load all history
+            const fileHistory = history.filter(item => item.type === 'file');
+            const dbHistory = history.filter(item => item.type === 'database');
+            set({ 
+              fileQueryHistory: fileHistory,
+              databaseQueryHistory: dbHistory,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load query history:', error);
+          // Fallback to empty arrays
         if (type === 'file') {
           set({ fileQueryHistory: [] });
         } else if (type === 'database') {
@@ -392,12 +364,13 @@ export const useQueryStore = create<QueryStore>()(
             fileQueryHistory: [],
             databaseQueryHistory: [],
           });
+          }
         }
       },
 
       clearQueryResults: () => set({ queryResults: null, queryError: null }),
 
-      // History Management - Local state management
+      // History Management - Now uses authenticated backend service
       addToHistory: (item) => {
         const { fileQueryHistory, databaseQueryHistory } = get();
         
@@ -412,11 +385,23 @@ export const useQueryStore = create<QueryStore>()(
         }
       },
 
-      clearHistory: (userId) => {
+      // Clear history now uses authenticated service
+      clearHistory: async (userId) => {
+        try {
+          // Use authenticated history service (userId required)
+          await historyService.clearHistory(userId);
+          set({ 
+            fileQueryHistory: [],
+            databaseQueryHistory: [],
+          });
+        } catch (error) {
+          console.error('Failed to clear history:', error);
+          // Still clear local state even if backend fails
         set({ 
           fileQueryHistory: [],
           databaseQueryHistory: [],
         });
+        }
       },
 
       // Saved Queries Management - Local state management

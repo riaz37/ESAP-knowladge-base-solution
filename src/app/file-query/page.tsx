@@ -1,669 +1,548 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Search,
-  FileText,
-  Upload,
-  History,
-  Download,
-  Copy,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  Plus,
-  Trash2,
-} from "lucide-react";
-
+import React, { useState, useEffect, useCallback } from "react";
 import { useQueryStore } from "@/store/query-store";
-import { useFileOperations } from "@/lib/hooks/use-smart-file-upload";
-import { useAuthContext } from "@/components/providers";
-import { toast } from "sonner";
 import {
+  useAuthContext,
+  useDatabaseContext,
+  useBusinessRulesContext,
+} from "@/components/providers";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  FileText,
+  CheckCircle,
+  File,
+  Info,
+  History,
+  BarChart3,
+  AlertCircle,
+  X,
+  Database,
+} from "lucide-react";
+import {
+  FileUpload,
+  FileResults,
+  FileQueryForm,
+  FileQueryStats,
   QueryHistoryPanel,
-  QueryInputForm,
-  QueryTips,
-  FileUploadProgress,
+  TableSelector,
+  AdvancedQueryParams,
 } from "@/components/data-query";
-import { TableSelector } from "@/components/data-query/TableSelector";
-import { AdvancedQueryParams } from "@/components/data-query/AdvancedQueryParams";
-
-interface FileUploadData {
-  file: File;
-  description: string;
-  tableName: string;
-}
+import { fileService } from "@/lib/api/services/file-service";
+import type {
+  UploadedFile,
+  FileQueryResult,
+  QueryOptions,
+} from "@/components/data-query";
 
 export default function FileQueryPage() {
+  // Query state
   const [query, setQuery] = useState("");
-  const [fileUploads, setFileUploads] = useState<FileUploadData[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
-  const [tableSpecific, setTableSpecific] = useState(false);
-  const [selectedTables, setSelectedTables] = useState<string[]>([]);
-  const [useIntentReranker, setUseIntentReranker] = useState(false);
-  const [useChunkReranker, setUseChunkReranker] = useState(false);
-  const [useDualEmbeddings, setUseDualEmbeddings] = useState(true);
-  const [intentTopK, setIntentTopK] = useState(20);
-  const [chunkTopK, setChunkTopK] = useState(40);
-  const [chunkSource, setChunkSource] = useState("reranked");
-  const [maxChunksForAnswer, setMaxChunksForAnswer] = useState(40);
-  const [answerStyle, setAnswerStyle] = useState("detailed");
-  
-  const {
-    executeFileQuery,
-    fileQueryHistory,
-    queryResults,
-    queryLoading,
-    queryError,
-    loadQueryHistory,
-  } = useQueryStore();
+  const [queryResults, setQueryResults] = useState<FileQueryResult[]>([]);
+  const [queryError, setQueryError] = useState<string | null>(null);
+  const [executionTime, setExecutionTime] = useState<number>(0);
 
-  const {
-    uploadResponse,
-    bundleStatus,
-    isLoading: isUploading,
-    error: uploadError,
-    isPolling,
-    uploadProgress,
-    uploadSmartFileSystem,
-    getBundleTaskStatus,
-    clearError: clearUploadError,
-    reset: resetUpload,
-  } = useFileOperations();
+  // File upload state
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
-  // Get userId from user context
-  const { user } = useAuthContext();
-  const userId = user?.id;
+  // Table selection state
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [useTable, setUseTable] = useState(true); // Track table usage from FileUpload
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Store and context
+  const { fileQueryHistory, loadQueryHistory, saveQuery } = useQueryStore();
+
+  const { user, isLoading: userLoading, isAuthenticated } = useAuthContext();
+  const { currentDatabaseId, currentDatabaseName } = useDatabaseContext();
+  const { businessRules, validateQuery } = useBusinessRulesContext();
+
+  // Load query history on mount
   useEffect(() => {
-    loadQueryHistory(userId, 'file');
-  }, [userId, loadQueryHistory]);
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Add new file with default values
-      const newFileUpload: FileUploadData = {
-        file,
-        description: `Document: ${file.name}`,
-        tableName: `table_${Date.now()}`,
-      };
-      setFileUploads(prev => [...prev, newFileUpload]);
-      toast.success(`File "${file.name}" added for upload`);
+    if (isAuthenticated && user?.user_id) {
+      loadQueryHistory(user.user_id, "file");
     }
-  };
+  }, [isAuthenticated, user?.user_id, loadQueryHistory]);
 
-  const removeFileUpload = (index: number) => {
-    setFileUploads(prev => prev.filter((_, i) => i !== index));
-  };
+  // Handle file upload status changes
+  const handleUploadStatusChange = useCallback((files: UploadedFile[]) => {
+    setUploadedFiles(files);
+  }, []);
 
-  const updateFileUpload = (index: number, field: keyof FileUploadData, value: string) => {
-    setFileUploads(prev => prev.map((item, i) => 
-      i === index ? { ...item, [field]: value } : item
-    ));
-  };
+  // Handle files uploaded (get file IDs for querying)
+  const handleFilesUploaded = useCallback((fileIds: string[]) => {
+    console.log("Files uploaded with IDs:", fileIds);
+    // These IDs can be used when querying specific files
+  }, []);
 
-  const handleSmartUpload = async () => {
-    if (fileUploads.length === 0) {
-      toast.error("Please add at least one file");
-      return;
+  // Handle table usage change from FileUpload
+  const handleTableUsageChange = useCallback((useTable: boolean) => {
+    console.log('FileQueryPage: handleTableUsageChange called with:', useTable);
+    setUseTable(useTable);
+    // Clear selected table if tables are disabled
+    if (!useTable) {
+      setSelectedTable(null);
+      toast.info("Table selection cleared - tables are disabled");
     }
+  }, []);
 
-    // Validate all file uploads have required fields
-    const invalidUploads = fileUploads.filter(
-      upload => !upload.description.trim() || !upload.tableName.trim()
-    );
-    
-    if (invalidUploads.length > 0) {
-      toast.error("Please fill in all file descriptions and table names");
-      return;
-    }
-
-    try {
-      const files = fileUploads.map(upload => upload.file);
-      const descriptions = fileUploads.map(upload => upload.description.trim());
-      const tableNames = fileUploads.map(upload => upload.tableName.trim());
-      const userIds = fileUploads.map(() => userId);
-
-      const response = await uploadSmartFileSystem(files, descriptions, tableNames, userIds);
-      
-      if (response) {
-        toast.success("Files uploaded successfully! Processing has begun.");
+  // Execute file query
+  const handleQuerySubmit = useCallback(
+    async (queryText: string, options: QueryOptions) => {
+      if (!queryText.trim()) {
+        toast.error("Please enter a query");
+        return;
       }
-    } catch (error) {
-      toast.error("Failed to upload files");
-    }
-  };
 
-  const handleQuerySubmit = async () => {
-    if (!query.trim()) {
-      toast.error("Please enter a query");
-      return;
-    }
+      if (!isAuthenticated) {
+        toast.error("Please log in to execute queries");
+        return;
+      }
 
-    // Validate table selection when table-specific is enabled
-    if (tableSpecific && selectedTables.length === 0) {
-      toast.error("Please select at least one table for table-specific querying");
-      return;
-    }
-
-    // Show confirmation for table-specific queries
-    if (tableSpecific) {
-      toast.success(`Querying ${selectedTables.length} selected table(s): ${selectedTables.join(", ")}`);
-    }
-
-    setIsExecuting(true);
-    
-    try {
-      // Query existing knowledge base or uploaded files
-      await executeFileQuery({
-        fileId: bundleStatus?.status === "COMPLETED" ? "processed_files" : "existing_knowledge",
-        query: query.trim(),
-        userId,
-        parameters: {
-          table_specific: tableSpecific,
-          tables: tableSpecific ? selectedTables : undefined,
-          use_intent_reranker: useIntentReranker,
-          use_chunk_reranker: useChunkReranker,
-          use_dual_embeddings: useDualEmbeddings,
-          intent_top_k: intentTopK,
-          chunk_top_k: chunkTopK,
-          chunk_source: chunkSource,
-          max_chunks_for_answer: maxChunksForAnswer,
-          answer_style: answerStyle
+      // Validate query against business rules if database is selected
+      if (currentDatabaseId) {
+        const validationResult = validateQuery(queryText, currentDatabaseId);
+        if (!validationResult.isValid) {
+          toast.error(
+            `Query validation failed: ${validationResult.errors.join(", ")}`
+          );
+          return;
         }
-      });
-      
-      toast.success("Query executed successfully!");
-      
-    } catch (error) {
-      toast.error("Query execution failed");
-    } finally {
-      setIsExecuting(false);
-    }
-  };
+      }
 
-  const handleQueryClear = () => {
+      setIsExecuting(true);
+      setQueryError(null);
+      setQueryResults([]);
+      setExecutionTime(0);
+      setQuery(queryText);
+
+      const startTime = Date.now();
+
+      try {
+        // Get file IDs from completed uploads
+        const completedFileIds = uploadedFiles
+          .filter((file) => file.status === "completed")
+          .map((file) => file.id);
+
+        // Execute file search
+        const response = await fileService.searchFiles({
+          query: queryText,
+          user_id: user?.user_id,
+          use_intent_reranker: options.useIntentReranker,
+          use_chunk_reranker: options.useChunkReranker,
+          use_dual_embeddings: options.useDualEmbeddings,
+          intent_top_k: options.intentTopK,
+          chunk_top_k: options.chunkTopK,
+          max_chunks_for_answer: options.maxChunksForAnswer,
+          answer_style: options.answerStyle,
+          table_specific: !!selectedTable, // Make query table-specific if table is selected
+          tables: selectedTable ? [selectedTable] : undefined, // Include selected table
+          file_ids: completedFileIds.length > 0 ? completedFileIds : undefined,
+        });
+
+        if (response.success && response.data) {
+          const searchResponse = response.data;
+          console.log("File search response:", searchResponse);
+
+          // Extract results from the answer sources or create structured result
+          let results: FileQueryResult[] = [];
+          if (
+            searchResponse.answer &&
+            searchResponse.answer.sources &&
+            Array.isArray(searchResponse.answer.sources)
+          ) {
+            results = searchResponse.answer.sources.map((source, index) => ({
+              id: `result-${index}`,
+              answer: source.content || source.text || null, // Don't fallback to JSON.stringify
+              confidence: searchResponse.answer.confidence,
+              sources_used: searchResponse.answer.sources_used,
+              query: searchResponse.query,
+              ...source,
+            }));
+          } else if (searchResponse.answer) {
+            // If no sources, create a result from the answer
+            results = [
+              {
+                id: "result-0",
+                answer: searchResponse.answer.answer,
+                confidence: searchResponse.answer.confidence,
+                sources_used: searchResponse.answer.sources_used,
+                query: searchResponse.query,
+              },
+            ];
+          }
+
+          setQueryResults(results);
+          setExecutionTime(Date.now() - startTime);
+
+          // Save to history
+          if (user?.user_id) {
+            saveQuery({
+              id: Math.random().toString(36).substr(2, 9),
+              type: "file",
+              query: queryText,
+              userId: user.user_id,
+              timestamp: new Date(),
+              results: results,
+              metadata: {
+                resultCount: results.length,
+                executionTime: Date.now() - startTime,
+                fileIds: completedFileIds,
+              },
+            });
+          }
+
+          toast.success(
+            `Query executed successfully! Found ${results.length} results.`
+          );
+        } else {
+          throw new Error(response.error || "Query execution failed");
+        }
+      } catch (error) {
+        console.error("File query execution error:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+        setQueryError(errorMessage);
+        toast.error(`Query failed: ${errorMessage}`);
+      } finally {
+        setIsExecuting(false);
+      }
+    },
+    [
+      isAuthenticated,
+      user?.user_id,
+      currentDatabaseId,
+      validateQuery,
+      uploadedFiles,
+      saveQuery,
+      selectedTable,
+    ]
+  );
+
+  // Handle query save
+  const handleQuerySave = useCallback(
+    (queryText: string) => {
+      if (!queryText.trim() || !user?.user_id) {
+        toast.error("Cannot save empty query or user not authenticated");
+        return;
+      }
+
+      try {
+        saveQuery({
+          id: Date.now().toString(),
+          type: "file",
+          query: queryText.trim(),
+          userId: user.user_id,
+          timestamp: new Date(),
+        });
+        toast.success("Query saved successfully!");
+      } catch (error) {
+        console.error("Failed to save query:", error);
+        toast.error("Failed to save query");
+      }
+    },
+    [user?.user_id, saveQuery]
+  );
+
+  // Handle query clear
+  const handleQueryClear = useCallback(() => {
     setQuery("");
-  };
+    setQueryResults([]);
+    setQueryError(null);
+    setExecutionTime(0);
+    setSelectedTable(null); // Also clear selected table
+  }, []);
 
-  const handleResetAdvancedParams = () => {
-    setUseIntentReranker(false);
-    setUseChunkReranker(false);
-    setUseDualEmbeddings(true);
-    setIntentTopK(20);
-    setChunkTopK(40);
-    setChunkSource("reranked");
-    setMaxChunksForAnswer(40);
-    setAnswerStyle("detailed");
-  };
+  // Handle loading query from history
+  const handleHistorySelect = useCallback((historyItem: any) => {
+    setQuery(historyItem.query);
+    setQueryResults(historyItem.results || []);
+    setExecutionTime(historyItem.metadata?.executionTime || 0);
+    // Note: Table selection would need to be stored in history metadata to restore it
+    toast.success("Query loaded from history");
+  }, []);
 
-  const handleResetAll = () => {
-    setTableSpecific(false);
-    setSelectedTables([]);
-    handleResetAdvancedParams();
-  };
+  // Loading state
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleRefreshStatus = () => {
-    if (uploadResponse?.bundle_id) {
-      getBundleTaskStatus(uploadResponse.bundle_id);
-    }
-  };
-
-  const handleResetUpload = () => {
-    resetUpload();
-    setFileUploads([]);
-  };
-
-  return (
-    <div className="w-full min-h-screen relative bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900">
-       <div className="container mx-auto px-6 py-8" style={{ paddingTop: "120px" }}>
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-                Smart File Query Interface
-              </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-300">
-                Query existing knowledge or upload files for intelligent processing using natural language
-              </p>
-            </div>
+  // Authentication required
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card className="max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+              <AlertCircle className="w-5 h-5" />
+              Authentication Required
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Please log in to use the file query feature.
+            </p>
             <Button
               variant="outline"
-              onClick={handleResetAll}
-              className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+              onClick={() => (window.location.href = "/auth")}
+              className="w-full"
             >
-              Reset All Settings
+              Go to Login
             </Button>
-          </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <FileText className="w-8 h-8 text-blue-600" />
+            File Query
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-2">
+            Upload files and query them using natural language
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - File Upload & Query Interface */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Smart File Upload */}
-            <Card>
+        {/* Status Badges */}
+        <div className="flex items-center gap-3">
+          {user?.user_id && (
+            <Badge variant="outline" className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              User: {user.user_id}
+            </Badge>
+          )}
+          {currentDatabaseId && (
+            <Badge variant="outline" className="flex items-center gap-2">
+              <File className="w-4 h-4 text-blue-600" />
+              DB: {currentDatabaseName || currentDatabaseId}
+            </Badge>
+          )}
+          {businessRules.status === "loaded" && (
+            <Badge variant="outline" className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              Rules Active
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - File Upload and Query */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* File Upload */}
+          <FileUpload
+            onFilesUploaded={handleFilesUploaded}
+            onUploadStatusChange={handleUploadStatusChange}
+            onTableUsageChange={handleTableUsageChange}
+            disabled={!isAuthenticated}
+          />
+
+          {/* Query Form */}
+          <FileQueryForm
+            onSubmit={handleQuerySubmit}
+            onSave={handleQuerySave}
+            onClear={handleQueryClear}
+            isLoading={isExecuting}
+            disabled={!isAuthenticated}
+          />
+
+          {/* Query Results */}
+          {queryResults.length > 0 && (
+            <FileResults
+              results={queryResults}
+              query={query}
+              isLoading={isExecuting}
+            />
+          )}
+
+          {/* Query Error */}
+          {queryError && (
+            <Card className="border-red-200 dark:border-red-800">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Smart File Upload
+                <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                  <AlertCircle className="w-5 h-5" />
+                  Query Error
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* File Upload List */}
-                <div className="space-y-3">
-                  {fileUploads.map((fileUpload, index) => (
-                    <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-gray-500" />
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {fileUpload.file.name}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            {(fileUpload.file.size / 1024 / 1024).toFixed(2)} MB
-                          </Badge>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFileUpload(index)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <Label htmlFor={`description-${index}`} className="text-sm text-gray-600 dark:text-gray-400">
-                            File Description
-                          </Label>
-                          <Input
-                            id={`description-${index}`}
-                            value={fileUpload.description}
-                            onChange={(e) => updateFileUpload(index, 'description', e.target.value)}
-                            placeholder="Describe the file content..."
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor={`table-${index}`} className="text-sm text-gray-600 dark:text-gray-400">
-                            Table Name
-                          </Label>
-                          <Input
-                            id={`table-${index}`}
-                            value={fileUpload.tableName}
-                            onChange={(e) => updateFileUpload(index, 'tableName', e.target.value)}
-                            placeholder="e.g., invoices, contracts..."
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              <CardContent>
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <p className="text-red-800 dark:text-red-200">{queryError}</p>
                 </div>
-
-                {/* Add File Button */}
-                <div className="flex items-center gap-4">
-                  <Label htmlFor="file-upload" className="cursor-pointer">
-                    <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center hover:border-gray-400 dark:hover:border-gray-500 transition-colors">
-                      <Plus className="h-6 w-6 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Add File
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        Supports PDF, DOC, TXT, and other document formats
-                      </p>
-                    </div>
-                  </Label>
-                  <input
-                    id="file-upload"
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.txt,.rtf,.odt,.md"
-                    onChange={handleFileUpload}
-                  />
-                </div>
-
-                {/* Upload Button */}
-                {fileUploads.length > 0 && (
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleSmartUpload}
-                      disabled={isUploading}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
-                      {isUploading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload & Process Files
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             </Card>
+          )}
+        </div>
 
-            {/* Upload Progress */}
-            <FileUploadProgress
-              uploadResponse={uploadResponse}
-              bundleStatus={bundleStatus}
-              isLoading={isUploading}
-              error={uploadError}
-              onRefreshStatus={handleRefreshStatus}
-              onReset={handleResetUpload}
-            />
+        {/* Right Column - Stats, History, and Info */}
+        <div className="space-y-6">
+          {/* Table Usage Status */}
+          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                <Database className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  Table Usage: {useTable ? "Enabled" : "Disabled"}
+                </span>
+                <Badge variant="outline" className="ml-auto text-xs">
+                  {useTable ? "With Tables" : "No Tables"}
+                </Badge>
+              </div>
+              <p className="text-blue-700 dark:text-blue-300 text-xs mt-1">
+                {useTable
+                  ? "Files will be processed with table names for structured queries"
+                  : "Files will be processed without table names for general content search"}
+              </p>
+            </CardContent>
+          </Card>
 
-            {/* Query Input Form */}
-            <QueryInputForm
-              title="Query Knowledge Base"
-              icon={<Search className="h-5 w-5" />}
-              placeholder="e.g., What are the key terms in the knowledge base? Ask about existing knowledge or uploaded documents."
-              value={query}
-              onChange={setQuery}
-              onSubmit={handleQuerySubmit}
-              onClear={handleQueryClear}
-              isLoading={isExecuting}
-              isDisabled={false}
-              submitButtonText="Execute Query"
-              clearButtonText="Clear"
-            />
-
-            {/* Table Selector */}
+          {/* Table Selector - for specifying which table to query */}
+          {useTable && (
             <TableSelector
-              userId={userId}
-              tableSpecific={tableSpecific}
-              selectedTables={selectedTables}
-              onTableSpecificChange={setTableSpecific}
-              onSelectedTablesChange={setSelectedTables}
+              databaseId={currentDatabaseId}
+              onTableSelect={(tableName) => {
+                setSelectedTable(tableName);
+                toast.success(`Selected table: ${tableName}`);
+              }}
             />
+          )}
 
-            {/* Advanced Query Parameters */}
-            <AdvancedQueryParams
-              useIntentReranker={useIntentReranker}
-              useChunkReranker={useChunkReranker}
-              useDualEmbeddings={useDualEmbeddings}
-              intentTopK={intentTopK}
-              chunkTopK={chunkTopK}
-              chunkSource={chunkSource}
-              maxChunksForAnswer={maxChunksForAnswer}
-              answerStyle={answerStyle}
-              onIntentRerankerChange={setUseIntentReranker}
-              onChunkRerankerChange={setUseChunkReranker}
-              onDualEmbeddingsChange={setUseDualEmbeddings}
-              onIntentTopKChange={setIntentTopK}
-              onChunkTopKChange={setChunkTopK}
-              onChunkSourceChange={setChunkSource}
-              onMaxChunksForAnswerChange={setMaxChunksForAnswer}
-              onAnswerStyleChange={setAnswerStyle}
-              onReset={handleResetAdvancedParams}
+          {/* Selected Table Indicator */}
+          {useTable && selectedTable && (
+            <Card className="border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 text-green-800 dark:text-green-200">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    Querying table: {selectedTable}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedTable(null)}
+                    className="h-6 w-6 p-0 ml-auto"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Advanced Query Parameters */}
+          <AdvancedQueryParams />
+
+          {/* Query Statistics */}
+          {query && (
+            <FileQueryStats
+              query={query}
+              resultCount={queryResults.length}
+              executionTime={executionTime}
+              uploadedFilesCount={uploadedFiles.length}
+              completedFilesCount={
+                uploadedFiles.filter((f) => f.status === "completed").length
+              }
+              failedFilesCount={
+                uploadedFiles.filter((f) => f.status === "failed").length
+              }
             />
+          )}
 
-            {/* Query Results */}
-            {queryResults && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    Query Results
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {/* Main Answer */}
-                    {queryResults.data && queryResults.data.answer && (
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                            Answer
-                          </h3>
-                        </div>
-                        <div className="prose prose-gray dark:prose-invert max-w-none">
-                          <div 
-                            className="text-gray-800 dark:text-gray-200 text-base leading-relaxed"
-                            dangerouslySetInnerHTML={{ 
-                              __html: queryResults.data.answer
-                                .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900 dark:text-white">$1</strong>')
-                                .replace(/\*(.*?)\*/g, '<em class="italic text-gray-700 dark:text-gray-300">$1</em>')
-                                .replace(/\n/g, '<br>')
-                            }}
-                          />
-                        </div>
-                        <div className="flex items-center gap-4 mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Confidence:</span>
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-700">
-                              {queryResults.data.confidence}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-blue-500" />
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Sources:</span>
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700">
-                              {queryResults.data.sourcesUsed}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+          {/* Query History */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="w-5 h-5" />
+                Query History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <QueryHistoryPanel
+                history={fileQueryHistory}
+                onSelect={handleHistorySelect}
+                onClear={() => {
+                  /* Implement clear history */
+                }}
+                type="file"
+              />
+            </CardContent>
+          </Card>
 
-                    {/* Sources */}
-                    {queryResults.data && queryResults.data.sources && queryResults.data.sources.length > 0 && (
-                      <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800 dark:to-slate-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                            Sources Used ({queryResults.data.sourcesUsed || queryResults.data.sources.length})
-                          </h3>
-                          <div className="ml-auto text-sm text-gray-500 dark:text-gray-400">
-                            Showing sources referenced in the answer
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          {queryResults.data.sources.map((source: any, index: number) => {
-                            // Parse source if it's a JSON string
-                            let parsedSource = source;
-                            if (typeof source === 'string' && source.startsWith('{')) {
-                              try {
-                                parsedSource = JSON.parse(source);
-                              } catch (e) {
-                                // Keep as string if parsing fails
-                              }
-                            }
-                            
-                            return (
-                              <div 
-                                key={index} 
-                                className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all"
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    {/* File Icon */}
-                                    <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                                      <span className="text-lg">
-                                        {parsedSource.file_name?.includes('.pdf') ? '📄' : 
-                                         parsedSource.file_name?.includes('.doc') ? '📝' : 
-                                         parsedSource.file_name?.includes('.txt') ? '📄' : '📁'}
-                                      </span>
-                                    </div>
-                                    
-                                    {/* File Info */}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                          #{index + 1}
-                                        </span>
-                                        <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                                          {parsedSource.file_name || 'Unknown File'}
-                                        </span>
-                                      </div>
-                                      {parsedSource.file_path && (
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs text-gray-500 dark:text-gray-400">Path:</span>
-                                          <a 
-                                            href={parsedSource.file_path} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs"
-                                            title={parsedSource.file_path}
-                                          >
-                                            {parsedSource.file_path}
-                                          </a>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Actions */}
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    {parsedSource.file_path && (
-                                      <a 
-                                        href={parsedSource.file_path} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                                        title="Open File"
-                                      >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                      </a>
-                                    )}
-                                    <button 
-                                      className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                      title="Copy File Path"
-                                      onClick={() => {
-                                        if (parsedSource.file_path) {
-                                          navigator.clipboard.writeText(parsedSource.file_path);
-                                          toast.success('File path copied to clipboard');
-                                        }
-                                      }}
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                      </svg>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        
-                        <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400">
-                          <div className="flex items-center justify-between">
-                            <span>Sources Referenced: {queryResults.data.sourcesUsed || queryResults.data.sources.length}</span>
-                            <div className="flex items-center gap-1">
-                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                              <span>Ready</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Metadata */}
-                    {queryResults.metadata && (
-                      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-6 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                          <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                            Query Details
-                          </h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-emerald-200 dark:border-emerald-700">
-                            <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">ID</span>
-                            </div>
-                            <div>
-                              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Query ID</span>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{queryResults.id}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-emerald-200 dark:border-emerald-700">
-                            <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">✓</span>
-                            </div>
-                            <div>
-                              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</span>
-                              <Badge variant={queryResults.status === 'success' ? 'default' : 'destructive'} className="mt-1">
-                                {queryResults.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-emerald-200 dark:border-emerald-700">
-                            <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">📊</span>
-                            </div>
-                            <div>
-                              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Row Count</span>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{queryResults.metadata.rowCount}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg border border-emerald-200 dark:border-emerald-700">
-                            <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-300">🕒</span>
-                            </div>
-                            <div>
-                              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Executed</span>
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                {new Date(queryResults.timestamp).toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Error Display */}
-            {queryError && (
-              <Card className="border-red-200 bg-red-50 dark:bg-red-900/20">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 text-red-800 dark:text-red-200">
-                    <XCircle className="h-5 w-5" />
-                    <span className="font-medium">Query Error:</span>
-                    <span>{queryError}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Right Column - Query History Only */}
-          <div className="space-y-6">
-            {/* Query History */}
-            <QueryHistoryPanel
-              history={fileQueryHistory}
-              queryType="file"
-              maxItems={10}
-            />
-          </div>
+          {/* Help Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Info className="w-5 h-5" />
+                How to Use
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                  1. Upload Files
+                </h4>
+                <p>
+                  Upload your documents (PDF, Word, Excel, etc.) to query their
+                  content.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                  2. Select Table {useTable ? "(Optional)" : "(Disabled)"}
+                </h4>
+                <p>
+                  {useTable
+                    ? "Choose a specific table to focus your query on, or leave unselected to search across all tables."
+                    : "Table selection is currently disabled. Files will be processed without table names."}
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                  3. Ask Questions
+                </h4>
+                <p>
+                  Use natural language to ask questions about your uploaded
+                  files and selected table.
+                </p>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-1">
+                  4. Get Results
+                </h4>
+                <p>
+                  Receive detailed answers with source references from your
+                  documents and table data.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
-} 
+}

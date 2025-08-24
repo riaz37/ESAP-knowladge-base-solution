@@ -97,6 +97,7 @@ export interface DatabaseConfigStepProps {
   setCurrentStep: (step: WorkflowStep) => void;
   setDatabaseCreationData: (data: any) => void;
   setCurrentTaskId: (taskId: string | null) => void;
+  refreshUserConfigs: () => Promise<void>;
 }
 
 export interface VectorConfigStepProps {

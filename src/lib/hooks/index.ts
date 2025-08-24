@@ -1,22 +1,32 @@
-// Custom React Hooks
+// Custom React Hooks - All using standardized ServiceRegistry
+
+// Core functionality hooks
 export { useAuth } from "./use-auth";
-export { useBusinessRules } from "./use-business-rules";
-export { useDatabaseConfig } from "./use-database-config";
 export { useDatabaseOperations } from "./use-database-operations";
-export { useDatabaseQueryValidation } from "./use-database-query-validation";
-export { useDatabaseSelector } from "./use-database-selector";
+export { useBusinessRules } from "./use-business-rules";
+
+// Service-specific hooks
 export { useExcelToDB } from "./use-excel-to-db";
 export { useFileQuery } from "./use-file-query";
-export { useHierarchyData } from "./use-hierarchy-data";
-export { useMSSQLConfig } from "./use-mssql-config";
-export { useMSSQLTableOperations } from "./use-mssql-table-operations";
 export { useNewTable } from "./use-new-table";
-export { useParentCompanies } from "./use-parent-companies";
-export { useSmartFileUpload } from "./use-smart-file-upload";
-export { useSubCompanies } from "./use-sub-companies";
-export { useToast } from "./use-toast";
 export { useUserAccess } from "./use-user-access";
+export { useVectorDB } from "./use-vector-db";
 
+// File operations
+export { useFileOperations, useSmartFileUpload } from "./use-smart-file-upload";
+
+// Data and hierarchy hooks
+export { useHierarchyData } from "./use-hierarchy-data";
+export { useParentCompanies } from "./use-parent-companies";
+export { useSubCompanies } from "./use-sub-companies";
+
+// Validation hooks
+export { useDatabaseQueryValidation } from "./use-database-query-validation";
+
+// UI and utility hooks
+export { useToast } from "./use-toast";
 export { useUserSettings } from "./use-user-settings";
 export { useThemeTransition } from "./useThemeTransition";
-export { useVectorDB } from "./use-vector-db";
+
+// Context hooks
+// export { useUserContext } from "./use-user-context"; // Keep if needed for specific context usage

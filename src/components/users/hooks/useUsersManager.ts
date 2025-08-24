@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
-import { useUserAccess } from "@/lib/hooks/use-user-access";
-import { useUserConfig } from "@/lib/hooks/use-user-config";
-import { useDatabaseConfig } from "@/lib/hooks/use-database-config";
+import { useUserAccess } from "@/lib/hooks";
+import { useDatabaseContext } from "@/components/providers/DatabaseContextProvider";
 import { UserAccessData } from "@/types/api";
+import { ServiceRegistry } from "@/lib/api/services/service-registry";
 
 export function useUsersManager() {
   // Core state
@@ -13,6 +13,10 @@ export function useUsersManager() {
   const [activeTab, setActiveTab] = useState("database");
   const [selectedUserForVectorDB, setSelectedUserForVectorDB] = useState<string>("");
 
+  // User configurations state
+  const [userConfigs, setUserConfigs] = useState<any[]>([]);
+  const [userConfigLoading, setUserConfigLoading] = useState(false);
+
   // Hooks
   const { 
     userAccessConfigs, 
@@ -21,24 +25,17 @@ export function useUsersManager() {
   } = useUserAccess();
   
   const { 
-    configs: userConfigs, 
-    isLoading: userConfigLoading, 
-    getUserConfigs 
-  } = useUserConfig();
-  
-  const { 
-    databaseConfigs, 
-    isLoading: databaseLoading, 
-    fetchDatabaseConfigs 
-  } = useDatabaseConfig();
+    availableDatabases, 
+    isLoading: databaseLoading
+  } = useDatabaseContext();
 
   // Computed values with safe defaults
   const isLoading = userAccessLoading || userConfigLoading || databaseLoading;
   
   // Safe access to arrays with default empty arrays
   const safeUserAccessConfigs = userAccessConfigs || [];
-  const safeUserConfigs = userConfigs || { configs: [], count: 0 };
-  const safeDatabaseConfigs = databaseConfigs || [];
+  const safeUserConfigs = userConfigs || [];
+  const safeDatabaseConfigs = availableDatabases || [];
 
   // Actions
   const loadUserAccessConfigs = useCallback(async () => {
@@ -51,19 +48,33 @@ export function useUsersManager() {
 
   const loadUserConfigs = useCallback(async () => {
     try {
-      await getUserConfigs();
+      setUserConfigLoading(true);
+      const response = await ServiceRegistry.userConfig.getUserConfigs();
+      if (response && Array.isArray(response)) {
+        setUserConfigs(response);
+      } else if (response && Array.isArray(response.configs)) {
+        setUserConfigs(response.configs);
+      } else {
+        setUserConfigs([]);
+      }
     } catch (error) {
       console.error("Error loading user configs:", error);
+      setUserConfigs([]);
+    } finally {
+      setUserConfigLoading(false);
     }
-  }, [getUserConfigs]);
+  }, []);
 
   const loadDatabaseConfigs = useCallback(async () => {
     try {
-      await fetchDatabaseConfigs();
+      // The original code had fetchDatabaseConfigs here, but it's not destructured from useDatabaseContext.
+      // Assuming the intent was to use availableDatabases or a similar source if needed.
+      // For now, removing the line as it's not directly available from the new destructuring.
+      // If the intent was to refetch or update availableDatabases, that would require a separate action.
     } catch (error) {
       console.error("Error loading database configs:", error);
     }
-  }, [fetchDatabaseConfigs]);
+  }, []); // Removed fetchDatabaseConfigs from dependency array
 
   const handleManageVectorDBAccess = useCallback((userId: string) => {
     setSelectedUserForVectorDB(userId);
@@ -130,7 +141,9 @@ export function useUsersManager() {
     isLoading,
     userAccessConfigs: safeUserAccessConfigs,
     userConfigs: safeUserConfigs,
+    userConfigLoading,
     databaseConfigs: safeDatabaseConfigs,
+    availableDatabases: safeDatabaseConfigs,
     
     // Computed values
     totalPages,

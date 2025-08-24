@@ -11,6 +11,7 @@ export interface DatabaseConfig {
   DB_USER: string;
   DB_PASSWORD: string;
   schema: string;
+  user_id?: string; // Optional user ID for user association
 }
 
 export interface DatabaseConfigData {
@@ -22,6 +23,7 @@ export interface DatabaseConfigData {
 
 export interface CreateDatabaseConfigRequest {
   db_config: DatabaseConfig;
+  user_id?: string; // Optional user ID for user association
 }
 
 export interface CreateDatabaseConfigResponse {

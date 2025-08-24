@@ -1,141 +1,288 @@
-import { useState, useEffect } from "react";
-import VectorDBService, { VectorDBConfig } from "@/lib/api/services/vector-db-service";
+import { useState, useCallback } from "react";
+import { ServiceRegistry } from "../api";
 
+/**
+ * Hook for Vector Database operations using standardized ServiceRegistry
+ */
 export function useVectorDB() {
-  const [vectorDBConfigs, setVectorDBConfigs] = useState<VectorDBConfig[]>([]);
-  const [userTableNames, setUserTableNames] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [vectorDBConfigs, setVectorDBConfigs] = useState<any[]>([]);
+  const [userTableNames, setUserTableNames] = useState<string[]>([]);
+  const [userConfig, setUserConfig] = useState<any>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState(false);
 
-  const getVectorDBConfigs = async () => {
-    setIsLoading(true);
+  /**
+   * Get all available vector database configurations
+   */
+  const getVectorDBConfigs = useCallback(async () => {
+    setLoading(true);
     setError(null);
+
     try {
-      const response = await VectorDBService.getVectorDBConfigs();
+      const response = await ServiceRegistry.vectorDB.getVectorDBConfigs();
       
-      // Handle different response structures
-      let configs: VectorDBConfig[] = [];
-      
-      if (Array.isArray(response)) {
-        configs = response;
-      } else if (response && typeof response === 'object') {
-        // If response has a data property that's an array
-        if (Array.isArray(response.data)) {
-          configs = response.data;
-        } else if (Array.isArray(response.configs)) {
-          configs = response.configs;
-        } else if (Array.isArray(response.vector_dbs)) {
-          configs = response.vector_dbs;
-        } else if (Array.isArray(response.user_configs)) {
-          configs = response.user_configs;
+      if (response.success) {
+        setVectorDBConfigs(response.data || []);
+        return response.data;
         } else {
-          // If response is an object but no array found, try to extract any array
-          const keys = Object.keys(response);
-          for (const key of keys) {
-            if (Array.isArray(response[key])) {
-              configs = response[key];
-              break;
-            }
-          }
-        }
+        throw new Error(response.error || "Failed to fetch vector DB configs");
       }
-      
-      // Ensure we always have an array
-      setVectorDBConfigs(Array.isArray(configs) ? configs : []);
-      
-      console.log("Vector DB configs response:", response);
-      console.log("Extracted configs:", configs);
-      
-    } catch (err: any) {
-      console.error("Error fetching vector database configs:", err);
-      setError(err?.message || "Failed to fetch vector database configs");
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch vector DB configs");
       setVectorDBConfigs([]);
+      return [];
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const getUserTableNames = async (userId: string) => {
-    if (!userId) return;
-    
-    setIsLoading(true);
+  /**
+   * Get user table names
+   */
+  const getUserTableNames = useCallback(async (userId?: string) => {
+    setLoading(true);
     setError(null);
+
     try {
-      const response = await VectorDBService.getUserTableNames(userId);
-      
-      console.log("User table names response from service:", response);
-      
-      // The service should now return the array directly, but let's handle both cases
-      let tableNames: string[] = [];
-      
-      if (Array.isArray(response)) {
-        tableNames = response;
-      } else if (response && typeof response === 'object') {
-        if (Array.isArray(response.table_names)) {
-          tableNames = response.table_names;
-        } else if (Array.isArray(response.data)) {
-          tableNames = response.data;
-        } else if (Array.isArray(response.tables)) {
-          tableNames = response.tables;
-        } else {
-          // Try to find any array in the response
-          const keys = Object.keys(response);
-          for (const key of keys) {
-            if (Array.isArray(response[key])) {
-              tableNames = response[key];
-              break;
-            }
-          }
-        }
+      // If no userId provided, try to get from auth context
+      if (!userId) {
+        throw new Error('User ID is required to fetch table names');
       }
       
-      // Ensure we always have an array
-      setUserTableNames(Array.isArray(tableNames) ? tableNames : []);
+      const response = await ServiceRegistry.vectorDB.getUserTableNames(userId);
       
-      console.log("User table names response:", response);
-      console.log("Extracted table names:", tableNames);
-      console.log("Final table names set:", Array.isArray(tableNames) ? tableNames : []);
-      
-    } catch (err: any) {
-      console.error(`Error fetching table names for user ${userId}:`, err);
-      setError(err?.message || "Failed to fetch user table names");
+      if (response.success) {
+        setUserTableNames(response.data || []);
+        return response.data;
+        } else {
+        throw new Error(response.error || "Failed to fetch user table names");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch user table names");
       setUserTableNames([]);
+      return [];
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const createVectorDBAccess = async (request: {
-    user_id: string;
+  /**
+   * Get user table names with metadata
+   */
+  const getUserTableNamesWithMetadata = useCallback(async (userId?: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // If no userId provided, try to get from auth context
+      if (!userId) {
+        throw new Error('User ID is required to fetch table names with metadata');
+      }
+      
+      const response = await ServiceRegistry.vectorDB.getUserTableNamesWithMetadata(userId);
+      
+      if (response.success) {
+        setUserTableNames(response.data.tableNames || []);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to fetch table names with metadata");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch table names with metadata");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Create vector database access
+   */
+  const createVectorDBAccess = useCallback(async (request: {
     vector_db_id: number;
     accessible_tables: string[];
     access_level: string;
   }) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await VectorDBService.createVectorDBAccess(request);
-      return result;
-    } catch (err: any) {
-      console.error("Error creating vector DB access:", err);
-      setError(err?.message || "Failed to create vector DB access");
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    setCreateLoading(true);
+    setCreateError(null);
+    setCreateSuccess(false);
 
-  const clearError = () => setError(null);
+    try {
+      const response = await ServiceRegistry.vectorDB.createVectorDBAccess(request);
+      
+      if (response.success) {
+        setCreateSuccess(true);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to create vector DB access");
+      }
+    } catch (e: any) {
+      setCreateError(e.message || "Failed to create vector DB access");
+      return null;
+    } finally {
+      setCreateLoading(false);
+    }
+  }, []);
+
+  /**
+   * Get user configuration by database ID
+   */
+  const getUserConfigByDB = useCallback(async (dbId: number) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await ServiceRegistry.vectorDB.getUserConfigByDB(dbId);
+      
+      if (response.success) {
+        setUserConfig(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to fetch user config");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch user config");
+      setUserConfig(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Add user table name
+   */
+  const addUserTableName = useCallback(async (tableName: string, userId: string) => {
+    setCreateLoading(true);
+    setCreateError(null);
+    setCreateSuccess(false);
+
+    try {
+      const response = await ServiceRegistry.vectorDB.addUserTableName(tableName, userId);
+      
+      if (response.success) {
+        setCreateSuccess(true);
+        // Refresh table names
+        await getUserTableNames();
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to add table name");
+      }
+    } catch (e: any) {
+      setCreateError(e.message || "Failed to add table name");
+      return null;
+    } finally {
+      setCreateLoading(false);
+    }
+  }, [getUserTableNames]);
+
+  /**
+   * Delete user table name
+   */
+  const deleteUserTableName = useCallback(async (tableName: string, userId: string) => {
+    setCreateLoading(true);
+    setCreateError(null);
+
+    try {
+      const response = await ServiceRegistry.vectorDB.deleteUserTableName(tableName, userId);
+      
+      if (response.success) {
+        setCreateSuccess(true);
+        // Refresh table names
+        await getUserTableNames(userId);
+        return true;
+      } else {
+        throw new Error(response.error || "Failed to delete table name");
+      }
+    } catch (e: any) {
+      setCreateError(e.message || "Failed to delete table name");
+      return false;
+    } finally {
+      setCreateLoading(false);
+    }
+  }, [getUserTableNames]);
+
+  /**
+   * Add multiple table names
+   */
+  const addMultipleTableNames = useCallback(async (tableNames: string[], userId: string) => {
+    setCreateLoading(true);
+    setCreateError(null);
+    setCreateSuccess(false);
+
+    try {
+      const response = await ServiceRegistry.vectorDB.addMultipleTableNames(tableNames, userId);
+      
+      if (response.success) {
+        setCreateSuccess(true);
+        // Refresh table names
+        await getUserTableNames(userId);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to add table names");
+      }
+    } catch (e: any) {
+      setCreateError(e.message || "Failed to add table names");
+      return null;
+    } finally {
+      setCreateLoading(false);
+    }
+  }, [getUserTableNames]);
+
+  /**
+   * Validate table name format
+   */
+  const validateTableName = useCallback((tableName: string) => {
+    return ServiceRegistry.vectorDB.validateTableName(tableName);
+  }, []);
+
+  // Clear functions
+  const clearError = useCallback(() => {
+    setError(null);
+    setCreateError(null);
+  }, []);
+
+  const clearSuccess = useCallback(() => {
+    setCreateSuccess(false);
+  }, []);
+
+  const reset = useCallback(() => {
+    setError(null);
+    setCreateError(null);
+    setCreateSuccess(false);
+    setVectorDBConfigs([]);
+    setUserTableNames([]);
+    setUserConfig(null);
+  }, []);
 
   return {
+    // State
+    loading,
+    error,
     vectorDBConfigs,
     userTableNames,
-    setUserTableNames,
-    isLoading,
-    error,
+    userConfig,
+    createLoading,
+    createError,
+    createSuccess,
+
+    // Actions
     getVectorDBConfigs,
     getUserTableNames,
+    getUserTableNamesWithMetadata,
     createVectorDBAccess,
+    getUserConfigByDB,
+    addUserTableName,
+    deleteUserTableName,
+    addMultipleTableNames,
+    validateTableName,
+
+    // Utilities
     clearError,
+    clearSuccess,
+    reset,
   };
 } 

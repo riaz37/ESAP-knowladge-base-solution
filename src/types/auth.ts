@@ -1,7 +1,7 @@
 // Authentication-related types and interfaces
 
 export interface User {
-  id: string;
+  user_id: string;
   username: string;
   email: string;
   is_active: boolean;
@@ -16,7 +16,7 @@ export interface SignupRequest {
 }
 
 export interface SignupResponse {
-  id: string;
+  user_id: string;
   username: string;
   email: string;
   is_active: boolean;

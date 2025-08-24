@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Building2, X } from "lucide-react";
 import {
   Dialog,
@@ -9,8 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useMSSQLConfig } from "@/lib/hooks/use-mssql-config";
-import { useDatabaseConfig } from "@/lib/hooks/use-database-config";
+import { useDatabaseContext } from "@/components/providers/DatabaseContextProvider";
 
 import { MSSQLConfigData, DatabaseConfigData } from "@/types/api";
 import { toast } from "sonner";
@@ -30,6 +29,7 @@ import {
   WorkflowStep,
   CompanyCreationModalProps,
 } from "./types";
+import { ServiceRegistry } from "@/lib/api/services/service-registry";
 
 export function CompanyCreationModal({
   isOpen,
@@ -38,19 +38,11 @@ export function CompanyCreationModal({
   type,
   parentCompanyId,
 }: CompanyCreationModalProps) {
-  const {
-    getConfigs,
-    setConfig,
-    isLoading: mssqlLoading,
-    clearError: clearMSSQLError,
-    clearSuccess: clearMSSQLSuccess,
-  } = useMSSQLConfig();
-
-  const {
-    fetchDatabaseConfigs,
-    createDatabaseConfig,
-    isLoading: userConfigLoading,
-  } = useDatabaseConfig();
+  // Remove dependency on context
+  // const {
+  //   availableDatabases,
+  //   isLoading: userConfigLoading,
+  // } = useDatabaseContext();
 
   // Workflow state
   const [currentStep, setCurrentStep] = useState<WorkflowStep>("company-info");
@@ -69,36 +61,101 @@ export function CompanyCreationModal({
   const [userConfigs, setUserConfigs] = useState<DatabaseConfigData[]>([]);
   const [creatingCompany, setCreatingCompany] = useState(false);
   const [databaseCreationData, setDatabaseCreationData] = useState<any>(null);
-
-  // Load data when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      loadInitialData();
-      resetForm();
-    }
-  }, [isOpen]);
+  
+  // Loading states
+  const [isLoadingDatabases, setIsLoadingDatabases] = useState(false);
+  const [isLoadingUserConfigs, setIsLoadingUserConfigs] = useState(false);
+  const [databaseError, setDatabaseError] = useState<string | null>(null);
+  const [userConfigError, setUserConfigError] = useState<string | null>(null);
+  
+  // Add cache flags to prevent unnecessary reloading
+  const [databasesLoaded, setDatabasesLoaded] = useState(false);
+  const [userConfigsLoaded, setUserConfigsLoaded] = useState(false);
 
   const loadInitialData = useCallback(async () => {
     try {
-      const [dbConfigs, userConfigsResponse] = await Promise.all([
-        getConfigs(),
-        fetchDatabaseConfigs()
+      setIsLoadingDatabases(true);
+      setIsLoadingUserConfigs(true);
+      setDatabaseError(null);
+      setUserConfigError(null);
+
+      // Load both databases and user configs in parallel
+      await Promise.all([
+        loadDatabases(),
+        loadUserConfigs()
       ]);
-      
-      setDatabases(Array.isArray(dbConfigs) ? dbConfigs : []);
-      
-      // Handle DatabaseConfigs response structure: { configs: DatabaseConfigData[], count: number }
-      if (userConfigsResponse && userConfigsResponse.configs && Array.isArray(userConfigsResponse.configs)) {
-        setUserConfigs(userConfigsResponse.configs);
-      } else {
-        setUserConfigs([]);
-      }
+
     } catch (error) {
       console.error('Error loading initial data:', error);
       setDatabases([]);
       setUserConfigs([]);
+      setDatabaseError("Failed to load databases");
+    } finally {
+      setIsLoadingDatabases(false);
+      setIsLoadingUserConfigs(false);
     }
-  }, [getConfigs, fetchDatabaseConfigs]);
+  }, []);
+
+  const loadDatabases = useCallback(async () => {
+    try {
+      setIsLoadingDatabases(true);
+      setDatabaseError(null);
+
+      // Load databases using API call
+      const databasesResponse = await ServiceRegistry.database.getAllDatabases();
+      if (databasesResponse.success && databasesResponse.data) {
+        // Transform DatabaseInfo to MSSQLConfigData format
+        const mssqlDatabases: MSSQLConfigData[] = databasesResponse.data.map(db => ({
+          db_id: db.id,
+          db_name: db.name,
+          db_url: db.url,
+          business_rule: db.metadata?.businessRule || "",
+          table_info: db.metadata?.tableInfo || {},
+          db_schema: db.metadata?.dbSchema || {},
+          dbpath: "",
+          created_at: db.metadata?.createdAt || new Date().toISOString(),
+          updated_at: db.lastUpdated || new Date().toISOString(),
+        }));
+        setDatabases(mssqlDatabases);
+        setDatabasesLoaded(true);
+      } else {
+        setDatabases([]);
+        setDatabaseError("Failed to load databases");
+        setDatabasesLoaded(false);
+      }
+    } catch (error) {
+      console.error('Error loading databases:', error);
+      setDatabases([]);
+      setDatabaseError("Failed to load databases");
+      setDatabasesLoaded(false);
+    } finally {
+      setIsLoadingDatabases(false);
+    }
+  }, []);
+
+  const loadUserConfigs = useCallback(async () => {
+    try {
+      setIsLoadingUserConfigs(true);
+      setUserConfigError(null);
+
+      // Load user configs using API call (vector databases)
+      const userConfigsResponse = await ServiceRegistry.databaseConfig.getDatabaseConfigs();
+      if (userConfigsResponse && userConfigsResponse.configs) {
+        setUserConfigs(userConfigsResponse.configs);
+        setUserConfigsLoaded(true);
+      } else {
+        setUserConfigs([]);
+        setUserConfigsLoaded(false);
+      }
+    } catch (error) {
+      console.error('Error loading vector database configs:', error);
+      setUserConfigs([]);
+      setUserConfigError("Failed to load vector database configurations");
+      setUserConfigsLoaded(false);
+    } finally {
+      setIsLoadingUserConfigs(false);
+    }
+  }, []);
 
   const resetForm = () => {
     setCompanyName("");
@@ -110,36 +167,47 @@ export function CompanyCreationModal({
     setCurrentStep("company-info");
     setCurrentTaskId(null);
     setDatabaseCreationData(null);
-    clearMSSQLError();
-    clearMSSQLSuccess();
   };
+
+  const clearCache = useCallback(() => {
+    setDatabasesLoaded(false);
+    setUserConfigsLoaded(false);
+  }, []);
+
+  // Force refresh - clears cache and reloads data
+  const forceRefreshUserConfigs = useCallback(async () => {
+    setUserConfigsLoaded(false);
+    await loadUserConfigs();
+  }, [loadUserConfigs]);
+
+  const forceRefreshDatabases = useCallback(async () => {
+    setDatabasesLoaded(false);
+    await loadDatabases();
+  }, [loadDatabases]);
 
   const handleTaskComplete = async (success: boolean, result?: any) => {
     if (success) {
       // Reload databases to get the newly created one
-      const configs = await getConfigs();
-      if (configs && Array.isArray(configs)) {
-        setDatabases(configs);
-        
-        // Try to find and select the newly created database
-        let newDbId = null;
-        
-        if (result?.db_id) {
-          newDbId = result.db_id;
-        } else if (result?.database_id) {
-          newDbId = result.database_id;
-        } else if (databaseCreationData?.dbConfig?.db_name) {
-          const newDb = configs.find(
-            (db) => db.db_name === databaseCreationData.dbConfig.db_name
-          );
-          if (newDb) {
-            newDbId = newDb.db_id;
-          }
+      await loadInitialData();
+      
+      // Try to find and select the newly created database
+      let newDbId = null;
+      
+      if (result?.db_id) {
+        newDbId = result.db_id;
+      } else if (result?.database_id) {
+        newDbId = result.database_id;
+      } else if (databaseCreationData?.dbConfig?.db_name) {
+        const newDb = databases.find(
+          (db) => db.db_name === databaseCreationData.dbConfig.db_name
+        );
+        if (newDb) {
+          newDbId = newDb.db_id;
         }
+      }
 
-        if (newDbId) {
-          setSelectedDbId(newDbId);
-        }
+      if (newDbId) {
+        setSelectedDbId(newDbId);
       }
 
       // Move to vector config step
@@ -193,6 +261,17 @@ export function CompanyCreationModal({
     onClose();
   };
 
+  // Load data when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      // Only load data if not already loaded or if we need to refresh
+      if (!databasesLoaded || !userConfigsLoaded) {
+        loadInitialData();
+      }
+      resetForm();
+    }
+  }, [isOpen, databasesLoaded, userConfigsLoaded]);
+
   const stepProps = {
     currentStep,
     setCurrentStep,
@@ -210,16 +289,20 @@ export function CompanyCreationModal({
     setSelectedUserConfigId,
     databases,
     userConfigs,
-    mssqlLoading,
-    userConfigLoading,
-    setConfig,
-    createDatabaseConfig,
+    mssqlLoading: isLoadingDatabases,
+    userConfigLoading: isLoadingUserConfigs,
+    setConfig: async (dbConfig: any) => {
+      // Use MSSQLConfigService to create database
+      const { MSSQLConfigService } = await import('@/lib/api/services/mssql-config-service');
+      return await MSSQLConfigService.setMSSQLConfig(dbConfig);
+    },
+    loadDatabases: loadDatabases,
     setDatabaseCreationData,
     setCurrentTaskId,
     creatingCompany,
     handleSubmit,
     type,
-    refreshUserConfigs: loadInitialData,
+    refreshUserConfigs: forceRefreshUserConfigs,
   };
 
   return (

@@ -1,51 +1,51 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import { FileService } from "@/lib/api/services/file-service";
-import {
-  SmartFileSystemResponse,
-  BundleTaskStatusResponse,
-  BundleTaskStatusAllResponse,
-  FilesSearchRequest,
-  FilesSearchResponse,
-} from "@/types/api";
+import { useState, useCallback, useRef } from "react";
+import { ServiceRegistry } from "../api";
 
 interface UseFileOperationsReturn {
-  uploadResponse: SmartFileSystemResponse | null;
-  bundleStatus: BundleTaskStatusResponse | null;
-  allBundleStatuses: BundleTaskStatusAllResponse | null;
-  searchResults: FilesSearchResponse | null;
+  // File upload operations
+  uploadToSmartFileSystem: (request: {
+    files: File[];
+    file_descriptions: string[];
+    table_names: string[];
+  }) => Promise<any>;
+
+  // Bundle status operations
+  getBundleTaskStatus: (bundleId: string) => Promise<any>;
+  getAllBundleTaskStatuses: () => Promise<any>;
+
+  // File search operations
+  searchFiles: (request: {
+    query: string;
+    user_id?: string;
+    intent_top_k?: number;
+    chunk_top_k?: number;
+    max_chunks_for_answer?: number;
+  }) => Promise<any>;
+
+  // State
+  uploadResponse: any;
+  bundleStatus: any;
+  allBundleStatuses: any;
+  searchResults: any;
   isLoading: boolean;
   error: string | null;
   isPolling: boolean;
   uploadProgress: number;
-  uploadSmartFileSystem: (
-    files: File[],
-    fileDescriptions: string[],
-    tableNames: string[],
-    userIds: string[],
-  ) => Promise<SmartFileSystemResponse | null>;
-  getBundleTaskStatus: (bundleId: string) => Promise<void>;
-  getAllBundleTaskStatus: () => Promise<void>;
-  searchFiles: (
-    request: FilesSearchRequest,
-  ) => Promise<FilesSearchResponse | null>;
-  startPolling: (bundleId: string, interval?: number) => void;
-  stopPolling: () => void;
+
+  // Utility functions
   clearError: () => void;
   reset: () => void;
 }
 
 /**
  * Custom hook for managing file operations with progress tracking and polling
+ * Uses standardized ServiceRegistry
  */
 export function useFileOperations(): UseFileOperationsReturn {
-  const [uploadResponse, setUploadResponse] =
-    useState<SmartFileSystemResponse | null>(null);
-  const [bundleStatus, setBundleStatus] =
-    useState<BundleTaskStatusResponse | null>(null);
-  const [allBundleStatuses, setAllBundleStatuses] =
-    useState<BundleTaskStatusAllResponse | null>(null);
-  const [searchResults, setSearchResults] =
-    useState<FilesSearchResponse | null>(null);
+  const [uploadResponse, setUploadResponse] = useState<any>(null);
+  const [bundleStatus, setBundleStatus] = useState<any>(null);
+  const [allBundleStatuses, setAllBundleStatuses] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
@@ -77,165 +77,223 @@ export function useFileOperations(): UseFileOperationsReturn {
 
   const startPolling = useCallback((bundleId: string, interval: number = 2000) => {
     if (pollingRef.current) {
-      clearInterval(pollingRef.current);
+      stopPolling();
     }
 
     setIsPolling(true);
     pollingRef.current = setInterval(async () => {
       try {
-        const response = await FileService.getBundleTaskStatus(bundleId);
-        setBundleStatus(response);
+        const response = await ServiceRegistry.file.getBundleTaskStatus(bundleId);
         
-        // Stop polling if processing is complete
-        if (response.status === "COMPLETED" || response.status === "FAILED") {
+        if (response.success) {
+          setBundleStatus(response.data);
+          
+          // Stop polling if completed or failed
+          if (response.data.status === 'completed' || response.data.status === 'failed') {
+            stopPolling();
+          }
+        } else {
+          console.error('Failed to get bundle status:', response.error);
           stopPolling();
         }
-      } catch (err) {
-        console.error("Error polling bundle status:", err);
-        // Don't stop polling on error, just log it
+      } catch (err: any) {
+        console.error('Error polling bundle status:', err);
+        stopPolling();
       }
     }, interval);
   }, [stopPolling]);
 
-  const uploadSmartFileSystem = useCallback(
-    async (
-      files: File[],
-      fileDescriptions: string[],
-      tableNames: string[],
-      userIds: string[],
-    ): Promise<SmartFileSystemResponse | null> => {
-      // Validate request
-      const validation = FileService.validateSmartFileSystemRequest(
-        files,
-        fileDescriptions,
-        tableNames,
-        userIds,
+  /**
+   * Upload files to smart file system
+   */
+  const uploadToSmartFileSystem = useCallback(async (request: {
+    files: File[];
+    file_descriptions: string[];
+    table_names: string[];
+  }) => {
+    setIsLoading(true);
+    setError(null);
+    setUploadProgress(0);
+    setUploadResponse(null);
+
+    try {
+      // Validate files first
+      const validationPromises = request.files.map(file => 
+        ServiceRegistry.file.validateExcelFile(file)
       );
-      if (!validation.isValid) {
-        setError(validation.errors.join(", "));
-        return null;
+      
+      const validationResults = await Promise.all(validationPromises);
+      const hasValidationErrors = validationResults.some(result => 
+        result && result.data && !result.data.isValid
+      );
+
+      if (hasValidationErrors) {
+        const errors = validationResults
+          .filter(result => result && result.data && !result.data.isValid)
+          .map(result => result!.data.errors.join(', '))
+          .join('; ');
+        throw new Error(`File validation failed: ${errors}`);
       }
 
-      setIsLoading(true);
-      setError(null);
-      setUploadProgress(0);
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 200);
 
-      try {
-        // Simulate upload progress
-        const progressInterval = setInterval(() => {
-          setUploadProgress((prev) => {
-            if (prev >= 90) {
-              clearInterval(progressInterval);
-              return prev;
-            }
-            return prev + 10;
-          });
-        }, 200);
+      const response = await ServiceRegistry.file.uploadToSmartFileSystem(request);
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
 
-        const response = await FileService.uploadSmartFileSystem(
-          files,
-          fileDescriptions,
-          tableNames,
-          userIds,
-        );
+      if (response.success) {
+        setUploadResponse(response.data);
         
-        clearInterval(progressInterval);
-        setUploadProgress(100);
-        setUploadResponse(response);
-        
-        // Start polling for status updates
-        if (response.bundle_id) {
-          startPolling(response.bundle_id);
+        // Start polling if bundle_id is provided
+        if (response.data.bundle_id) {
+          startPolling(response.data.bundle_id);
         }
         
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "An unexpected error occurred";
-        setError(errorMessage);
-        console.error("Error uploading files to smart file system:", err);
-        setUploadProgress(0);
-        return null;
-      } finally {
-        setIsLoading(false);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Upload failed");
       }
-    },
-    [startPolling],
-  );
+    } catch (e: any) {
+      setError(e.message || "Upload failed");
+      setUploadProgress(0);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [startPolling]);
 
+  /**
+   * Get bundle task status
+   */
   const getBundleTaskStatus = useCallback(async (bundleId: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await FileService.getBundleTaskStatus(bundleId);
-      setBundleStatus(response);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An unexpected error occurred";
-      setError(errorMessage);
-      console.error("Error fetching bundle task status:", err);
+      const response = await ServiceRegistry.file.getBundleTaskStatus(bundleId);
+      
+      if (response.success) {
+        setBundleStatus(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to get bundle status");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get bundle status");
+      return null;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const getAllBundleTaskStatus = useCallback(async () => {
+  /**
+   * Get all bundle task statuses
+   */
+  const getAllBundleTaskStatuses = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await FileService.getAllBundleTaskStatus();
-      setAllBundleStatuses(response);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An unexpected error occurred";
-      setError(errorMessage);
-      console.error("Error fetching all bundle task statuses:", err);
+      const response = await ServiceRegistry.file.getAllBundleTaskStatuses();
+      
+      if (response.success) {
+        setAllBundleStatuses(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to get all bundle statuses");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to get all bundle statuses");
+      return null;
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const searchFiles = useCallback(
-    async (
-      request: FilesSearchRequest,
-    ): Promise<FilesSearchResponse | null> => {
-      // Validate request
-      const validation = FileService.validateFilesSearchRequest(request);
-      if (!validation.isValid) {
-        setError(validation.errors.join(", "));
-        return null;
+  /**
+   * Search files
+   */
+  const searchFiles = useCallback(async (request: {
+    query: string;
+    user_id?: string;
+    intent_top_k?: number;
+    chunk_top_k?: number;
+    max_chunks_for_answer?: number;
+  }) => {
+    setIsLoading(true);
+    setError(null);
+    setSearchResults(null);
+
+    try {
+      // Ensure user_id is included in the search request
+      const searchRequest = {
+        ...request,
+        user_id: request.user_id, // Pass user_id to the API
+      };
+      
+      const response = await ServiceRegistry.file.searchFiles(searchRequest);
+      
+      if (response.success) {
+        setSearchResults(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Search failed");
       }
+    } catch (e: any) {
+      setError(e.message || "Search failed");
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await FileService.searchFiles(request);
-        setSearchResults(response);
-        return response;
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "An unexpected error occurred";
-        setError(errorMessage);
-        console.error("Error searching files:", err);
-        return null;
-      } finally {
-        setIsLoading(false);
+  /**
+   * Get upload progress for a bundle
+   */
+  const getUploadProgress = useCallback(async (bundleId: string) => {
+    try {
+      const response = await ServiceRegistry.file.getUploadProgress(bundleId);
+      
+      if (response.success) {
+        setUploadProgress(response.data.overallProgress);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to get upload progress");
       }
-    },
-    [],
-  );
+    } catch (e: any) {
+      setError(e.message || "Failed to get upload progress");
+      return null;
+    }
+  }, []);
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      stopPolling();
-    };
-  }, [stopPolling]);
+  /**
+   * Get supported file types
+   */
+  const getSupportedFileTypes = useCallback(() => {
+    const response = ServiceRegistry.file.getSupportedFileTypes();
+    return response.data;
+  }, []);
 
   return {
+    // File operations
+    uploadToSmartFileSystem,
+    getBundleTaskStatus,
+    getAllBundleTaskStatuses,
+    searchFiles,
+    getUploadProgress,
+    getSupportedFileTypes,
+
+    // State
     uploadResponse,
     bundleStatus,
     allBundleStatuses,
@@ -244,15 +302,14 @@ export function useFileOperations(): UseFileOperationsReturn {
     error,
     isPolling,
     uploadProgress,
-    uploadSmartFileSystem,
-    getBundleTaskStatus,
-    getAllBundleTaskStatus,
-    searchFiles,
-    startPolling,
-    stopPolling,
+
+    // Utilities
     clearError,
     reset,
+    startPolling,
+    stopPolling,
   };
 }
 
-export default useFileOperations;
+// Export with alias for backward compatibility
+export const useSmartFileUpload = useFileOperations;

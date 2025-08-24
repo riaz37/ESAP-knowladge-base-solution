@@ -16,7 +16,8 @@ export class BusinessRulesValidator {
    */
   static validateQuery(
     query: string,
-    businessRules: string
+    businessRules: string,
+    databaseId?: string
   ): BusinessRuleValidation {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -53,7 +54,7 @@ export class BusinessRulesValidator {
     }
 
     // Apply custom business rules from configuration
-    this.applyCustomBusinessRules(query, businessRules, errors, warnings, suggestions);
+    this.applyCustomBusinessRules(query, businessRules, errors, warnings, suggestions, databaseId);
 
     return {
       isValid: errors.length === 0,
@@ -145,9 +146,26 @@ export class BusinessRulesValidator {
     businessRules: string,
     errors: string[],
     warnings: string[],
-    suggestions: string[]
+    suggestions: string[],
+    databaseId?: string
   ): void {
     const rules = businessRules.toLowerCase();
+    
+    // Database-specific validation
+    if (databaseId) {
+      // Check for database-specific restrictions
+      if (rules.includes('production database restrictions') && databaseId.includes('prod')) {
+        warnings.push('Query executed on production database - ensure this is intentional');
+      }
+      
+      if (rules.includes('test database only') && !databaseId.includes('test')) {
+        errors.push('This query type is restricted to test databases only');
+      }
+      
+      if (rules.includes('specific database access') && !this.isAllowedDatabase(databaseId, rules)) {
+        errors.push(`Access to database ${databaseId} is restricted by business rules`);
+      }
+    }
     
     // Check for specific table restrictions
     if (rules.includes('no salary access') && query.toLowerCase().includes('salary')) {
@@ -229,5 +247,20 @@ export class BusinessRulesValidator {
     ];
 
     return restrictedTablePatterns.some(pattern => pattern.test(query));
+  }
+
+  /**
+   * Check if database is allowed based on business rules
+   */
+  private static isAllowedDatabase(databaseId: string, rules: string): boolean {
+    // Extract allowed database patterns from rules
+    const allowedPatterns = rules.match(/allowed databases?:\s*([^\n]+)/i);
+    if (allowedPatterns) {
+      const allowedDbs = allowedPatterns[1].split(',').map(db => db.trim().toLowerCase());
+      return allowedDbs.some(pattern => databaseId.toLowerCase().includes(pattern));
+    }
+    
+    // Default: allow all databases if no specific restrictions
+    return true;
   }
 } 

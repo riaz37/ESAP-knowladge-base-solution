@@ -1,141 +1,262 @@
-import { useState } from "react";
-import { UserAccessService } from "../api/services/user-access-service";
-import {
-  UserAccessCreateRequest,
-  UserAccessCreateResponse,
-  UserAccessData,
-} from "@/types/api";
+import { useState, useCallback } from "react";
+import { ServiceRegistry } from "../api";
 
-interface UseUserAccessReturn {
-  createUserAccess: (
-    config: UserAccessCreateRequest
-  ) => Promise<UserAccessCreateResponse | null>;
-  getUserAccessConfigs: () => Promise<UserAccessData[] | null>;
-  getUserAccess: (userId: string) => Promise<UserAccessData[] | null>;
-  userAccessConfigs: UserAccessData[]; // Added this to store fetched data
-  isLoading: boolean;
-  error: string | null;
-  success: boolean;
-  clearError: () => void;
-  clearSuccess: () => void;
-}
-
-export function useUserAccess(): UseUserAccessReturn {
-  const [isLoading, setIsLoading] = useState(false);
+/**
+ * Hook for managing user access operations using standardized ServiceRegistry
+ */
+export function useUserAccess() {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [userAccessConfigs, setUserAccessConfigs] = useState<UserAccessData[]>([]); // Added state
+  const [userAccessConfigs, setUserAccessConfigs] = useState<any[]>([]);
+  const [userAccess, setUserAccess] = useState<any>(null);
+  const [accessibleDatabases, setAccessibleDatabases] = useState<any[]>([]);
+  const [accessSummary, setAccessSummary] = useState<any>(null);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState(false);
 
-  const createUserAccess = async (
-    config: UserAccessCreateRequest
-  ): Promise<UserAccessCreateResponse | null> => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      // Validate access configuration before sending
-      const validation = UserAccessService.validateUserAccess(config);
-      if (!validation.isValid) {
-        throw new Error(validation.errors.join(", "));
-      }
-
-      const response = await UserAccessService.createUserAccess(config);
-      setSuccess(true);
-      return response;
-    } catch (err: any) {
-      const errorMessage =
-        err?.message || "Failed to create user access configuration";
-      setError(errorMessage);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getUserAccessConfigs = async (): Promise<UserAccessData[] | null> => {
-    setIsLoading(true);
-    setError(null);
+  /**
+   * Create user access configuration
+   */
+  const createUserAccess = useCallback(async (accessConfig: any) => {
+    setCreateLoading(true);
+    setCreateError(null);
+    setCreateSuccess(false);
 
     try {
-      const response = await UserAccessService.getUserAccessConfigs();
+      const response = await ServiceRegistry.userAccess.createUserAccess(accessConfig);
       
-      // Debug logging to understand the actual response structure
-      console.log('useUserAccess - Raw response:', response);
-      console.log('useUserAccess - Response type:', typeof response);
-      console.log('useUserAccess - Response keys:', response ? Object.keys(response) : 'null');
-      
-      // With the API client interceptor, response now contains just the data portion
-      // The response structure is: {access_configs: UserAccessData[], count: number}
-      const configs = (response as any).access_configs || null;
-      
-      console.log('useUserAccess - Extracted configs:', configs);
-      console.log('useUserAccess - Configs type:', typeof configs);
-      console.log('useUserAccess - Is array:', Array.isArray(configs));
-      
-      // Store the fetched data in state
-      if (configs && Array.isArray(configs)) {
-        setUserAccessConfigs(configs);
-        console.log('useUserAccess - Set configs in state:', configs);
+      if (response.success) {
+        setCreateSuccess(true);
+        return response.data;
       } else {
-        console.log('useUserAccess - No valid configs found, setting empty array');
-        setUserAccessConfigs([]);
+        throw new Error(response.error || "Failed to create user access");
       }
-      
-      return configs;
-    } catch (err: any) {
-      console.error("Hook: Error in getUserAccessConfigs:", err);
-      const errorMessage =
-        err?.message || "Failed to fetch user access configurations";
-      setError(errorMessage);
+    } catch (e: any) {
+      setCreateError(e.message || "Failed to create user access");
       return null;
     } finally {
-      setIsLoading(false);
+      setCreateLoading(false);
     }
-  };
+  }, []);
 
-  const getUserAccess = async (
-    userId: string
-  ): Promise<UserAccessData[] | null> => {
-    setIsLoading(true);
+  /**
+   * Get all user access configurations
+   */
+  const getUserAccessConfigs = useCallback(async () => {
+    setLoading(true);
     setError(null);
 
     try {
-      const response = await UserAccessService.getUserAccess(userId);
-      // With the API client interceptor, response now contains just the data portion
-      // The response structure is: {user_id: string, access_configs: UserAccessData[], count: number}
-      const configs = (response as any).access_configs || null;
+      const response = await ServiceRegistry.userAccess.getUserAccessConfigs();
       
-      // Store the fetched data in state
-      if (configs && Array.isArray(configs)) {
-        setUserAccessConfigs(configs);
+      if (response.success) {
+        setUserAccessConfigs(response.data?.access_configs || []);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to fetch user access configs");
       }
-      
-      return configs;
-    } catch (err: any) {
-      const errorMessage =
-        err?.message || `Failed to fetch access for user ${userId}`;
-      setError(errorMessage);
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch user access configs");
+      setUserAccessConfigs([]);
       return null;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const clearError = () => setError(null);
-  const clearSuccess = () => setSuccess(false);
+  /**
+   * Get access configurations for a specific user
+   */
+  const getUserAccess = useCallback(async (userId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await ServiceRegistry.userAccess.getUserAccess(userId);
+      
+      if (response.success) {
+        setUserAccess(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to fetch user access");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch user access");
+      setUserAccess(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Get accessible databases for a specific user
+   */
+  const getUserAccessibleDatabases = useCallback(async (userId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await ServiceRegistry.userAccess.getUserAccessibleDatabases(userId);
+      
+      if (response.success) {
+        setAccessibleDatabases(response.data.databases || []);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to fetch accessible databases");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch accessible databases");
+      setAccessibleDatabases([]);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Update user access configuration
+   */
+  const updateUserAccess = useCallback(async (userId: string, accessConfig: any) => {
+    setCreateLoading(true);
+    setCreateError(null);
+    setCreateSuccess(false);
+
+    try {
+      const response = await ServiceRegistry.userAccess.updateUserAccess(userId, accessConfig);
+      
+      if (response.success) {
+        setCreateSuccess(true);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to update user access");
+      }
+    } catch (e: any) {
+      setCreateError(e.message || "Failed to update user access");
+      return null;
+    } finally {
+      setCreateLoading(false);
+    }
+  }, []);
+
+  /**
+   * Delete user access configuration
+   */
+  const deleteUserAccess = useCallback(async (userId: string) => {
+    setCreateLoading(true);
+    setCreateError(null);
+
+    try {
+      const response = await ServiceRegistry.userAccess.deleteUserAccess(userId);
+      
+      if (response.success) {
+        setCreateSuccess(true);
+        return true;
+      } else {
+        throw new Error(response.error || "Failed to delete user access");
+      }
+    } catch (e: any) {
+      setCreateError(e.message || "Failed to delete user access");
+      return false;
+    } finally {
+      setCreateLoading(false);
+    }
+  }, []);
+
+  /**
+   * Check if user has access to a specific database
+   */
+  const checkUserDatabaseAccess = useCallback(async (userId: string, databaseId: number) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await ServiceRegistry.userAccess.checkUserDatabaseAccess(userId, databaseId);
+      
+      if (response.success) {
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to check database access");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to check database access");
+      return { hasAccess: false };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /**
+   * Get user access summary
+   */
+  const getUserAccessSummary = useCallback(async (userId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await ServiceRegistry.userAccess.getUserAccessSummary(userId);
+      
+      if (response.success) {
+        setAccessSummary(response.data);
+        return response.data;
+      } else {
+        throw new Error(response.error || "Failed to fetch access summary");
+      }
+    } catch (e: any) {
+      setError(e.message || "Failed to fetch access summary");
+      setAccessSummary(null);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Clear functions
+  const clearError = useCallback(() => {
+    setError(null);
+    setCreateError(null);
+  }, []);
+
+  const clearSuccess = useCallback(() => {
+    setCreateSuccess(false);
+  }, []);
+
+  const reset = useCallback(() => {
+    setError(null);
+    setCreateError(null);
+    setCreateSuccess(false);
+    setUserAccessConfigs([]);
+    setUserAccess(null);
+    setAccessibleDatabases([]);
+    setAccessSummary(null);
+  }, []);
 
   return {
+    // State
+    loading,
+    error,
+    userAccessConfigs,
+    userAccess,
+    accessibleDatabases,
+    accessSummary,
+    createLoading,
+    createError,
+    createSuccess,
+
+    // Actions
     createUserAccess,
     getUserAccessConfigs,
     getUserAccess,
-    userAccessConfigs, // Added this to return the stored data
-    isLoading,
-    error,
-    success,
+    getUserAccessibleDatabases,
+    updateUserAccess,
+    deleteUserAccess,
+    checkUserDatabaseAccess,
+    getUserAccessSummary,
+
+    // Utilities
     clearError,
     clearSuccess,
+    reset,
   };
 }
-
-export default useUserAccess;

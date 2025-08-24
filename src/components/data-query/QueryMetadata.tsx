@@ -48,12 +48,12 @@ export function QueryMetadata({
     <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 text-sm ${className}`}>
       <div className="flex items-center gap-2">
         <Database className="h-4 w-4 text-muted-foreground" />
-        <span className="font-medium">Rows:</span> {rowCount.toLocaleString()}
+        <span className="font-medium">Rows:</span> {(rowCount || 0).toLocaleString()}
       </div>
       
       <div className="flex items-center gap-2">
         <Clock className="h-4 w-4 text-muted-foreground" />
-        <span className="font-medium">Execution Time:</span> {executionTime.toFixed(2)}s
+        <span className="font-medium">Execution Time:</span> {(executionTime || 0).toFixed(2)}s
       </div>
       
       <div className="flex items-center gap-2">

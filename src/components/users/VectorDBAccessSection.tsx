@@ -1,28 +1,26 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Database, 
-  Brain, 
-  Shield, 
+  Table, 
   Plus, 
-  Trash2, 
-  RefreshCw, 
-  Settings,
-  CheckCircle,
+  Settings, 
+  Eye, 
+  Edit, 
+  Trash2,
   AlertCircle,
-  Info
+  CheckCircle,
+  RefreshCw
 } from "lucide-react";
+import { toast } from "sonner";
+import { useAuthContext, useDatabaseContext } from "@/components/providers";
 import { useVectorDB } from "@/lib/hooks/use-vector-db";
-import { useDatabaseConfig } from "@/lib/hooks/use-database-config";
-import { useAuthContext } from "@/components/providers";
-
 
 interface VectorDBAccessSectionProps {
   selectedUserForVectorDB: string;
@@ -38,6 +36,10 @@ export function VectorDBAccessSection({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   
+  // Use contexts instead of local state
+  const { user } = useAuthContext();
+  const { availableDatabases, currentDatabaseId, currentDatabaseName } = useDatabaseContext();
+  
   const {
     vectorDBConfigs,
     userTableNames,
@@ -47,14 +49,6 @@ export function VectorDBAccessSection({
     getUserTableNames,
   } = useVectorDB();
 
-  const {
-    databaseConfigs,
-    isLoading: dbLoading,
-    getDatabaseConfigs,
-  } = useDatabaseConfig();
-
-  const { user } = useAuthContext();
-  
   // Placeholder state - will be implemented with proper database context
   const userConfigs = { configs: [] };
   const userConfigLoading = false;
@@ -63,7 +57,7 @@ export function VectorDBAccessSection({
     // TODO: Implement with database context
   };
 
-  const isLoading = vectorDBLoading || dbLoading || userConfigLoading;
+  const isLoading = vectorDBLoading || userConfigLoading;
 
   useEffect(() => {
     if (selectedUserForVectorDB) {
@@ -74,9 +68,9 @@ export function VectorDBAccessSection({
   const loadData = async () => {
     await Promise.all([
       getVectorDBConfigs(),
-      getDatabaseConfigs(),
       getUserConfigs(),
       getUserTableNames(selectedUserForVectorDB),
+      getUserTableNamesWithMetadata(selectedUserForVectorDB),
     ]);
   };
 
@@ -87,7 +81,7 @@ export function VectorDBAccessSection({
 
   const handleOpenModal = () => {
     // Only open modal if we have the necessary data
-    if (getAvailableDatabases().length > 0) {
+    if (availableDatabases.length > 0) {
       setIsModalOpen(true);
     } else {
       // If no databases available, load data first
@@ -96,7 +90,7 @@ export function VectorDBAccessSection({
   };
 
   const getUserVectorDBConfigs = () => {
-    if (!userConfigs || !databaseConfigs) return [];
+    if (!userConfigs || !availableDatabases) return [];
     
     return userConfigs.configs.filter(config => 
       config.user_id === selectedUserForVectorDB && 
@@ -105,271 +99,239 @@ export function VectorDBAccessSection({
   };
 
   const getAvailableDatabases = () => {
-    if (!databaseConfigs) return [];
-    return databaseConfigs.configs;
+    if (!availableDatabases) return [];
+    return availableDatabases;
   };
 
   const getAccessLevelLabel = (level: number) => {
-    if (level >= 8) return { label: "Full Access", color: "bg-green-600", icon: CheckCircle };
-    if (level >= 5) return { label: "Advanced Access", color: "bg-blue-600", icon: Shield };
-    if (level >= 2) return { label: "Vector DB Access", color: "bg-purple-600", icon: Brain };
-    return { label: "Read Only", color: "bg-gray-600", icon: Info };
+    switch (level) {
+      case 1:
+        return "Read Only";
+      case 2:
+        return "Vector DB Access";
+      case 3:
+        return "Full Access";
+      default:
+        return "Unknown";
+    }
   };
 
+  const getAccessLevelColor = (level: number) => {
+    switch (level) {
+      case 1:
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300";
+      case 2:
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300";
+      case 3:
+        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300";
+    }
+  };
+
+  if (!selectedUserForVectorDB) {
+    return null;
+  }
+
   return (
-    <div className="bg-slate-800/50 rounded-lg border border-emerald-500/30 p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white mb-2">
-            Vector Database Access for {extractNameFromEmail(selectedUserForVectorDB)}
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Vector Database Access
           </h2>
-          <p className="text-gray-400">
-            Manage vector database access, table permissions, and AI operation capabilities
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Manage vector database access for {extractNameFromEmail(selectedUserForVectorDB)}
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button
-            onClick={loadData}
-            disabled={isLoading}
-            variant="outline"
-            className="border-slate-600 text-slate-300 hover:bg-slate-700"
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button
-            onClick={handleOpenModal}
-            className="bg-emerald-600 hover:bg-emerald-700"
-            disabled={isLoading}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {isLoading ? 'Loading...' : 'Add Vector DB Access'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="border-slate-600 text-slate-300 hover:bg-slate-700"
-          >
-            Back to Users
-          </Button>
+        
+        {/* Status Badges */}
+        <div className="flex items-center gap-3">
+          {currentDatabaseId && (
+            <Badge variant="outline" className="flex items-center gap-2">
+              <Database className="w-4 h-4 text-blue-600" />
+              Current DB: {currentDatabaseName || currentDatabaseId}
+            </Badge>
+          )}
+          {availableDatabases.length > 0 && (
+            <Badge variant="outline" className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              {availableDatabases.length} Databases Available
+            </Badge>
+          )}
         </div>
       </div>
 
-      {/* Tabs */}
+      <Separator />
+
+      {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-slate-700">
-          <TabsTrigger value="overview" className="text-white">Overview</TabsTrigger>
-          <TabsTrigger value="configurations" className="text-white">Configurations</TabsTrigger>
-          <TabsTrigger value="tables" className="text-white">Table Access</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="configs">Configurations</TabsTrigger>
+          <TabsTrigger value="tables">Tables</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6 mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Current Access Summary */}
-            <Card className="bg-slate-700/50 border-slate-600">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-white text-lg flex items-center">
-                  <Shield className="w-5 h-5 mr-2 text-blue-400" />
-                  Current Access
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {getUserVectorDBConfigs().length > 0 ? (
-                    getUserVectorDBConfigs().map((config, index) => {
-                      const accessInfo = getAccessLevelLabel(config.access_level);
-                      const IconComponent = accessInfo.icon;
-                      return (
-                        <div key={index} className="flex items-center justify-between p-3 bg-slate-600/50 rounded-lg">
-                          <div className="flex items-center">
-                            <IconComponent className="w-4 h-4 mr-2 text-white" />
-                            <span className="text-white text-sm">DB #{config.db_id}</span>
-                          </div>
-                          <Badge className={accessInfo.color}>
-                            {accessInfo.label}
-                          </Badge>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-4">
-                      <AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-400 text-sm">No vector DB access configured</p>
+        <TabsContent value="overview" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="w-5 h-5" />
+                Current Database Status
+              </CardTitle>
+              <CardDescription>
+                Overview of the currently selected database and user access
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {currentDatabaseId ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Database className="w-5 h-5 text-blue-600" />
+                      <span className="font-medium text-blue-800 dark:text-blue-200">Current Database</span>
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Available Tables */}
-            <Card className="bg-slate-700/50 border-slate-600">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-white text-lg flex items-center">
-                  <Database className="w-5 h-5 mr-2 text-green-400" />
-                  Available Tables
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {userTableNames && userTableNames.length > 0 ? (
-                    userTableNames.map((tableName, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-slate-600/50 rounded">
-                        <span className="text-white text-sm">{tableName}</span>
-                        <Badge variant="secondary" className="bg-green-600/20 text-green-400">
-                          Available
-                        </Badge>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4">
-                      <Info className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-400 text-sm">No tables available</p>
+                    <p className="text-blue-700 dark:text-blue-300">
+                      {currentDatabaseName || `Database ${currentDatabaseId}`}
+                    </p>
+                  </div>
+                  
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="font-medium text-green-800 dark:text-green-200">User</span>
                     </div>
-                  )}
+                    <p className="text-green-700 dark:text-green-300">
+                      {extractNameFromEmail(selectedUserForVectorDB)}
+                    </p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Database className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <p className="font-medium">No Database Selected</p>
+                  <p className="text-sm">Please select a database to view vector DB access</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            {/* Quick Actions */}
-            <Card className="bg-slate-700/50 border-slate-600">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-white text-lg flex items-center">
-                  <Settings className="w-5 h-5 mr-2 text-purple-400" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Button
-                    onClick={handleOpenModal}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700"
-                    size="sm"
-                    disabled={isLoading}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    {isLoading ? 'Loading...' : 'Add Access'}
-                  </Button>
-                  <Button
-                    onClick={loadData}
-                    variant="outline"
-                    className="w-full border-slate-600 text-slate-300 hover:bg-slate-700"
-                    size="sm"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Refresh Data
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Quick Actions
+              </CardTitle>
+              <CardDescription>
+                Common actions for managing vector database access
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleOpenModal}
+                  disabled={isLoading || getAvailableDatabases().length === 0}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Vector DB Access
+                </Button>
+                
+                <Button
+                  onClick={loadData}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh Data
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Configurations Tab */}
-        <TabsContent value="configurations" className="space-y-6 mt-6">
-          <Card className="bg-slate-700/50 border-slate-600">
+        <TabsContent value="configs" className="space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-white text-lg flex items-center">
-                <Brain className="w-5 h-5 mr-2 text-purple-400" />
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5" />
                 Vector DB Configurations
               </CardTitle>
+              <CardDescription>
+                Current vector database access configurations for this user
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {getUserVectorDBConfigs().length > 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+                  <span className="ml-2">Loading configurations...</span>
+                </div>
+              ) : getUserVectorDBConfigs().length > 0 ? (
                 <div className="space-y-4">
-                  {getUserVectorDBConfigs().map((config, index) => {
-                    const accessInfo = getAccessLevelLabel(config.access_level);
-                    const IconComponent = accessInfo.icon;
-                    const dbConfig = getAvailableDatabases().find(db => db.db_id === config.db_id);
-                    
-                    return (
-                      <div key={index} className="p-4 bg-slate-600/50 rounded-lg border border-slate-500">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center">
-                            <IconComponent className="w-5 h-5 mr-2 text-white" />
-                            <span className="text-white font-medium">Database #{config.db_id}</span>
-                            <Badge className={`ml-2 ${accessInfo.color}`}>
-                              {accessInfo.label}
-                            </Badge>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-slate-500 text-slate-300 hover:bg-slate-600"
-                            >
-                              <Settings className="w-4 h-4 mr-1" />
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-red-500 text-red-300 hover:bg-red-600/20"
-                            >
-                              <Trash2 className="w-4 h-4 mr-1" />
-                              Remove
-                            </Button>
-                          </div>
+                  {getUserVectorDBConfigs().map((config, index) => (
+                    <div key={index} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Database className="w-4 h-4 text-blue-600" />
+                          <span className="font-medium">Database {config.db_id}</span>
                         </div>
-                        
-                        {dbConfig && (
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="text-gray-400">Host:</span>
-                              <span className="text-white ml-2">{dbConfig.db_config.DB_HOST}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Port:</span>
-                              <span className="text-white ml-2">{dbConfig.db_config.DB_PORT}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Database:</span>
-                              <span className="text-white ml-2">{dbConfig.db_config.DB_NAME}</span>
-                            </div>
-                            <div>
-                              <span className="text-gray-400">Schema:</span>
-                              <span className="text-white ml-2">{dbConfig.db_config.schema}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        <div className="mt-3 pt-3 border-t border-slate-500">
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-400 text-sm">Accessible Tables:</span>
-                            <span className="text-white text-sm">{config.accessible_tables.length} tables</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {config.accessible_tables.slice(0, 5).map((table, idx) => (
-                              <Badge key={idx} variant="secondary" className="bg-blue-600/20 text-blue-400">
-                                {table}
-                              </Badge>
-                            ))}
-                            {config.accessible_tables.length > 5 && (
-                              <Badge variant="secondary" className="bg-gray-600/20 text-gray-400">
-                                +{config.accessible_tables.length - 5} more
-                              </Badge>
-                            )}
-                          </div>
+                        <Badge className={getAccessLevelColor(config.access_level)}>
+                          {getAccessLevelLabel(config.access_level)}
+                        </Badge>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 dark:text-gray-400">
+                        <div>
+                          <span className="font-medium">Access Level:</span>
+                          <span className="ml-2">{config.access_level}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Tables:</span>
+                          <span className="ml-2">{config.accessible_tables?.length || 0}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Updated:</span>
+                          <span className="ml-2">
+                            {new Date(config.updated_at).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
-                    );
-                  })}
+                      
+                      <div className="flex gap-2 mt-3">
+                        <Button size="sm" variant="outline">
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-600">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Brain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-white mb-2">No Vector DB Access</h3>
-                  <p className="text-gray-400 mb-4">
-                    This user doesn't have any vector database access configured yet.
-                  </p>
+                <div className="text-center py-8 text-gray-500">
+                  <Settings className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <p className="font-medium">No Vector DB Configurations</p>
+                  <p className="text-sm">This user has no vector database access configured</p>
                   <Button
                     onClick={handleOpenModal}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                    disabled={isLoading}
+                    className="mt-4"
+                    disabled={getAvailableDatabases().length === 0}
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    {isLoading ? 'Loading...' : 'Configure Access'}
+                    Add Configuration
                   </Button>
                 </div>
               )}
@@ -378,85 +340,65 @@ export function VectorDBAccessSection({
         </TabsContent>
 
         {/* Tables Tab */}
-        <TabsContent value="tables" className="space-y-6 mt-6">
-          <Card className="bg-slate-700/50 border-slate-600">
+        <TabsContent value="tables" className="space-y-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-white text-lg flex items-center">
-                <Database className="w-5 h-5 mr-2 text-green-400" />
-                Table Access Management
+              <CardTitle className="flex items-center gap-2">
+                <Table className="w-5 h-5" />
+                Available Tables
               </CardTitle>
+              <CardDescription>
+                Tables accessible to this user for vector database operations
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-white font-medium">Available Tables for User</h4>
-                    <p className="text-gray-400 text-sm">
-                      Tables that can be accessed by this user for vector operations
-                    </p>
-                  </div>
-                  <Button
-                    onClick={loadData}
-                    variant="outline"
-                    size="sm"
-                    className="border-slate-500 text-slate-300 hover:bg-slate-600"
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Refresh Tables
-                  </Button>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+                  <span className="ml-2">Loading tables...</span>
                 </div>
-                
-                {userTableNames && userTableNames.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {userTableNames.map((tableName, index) => (
-                      <div key={index} className="p-3 bg-slate-600/50 rounded-lg border border-slate-500">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <Database className="w-4 h-4 mr-2 text-green-400" />
-                            <span className="text-white font-medium">{tableName}</span>
-                          </div>
-                          <Badge className="bg-green-600/20 text-green-400">
-                            Available
-                          </Badge>
-                        </div>
-                        <div className="mt-2 text-xs text-gray-400">
-                          Ready for vector operations and AI queries
-                        </div>
+              ) : userTableNames && userTableNames.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {userTableNames.map((tableName, index) => (
+                    <div key={index} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Table className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium">{tableName}</span>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Database className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-white mb-2">No Tables Available</h3>
-                    <p className="text-gray-400 mb-4">
-                      This user doesn't have access to any tables yet.
-                    </p>
-                    <Button
-                      onClick={handleOpenModal}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                      disabled={isLoading}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      {isLoading ? 'Loading...' : 'Configure Table Access'}
-                    </Button>
-                  </div>
-                )}
-              </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        Available for vector operations
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Table className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+                  <p className="font-medium">No Tables Available</p>
+                  <p className="text-sm">No tables are configured for vector database access</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Vector DB Access Modal */}
-      <VectorDBAccessModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        userId={selectedUserForVectorDB}
-        onSuccess={handleModalSuccess}
-        availableDatabases={getAvailableDatabases()}
-        userTableNames={userTableNames || []}
-      />
+      {/* Error Display */}
+      {vectorDBError && (
+        <Card className="border-red-200 dark:border-red-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <AlertCircle className="w-6 h-6 text-red-600" />
+              <div>
+                <h3 className="font-medium text-red-800 dark:text-red-200">
+                  Vector DB Error
+                </h3>
+                <p className="text-red-700 dark:text-red-300 text-sm">{vectorDBError}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 } 

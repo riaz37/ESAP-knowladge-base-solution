@@ -15,7 +15,11 @@ import {
   Search,
   Bookmark,
   Palette,
-  User2Icon,
+  Home,
+  Shield,
+  Building2,
+  Plane,
+  Users,
 } from "lucide-react";
 
 import { useUIStore } from "@/store/uiStore";
@@ -25,73 +29,49 @@ export default function Menu() {
   const pathname = usePathname();
   const { setShowSidebar } = useUIStore();
 
-  // Menu items with new Data Query section
+  // Menu items with proper icons
   const menuItems = [
     {
+      icon: Home,
       name: "Dashboard",
       path: "/",
-      icon: Square,
       isActive: pathname === "/",
     },
-
     {
-      name: "File Queries",
-      path: "/file-query",
-      icon: FileText,
-    },
-    {
-      name: "Database Queries",
+      icon: Search,
+      name: "Database Query",
       path: "/database-query",
-      icon: Database,
-    },
-
-    {
-      name: "Report & Analysis",
-      path: "/ai-results",
-      icon: BarChart3,
-      isActive: pathname === "/ai-results",
+      isActive: pathname === "/database-query",
     },
     {
-      name: "Company Structure",
-      path: "/company-structure",
-      icon: Upload,
-      isActive: pathname === "/company-structure",
-    },
-    {
-      name: "Users",
-      path: "/users",
-      icon: User,
-      isActive: pathname === "/users",
-    },
-    {
-      name: "Business Rules",
-      path: "/business-rules",
       icon: FileText,
-      isActive: pathname === "/business-rules",
+      name: "File Query",
+      path: "/file-query",
+      isActive: pathname === "/file-query",
     },
     {
-      name: "User Configuration",
-      path: "/user-configuration",
-      icon: User2Icon,
-      isActive: pathname === "/user-configuration",
-    },
-    {
+      icon: Database,
       name: "Tables",
       path: "/tables",
-      icon: Database,
       isActive: pathname === "/tables",
     },
     {
-      name: "Table Management",
-      path: "/table-management",
-      icon: Database,
-      isActive: pathname === "/table-management",
+      icon: Building2,
+      name: "Company Struture",
+      path: "/company-structure",
+      isActive: pathname === "/company-structure",
     },
     {
-      name: "History Log",
-      path: "/database-hierarchy",
-      icon: History,
-      isActive: pathname === "/database-hierarchy",
+      icon: Plane,
+      name: "User Configuration",
+      path: "/user-configuration",
+      isActive: pathname === "/user-configuration",
+    },
+    {
+      icon: Users,
+      name: "Users",
+      path: "/users",
+      isActive: pathname === "/users",
     },
   ];
 
@@ -102,6 +82,7 @@ export default function Menu() {
   const renderMenuItem = (item: any) => {
     const isActive = item.isActive;
     const hasChildren = item.children && item.children.length > 0;
+    const IconComponent = item.icon;
 
     return (
       <div key={item.name}>
@@ -115,7 +96,7 @@ export default function Menu() {
               : "text-gray-300 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10"
           )}
         >
-          <item.icon
+          <IconComponent
             className={cn(
               "h-5 w-5 transition-all duration-200",
               isActive
@@ -137,29 +118,32 @@ export default function Menu() {
         {/* Render children if they exist and parent is active */}
         {hasChildren && isActive && (
           <div className="ml-6 mt-2 space-y-1">
-            {item.children.map((child: any) => (
-              <Link
-                key={child.name}
-                href={child.path}
-                onClick={handleMenuItemClick}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group relative",
-                  pathname === child.path
-                    ? "bg-green-500/10 text-green-300 border border-green-500/20"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent hover:border-white/5"
-                )}
-              >
-                <child.icon
+            {item.children.map((child: any) => {
+              const ChildIconComponent = child.icon;
+              return (
+                <Link
+                  key={child.name}
+                  href={child.path}
+                  onClick={handleMenuItemClick}
                   className={cn(
-                    "h-4 w-4 transition-all duration-200",
+                    "flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group relative",
                     pathname === child.path
-                      ? "text-green-300"
-                      : "text-gray-500 group-hover:text-gray-300"
+                      ? "bg-green-500/10 text-green-300 border border-green-500/20"
+                      : "text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-transparent hover:border-white/5"
                   )}
-                />
-                <span className="flex-1">{child.name}</span>
-              </Link>
-            ))}
+                >
+                  <ChildIconComponent
+                    className={cn(
+                      "h-4 w-4 transition-all duration-200",
+                      pathname === child.path
+                        ? "text-green-300"
+                        : "text-gray-500 group-hover:text-gray-300"
+                    )}
+                  />
+                  <span className="flex-1">{child.name}</span>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

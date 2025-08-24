@@ -1,32 +1,32 @@
 import { useState, useCallback } from 'react';
-import { BusinessRulesService } from '@/lib/api/services/business-rules-service';
 import { BusinessRulesValidator, BusinessRuleValidation } from '@/lib/utils/business-rules-validator';
+import { useBusinessRulesContext } from '@/components/providers';
 
 /**
  * Hook for validating database queries against business rules
+ * Now uses the Business Rules context for better state management
  */
 export function useDatabaseQueryValidation() {
   const [validationResult, setValidationResult] = useState<BusinessRuleValidation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Use the business rules context
+  const { businessRules, validateQuery } = useBusinessRulesContext();
+
   /**
    * Validate a database query against business rules
    */
-  const validateQuery = useCallback(async (
-    query: string,
-    userId: string
+  const validateQueryAgainstRules = useCallback(async (
+    query: string
   ): Promise<BusinessRuleValidation> => {
     setIsValidating(true);
     setValidationError(null);
     setValidationResult(null);
 
     try {
-      // Fetch business rules for the user (which are configured against their database)
-      const businessRules = await BusinessRulesService.getBusinessRules(userId);
-      
-      // Validate the query against the business rules
-      const validation = BusinessRulesValidator.validateQuery(query, businessRules);
+      // Use the context's validateQuery method
+      const validation = validateQuery(query);
       
       setValidationResult(validation);
       return validation;
@@ -47,7 +47,7 @@ export function useDatabaseQueryValidation() {
     } finally {
       setIsValidating(false);
     }
-  }, []);
+  }, [validateQuery]);
 
   /**
    * Clear validation results
@@ -60,16 +60,52 @@ export function useDatabaseQueryValidation() {
   /**
    * Check if query can be executed
    */
-  const canExecuteQuery = useCallback((query: string, userId: string): Promise<boolean> => {
-    return validateQuery(query, userId).then(validation => validation.isValid);
-  }, [validateQuery]);
+  const canExecuteQuery = useCallback((query: string): boolean => {
+    if (!businessRules.content || businessRules.status !== 'loaded') {
+      return true; // Allow execution if no business rules are configured
+    }
+
+    const validation = validateQuery(query);
+    return validation.isValid;
+  }, [businessRules, validateQuery]);
+
+  /**
+   * Get validation status for a query
+   */
+  const getValidationStatus = useCallback((query: string): {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+    suggestions: string[];
+  } => {
+    if (!businessRules.content || businessRules.status !== 'loaded') {
+      return {
+        isValid: true,
+        errors: [],
+        warnings: [],
+        suggestions: []
+      };
+    }
+
+    return validateQuery(query);
+  }, [businessRules, validateQuery]);
 
   return {
+    // State
     validationResult,
     isValidating,
     validationError,
-    validateQuery,
+    
+    // Actions
+    validateQuery: validateQueryAgainstRules,
     clearValidation,
-    canExecuteQuery
+    
+    // Computed
+    canExecuteQuery,
+    getValidationStatus,
+    
+    // Context state
+    businessRulesStatus: businessRules.status,
+    hasBusinessRules: businessRules.status === 'loaded' && !!businessRules.content
   };
 } 

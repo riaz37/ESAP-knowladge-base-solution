@@ -1,27 +1,41 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { AuthService } from '@/lib/api/services/auth-service';
-import {
-  User,
+import { ServiceRegistry } from '@/lib/api';
+import { clearAllESAPStorage } from '@/lib/utils/storage';
+import type { 
+  LoginRequest, 
   SignupRequest,
-  LoginRequest,
   ChangePasswordRequest,
-  AuthState,
-  AuthTokens,
-  AuthError,
-} from '@/types/auth';
+  AuthResponse,
+  UserProfile,
+} from '@/lib/api';
+
+interface AuthTokens {
+  accessToken: string;
+  tokenType: string;
+  expiresIn?: number;
+}
+
+interface AuthState {
+  user: UserProfile | null;
+  tokens: AuthTokens | null;
+  isLoading: boolean;
+  error: string | null;
+  isAuthenticated: boolean;
+}
 
 /**
  * Custom hook for managing authentication state and operations
+ * Uses standardized AuthService from ServiceRegistry
  */
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [tokens, setTokens] = useState<AuthTokens | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Check if user is authenticated
   const isAuthenticated = useMemo(() => {
-    return !!user && !!tokens?.accessToken && !AuthService.isTokenExpired(tokens.accessToken);
+    return !!user && !!tokens?.accessToken && !ServiceRegistry.auth.isTokenExpired(tokens.accessToken);
   }, [user, tokens]);
 
   // Initialize auth state from localStorage on mount
@@ -33,10 +47,10 @@ export function useAuth() {
         
         if (storedTokens && storedUser) {
           const parsedTokens: AuthTokens = JSON.parse(storedTokens);
-          const parsedUser: User = JSON.parse(storedUser);
+          const parsedUser: UserProfile = JSON.parse(storedUser);
           
           // Check if token is still valid
-          if (!AuthService.isTokenExpired(parsedTokens.accessToken)) {
+          if (!ServiceRegistry.auth.isTokenExpired(parsedTokens.accessToken)) {
             setTokens(parsedTokens);
             setUser(parsedUser);
           } else {
@@ -54,7 +68,7 @@ export function useAuth() {
   }, []);
 
   // Save auth data to localStorage
-  const saveAuthToStorage = useCallback((userData: User, authTokens: AuthTokens) => {
+  const saveAuthToStorage = useCallback((authTokens: AuthTokens, userData: UserProfile) => {
     try {
       localStorage.setItem('auth_tokens', JSON.stringify(authTokens));
       localStorage.setItem('auth_user', JSON.stringify(userData));
@@ -73,86 +87,98 @@ export function useAuth() {
     }
   }, []);
 
-  // Clear error state
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
-
-  // User registration
-  const signup = useCallback(async (data: SignupRequest): Promise<User> => {
+  // Login function
+  const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const newUser = await AuthService.signup(data);
+      // Login and get tokens
+      const authResponse = await ServiceRegistry.auth.login(credentials);
       
+      if (!authResponse.success) {
+        throw new Error(authResponse.error || 'Login failed');
+      }
+      
+      const authTokens: AuthTokens = {
+        accessToken: authResponse.data.access_token,
+        tokenType: authResponse.data.token_type,
+        expiresIn: authResponse.data.expires_in,
+      };
+
+      // Get user profile
+      const profileResponse = await ServiceRegistry.auth.getProfile(authTokens.accessToken);
+      
+      if (!profileResponse.success) {
+        throw new Error(profileResponse.error || 'Failed to get user profile');
+      }
+
+      // Update state
+      setTokens(authTokens);
+      setUser(profileResponse.data);
+
+      // Save to localStorage
+      saveAuthToStorage(authTokens, profileResponse.data);
+      
+    } catch (err: any) {
+      const errorMessage = err.message || 'Login failed';
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [saveAuthToStorage]);
+
+  // Signup function
+  const signup = useCallback(async (userData: SignupRequest): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await ServiceRegistry.auth.signup(userData);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Signup failed');
+      }
+
       // After successful signup, automatically log in
-      const loginData: LoginRequest = {
-        username: data.username,
-        password: data.password,
-      };
-      
-      const loginResponse = await AuthService.login(loginData);
-      const userProfile = await AuthService.getProfile(loginResponse.access_token);
-      
-      const authTokens: AuthTokens = {
-        accessToken: loginResponse.access_token,
-        tokenType: loginResponse.token_type,
-        expiresAt: AuthService.parseJWT(loginResponse.access_token)?.exp,
-      };
-      
-      setUser(userProfile);
-      setTokens(authTokens);
-      saveAuthToStorage(userProfile, authTokens);
-      
-      return userProfile;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Signup failed';
+      await login({
+        username: userData.username,
+        password: userData.password,
+      });
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Signup failed';
       setError(errorMessage);
-      throw error;
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [saveAuthToStorage]);
+  }, [login]);
 
-  // User login
-  const login = useCallback(async (data: LoginRequest): Promise<User> => {
+  // Logout function
+  const logout = useCallback(async (): Promise<void> => {
     setIsLoading(true);
-    setError(null);
-    
-    try {
-      const loginResponse = await AuthService.login(data);
-      const userProfile = await AuthService.getProfile(loginResponse.access_token);
-      
-      const authTokens: AuthTokens = {
-        accessToken: loginResponse.access_token,
-        tokenType: loginResponse.token_type,
-        expiresAt: AuthService.parseJWT(loginResponse.access_token)?.exp,
-      };
-      
-      setUser(userProfile);
-      setTokens(authTokens);
-      saveAuthToStorage(userProfile, authTokens);
-      
-      return userProfile;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      setError(errorMessage);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [saveAuthToStorage]);
 
-  // User logout
-  const logout = useCallback(() => {
+    try {
+      // Clear local state
     setUser(null);
     setTokens(null);
+      setError(null);
+
+      // Clear storage
     clearAuthStorage();
+    clearAllESAPStorage();
+
+    } catch (err: any) {
+      console.error('Logout error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, [clearAuthStorage]);
 
-  // Change password
-  const changePassword = useCallback(async (data: ChangePasswordRequest): Promise<void> => {
+  // Change password function
+  const changePassword = useCallback(async (passwordData: ChangePasswordRequest): Promise<void> => {
     if (!tokens?.accessToken) {
       throw new Error('No access token available');
     }
@@ -161,107 +187,102 @@ export function useAuth() {
     setError(null);
     
     try {
-      await AuthService.changePassword(data, tokens.accessToken);
+      const response = await ServiceRegistry.auth.changePassword(passwordData, tokens.accessToken);
       
-      // After password change, user needs to login again
-      logout();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Password change failed';
+      if (!response.success) {
+        throw new Error(response.error || 'Password change failed');
+      }
+
+      // Password changed successfully - no need to update tokens as they remain valid
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Password change failed';
       setError(errorMessage);
-      throw error;
+      throw new Error(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [tokens?.accessToken, logout]);
+  }, [tokens]);
 
   // Refresh user profile
-  const refreshUser = useCallback(async (): Promise<void> => {
+  const refreshProfile = useCallback(async (): Promise<void> => {
     if (!tokens?.accessToken) {
       return;
     }
-    
+
+    setIsLoading(true);
+    setError(null);
+
     try {
-      const userProfile = await AuthService.getProfile(tokens.accessToken);
-      setUser(userProfile);
-      saveAuthToStorage(userProfile, tokens);
-    } catch (error) {
-      console.error('Failed to refresh user profile:', error);
+      const response = await ServiceRegistry.auth.getProfile(tokens.accessToken);
       
-      // If token is invalid, logout user
-      if (error instanceof Error && error.message.includes('Authentication required')) {
-        logout();
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to refresh profile');
       }
+
+      setUser(response.data);
+      saveAuthToStorage(tokens, response.data);
+
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to refresh profile';
+      setError(errorMessage);
+      
+      // If token is invalid, logout
+      if (err.statusCode === 401) {
+        await logout();
+      }
+    } finally {
+      setIsLoading(false);
     }
-  }, [tokens?.accessToken, saveAuthToStorage, logout]);
+  }, [tokens, saveAuthToStorage, logout]);
 
-  // Auto-refresh user profile when token is about to expire
-  useEffect(() => {
-    if (!tokens?.accessToken) return;
-    
-    const checkTokenExpiry = () => {
-      if (AuthService.isTokenExpired(tokens.accessToken)) {
-        logout();
-      } else {
-        // Refresh user profile every 5 minutes
-        refreshUser();
-      }
-    };
-    
-    const interval = setInterval(checkTokenExpiry, 5 * 60 * 1000); // 5 minutes
-    
-    return () => clearInterval(interval);
-  }, [tokens?.accessToken, logout, refreshUser]);
+  // Check token validity
+  const checkTokenValidity = useCallback((): boolean => {
+    if (!tokens?.accessToken) {
+      return false;
+    }
 
-  // Get current access token
-  const getAccessToken = useCallback((): string | null => {
-    if (!tokens?.accessToken || AuthService.isTokenExpired(tokens.accessToken)) {
+    return !ServiceRegistry.auth.isTokenExpired(tokens.accessToken);
+  }, [tokens]);
+
+  // Get user ID from token
+  const getUserId = useCallback((): string | null => {
+    if (!tokens?.accessToken) {
       return null;
     }
-    return tokens.accessToken;
-  }, [tokens?.accessToken]);
 
-  // Check if user has specific role
-  const hasRole = useCallback((role: string): boolean => {
-    if (!tokens?.accessToken) return false;
-    
-    try {
-      const payload = AuthService.parseJWT(tokens.accessToken);
-      return payload?.roles?.includes(role) || false;
-    } catch {
-      return false;
-    }
-  }, [tokens?.accessToken]);
+    return ServiceRegistry.auth.getUserIdFromToken(tokens.accessToken);
+  }, [tokens]);
 
-  // Check if user has specific permission
-  const hasPermission = useCallback((permission: string): boolean => {
-    if (!tokens?.accessToken) return false;
-    
-    try {
-      const payload = AuthService.parseJWT(tokens.accessToken);
-      return payload?.permissions?.includes(permission) || false;
-    } catch {
-      return false;
-    }
-  }, [tokens?.accessToken]);
+  // Clear error
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
 
+  // Auth state object
   const authState: AuthState = {
     user,
     tokens,
-    isAuthenticated,
     isLoading,
     error,
+    isAuthenticated,
   };
 
   return {
+    // State
     ...authState,
-    signup,
+
+    // Actions
     login,
+    signup,
     logout,
     changePassword,
-    refreshUser,
+    refreshProfile,
+
+    // Utilities
+    checkTokenValidity,
+    getUserId,
     clearError,
-    getAccessToken,
-    hasRole,
-    hasPermission,
+    clearAuthStorage,
   };
 } 

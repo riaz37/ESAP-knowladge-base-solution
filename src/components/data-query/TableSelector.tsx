@@ -2,69 +2,52 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Database, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { UserConfigService } from "@/lib/api/services/user-config-service";
+import { ServiceRegistry } from "@/lib/api";
+import { useAuthContext } from "@/components/providers";
 
 interface TableSelectorProps {
-  userId: string;
-  tableSpecific: boolean;
-  selectedTables: string[];
-  onTableSpecificChange: (value: boolean) => void;
-  onSelectedTablesChange: (tables: string[]) => void;
+  databaseId?: number | null;
+  onTableSelect: (tableName: string) => void;
   className?: string;
 }
 
-interface UserTable {
-  table_name: string;
-  schema_name: string;
-  table_full_name: string;
-  creation_timestamp: string;
-}
-
 export function TableSelector({
-  userId,
-  tableSpecific,
-  selectedTables,
-  onTableSpecificChange,
-  onSelectedTablesChange,
+  databaseId,
+  onTableSelect,
   className = "",
 }: TableSelectorProps) {
-  const [availableTables, setAvailableTables] = useState<UserTable[]>([]);
+  const { user } = useAuthContext();
+  const [availableTables, setAvailableTables] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Get user tables from the API
+  // Get user tables from the API using authenticated service
   const fetchUserTables = async () => {
-    if (!userId) return;
+    if (!user?.user_id) {
+      setError("Please log in to view tables");
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
     
     try {
-      const response = await UserConfigService.getUserTableNames(userId);
+      // Use endpoint that requires user ID parameter
+      const response = await ServiceRegistry.vectorDB.getUserTableNames(user.user_id);
       
-      if (response && Array.isArray(response)) {
-        // Transform the response to match our UserTable interface
-        const tables: UserTable[] = response.map(tableName => ({
-          table_name: tableName,
-          schema_name: "dbo", // Default schema, could be enhanced later
-          table_full_name: `dbo.${tableName}`,
-          creation_timestamp: new Date().toISOString() // Default timestamp, could be enhanced later
-        }));
-        
-        setAvailableTables(tables);
+      if (response.success && response.data && Array.isArray(response.data)) {
+        setAvailableTables(response.data);
       } else {
         setAvailableTables([]);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to fetch tables";
-      toast.error(errorMessage);
+      console.error("Failed to fetch user tables:", error);
+      setError(errorMessage);
       setAvailableTables([]);
     } finally {
       setIsLoading(false);
@@ -72,65 +55,48 @@ export function TableSelector({
   };
 
   useEffect(() => {
-    if (tableSpecific && userId) {
+    if (user?.user_id) {
       fetchUserTables();
     }
-  }, [tableSpecific, userId]);
+  }, [user?.user_id, databaseId]);
 
-  const filteredTables = availableTables.filter(table =>
-    table.table_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    table.schema_name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTables = availableTables.filter(tableName =>
+    tableName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleTableToggle = (tableName: string, checked: boolean) => {
-    if (checked) {
-      onSelectedTablesChange([...selectedTables, tableName]);
-    } else {
-      onSelectedTablesChange(selectedTables.filter(t => t !== tableName));
-    }
-  };
-
-  const handleSelectAll = () => {
-    onSelectedTablesChange(filteredTables.map(t => t.table_name));
-  };
-
-  const handleDeselectAll = () => {
-    onSelectedTablesChange([]);
+  const handleTableClick = (tableName: string) => {
+    onTableSelect(tableName);
+    toast.success(`Selected table: ${tableName}`);
   };
 
   const handleRefresh = () => {
     fetchUserTables();
   };
 
+  if (!user?.user_id) {
+    return (
+      <Card className={className}>
+        <CardContent className="p-6">
+          <div className="text-center py-8">
+            <Database className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+            <p className="text-gray-500 text-sm">
+              Please log in to view available tables
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Database className="h-5 w-5" />
-          Table-Specific Query
+          Available Tables
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Table Specific Toggle */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Label htmlFor="table-specific" className="text-sm font-medium">
-              Enable Table-Specific Query
-            </Label>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Query specific tables instead of all available data
-            </p>
-          </div>
-          <Switch
-            id="table-specific"
-            checked={tableSpecific}
-            onCheckedChange={onTableSpecificChange}
-          />
-        </div>
-
-        {/* Table Selection */}
-        {tableSpecific && (
-          <div className="space-y-4">
             {/* Search and Actions */}
             <div className="flex items-center gap-3">
               <div className="relative flex-1">
@@ -154,29 +120,6 @@ export function TableSelector({
                   <RefreshCw className="h-4 w-4" />
                 )}
               </Button>
-            </div>
-
-            {/* Select All/None Actions */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSelectAll}
-                disabled={filteredTables.length === 0}
-              >
-                Select All
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDeselectAll}
-                disabled={selectedTables.length === 0}
-              >
-                Deselect All
-              </Button>
-              <Badge variant="secondary" className="ml-auto">
-                {selectedTables.length} selected
-              </Badge>
             </div>
 
             {/* Tables List */}
@@ -203,47 +146,43 @@ export function TableSelector({
                 <p className="text-gray-500 text-sm">
                   {searchTerm ? "No tables match your search" : "No tables available"}
                 </p>
+            {!searchTerm && (
+              <p className="text-gray-400 text-xs mt-1">
+                Tables will appear here once you have access to a database
+              </p>
+            )}
               </div>
             ) : (
-              <div className="max-h-64 overflow-y-auto space-y-2 border rounded-lg p-3">
-                {filteredTables.map((table) => (
-                  <div
-                    key={table.table_full_name}
-                    className="flex items-center space-x-3 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >
-                    <Checkbox
-                      id={table.table_full_name}
-                      checked={selectedTables.includes(table.table_name)}
-                      onCheckedChange={(checked) => 
-                        handleTableToggle(table.table_name, checked as boolean)
-                      }
-                    />
-                    <Label
-                      htmlFor={table.table_full_name}
-                      className="flex-1 cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{table.table_name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {table.schema_name}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-2">
+              <Badge variant="secondary" className="text-xs">
+                {filteredTables.length} table{filteredTables.length !== 1 ? 's' : ''} found
                         </Badge>
                       </div>
-                    </Label>
+            <div className="max-h-64 overflow-y-auto space-y-1 border rounded-lg p-2">
+              {filteredTables.map((tableName) => (
+                <Button
+                  key={tableName}
+                  variant="ghost"
+                  className="w-full justify-start text-left h-auto p-3 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  onClick={() => handleTableClick(tableName)}
+                >
+                  <div className="flex items-center gap-3 w-full">
+                    <Database className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                    <span className="font-medium truncate">{tableName}</span>
                   </div>
+                </Button>
                 ))}
               </div>
-            )}
-
-            {/* Warning when no tables selected */}
-            {tableSpecific && selectedTables.length === 0 && (
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                <p className="text-yellow-800 dark:text-yellow-200 text-sm">
-                  ⚠️ No tables selected. Please select at least one table to enable table-specific querying.
-                </p>
-              </div>
-            )}
           </div>
         )}
+
+        {/* Info message */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <p className="text-blue-800 dark:text-blue-200 text-sm">
+            💡 Click on a table name to add it to your query
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

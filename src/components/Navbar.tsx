@@ -1,16 +1,15 @@
 "use client";
 import React from "react";
 import Image from "next/image";
-import { Bell, User, LogOut, LogIn } from "lucide-react";
+import { Bell, User, LogOut, LogIn, Settings } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { useAuthContext } from "@/components/providers";
+import { useAuthContext } from "@/components/providers/AuthContextProvider";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function Navbar() {
-  const { showSidebar, setShowSidebar, showAIAssistant, setShowAIAssistant } =
-    useUIStore();
+  const { showSidebar, setShowSidebar, showAIAssistant, setShowAIAssistant } = useUIStore();
   const { isAuthenticated, user, logout } = useAuthContext();
 
   const handleMenuClick = () => {
@@ -127,6 +126,10 @@ export default function Navbar() {
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => window.location.href = '/user-configuration'}>
+                <Settings className="w-4 h-4 mr-2" />
+                Configuration
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => window.location.href = '/auth'}>
                 <User className="w-4 h-4 mr-2" />
                 Profile
@@ -139,8 +142,6 @@ export default function Navbar() {
           </DropdownMenu>
         ) : (
           <Button
-            variant="ghost"
-            size="sm"
             onClick={() => window.location.href = '/auth'}
             className="text-white/90 hover:text-white hover:bg-gray-600/50"
           >

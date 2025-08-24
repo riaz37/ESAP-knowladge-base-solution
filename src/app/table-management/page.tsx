@@ -1,25 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { TableManagementSection } from "@/components/tables/TableManagementSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Settings } from "lucide-react";
+import { useAuthContext } from "@/components/providers/AuthContextProvider";
 
 export default function TableManagementPage() {
-  const [userId, setUserId] = useState("");
-  const [debouncedUserId, setDebouncedUserId] = useState("");
+  const { user } = useAuthContext();
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedUserId(userId);
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [userId]);
-
- 
   return (
     <div className="w-full min-h-screen relative bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 pt-20">
       <div className="container mx-auto p-6 space-y-6">
@@ -32,19 +21,19 @@ export default function TableManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <Label className="text-sm text-slate-400 whitespace-nowrap">
+              <div className="text-sm text-slate-400 whitespace-nowrap">
                 User ID:
-              </Label>
-              <Input
-                placeholder="Enter User ID"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                className="w-40"
-              />
+              </div>
+              <div className="text-white font-medium">
+                {user?.user_id || 'Not authenticated'}
+              </div>
+              <div className="text-xs text-slate-500 ml-2">
+                (Automatically set from your account)
+              </div>
             </div>
           </CardContent>
         </Card>
-        <TableManagementSection userId={debouncedUserId} />
+        <TableManagementSection />
       </div>
     </div>
   );

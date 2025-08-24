@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { DatabaseConfigData } from "@/types/api";
 import { DatabaseConfig } from "@/lib/api/services/database-config-service";
 import { VectorConfigStepProps } from "../types";
+import { useAuthContext } from "@/components/providers/AuthContextProvider";
 
 export function VectorConfigStep({
   selectedUserConfigId,
@@ -27,6 +28,7 @@ export function VectorConfigStep({
   setCurrentStep,
   refreshUserConfigs,
 }: VectorConfigStepProps) {
+  const { user } = useAuthContext();
   const [activeTab, setActiveTab] = useState("existing");
   const [creatingConfig, setCreatingConfig] = useState(false);
 
@@ -59,6 +61,11 @@ export function VectorConfigStep({
       return;
     }
 
+    if (!user?.user_id) {
+      toast.error("User authentication required");
+      return;
+    }
+
     setCreatingConfig(true);
     try {
       const configRequest: DatabaseConfig = {
@@ -67,7 +74,8 @@ export function VectorConfigStep({
         DB_NAME: newConfigDatabase.trim(),
         DB_USER: newConfigUsername.trim(),
         DB_PASSWORD: newConfigPassword.trim(),
-        schema: "public" // Default schema
+        schema: "public", // Default schema
+        user_id: user.user_id // Add user ID from auth context
       };
 
       const newConfig = await createDatabaseConfig(configRequest);
@@ -186,6 +194,16 @@ export function VectorConfigStep({
         </TabsContent>
 
         <TabsContent value="new" className="space-y-4">
+          {/* User Information Display */}
+          <div className="space-y-3">
+            <Label className="text-gray-300">User</Label>
+            <div className="p-3 bg-gray-800/50 border border-green-400/30 rounded-lg">
+              <div className="text-green-400 font-medium">{user?.username || 'Not authenticated'}</div>
+              <div className="text-xs text-gray-400 mt-1">User ID: {user?.user_id || 'N/A'}</div>
+              <div className="text-xs text-gray-400">Automatically set from your account</div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="newConfigHost">Host *</Label>
@@ -255,6 +273,7 @@ export function VectorConfigStep({
                 !newConfigHost.trim() ||
                 !newConfigDatabase.trim() ||
                 !newConfigUsername.trim() ||
+                !user?.user_id ||
                 creatingConfig
               }
               className="flex-1 bg-green-600 hover:bg-green-700 text-white"

@@ -16,16 +16,19 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useUserAccess } from "@/lib/hooks/use-user-access";
-import { useDatabaseConfig } from "@/lib/hooks/use-database-config";
+import { useDatabaseContext } from "@/components/providers/DatabaseContextProvider";
 import { useParentCompanies } from "@/lib/hooks/use-parent-companies";
 import { useSubCompanies } from "@/lib/hooks/use-sub-companies";
+import { useAuthContext } from "@/components/providers/AuthContextProvider";
 import { UserAccessCreateRequest, ParentCompanyData, SubCompanyData } from "@/types/api";
+import { toast } from "sonner";
 
 interface CreateDatabaseAccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   selectedUser?: string;
+  editingUser?: string;
 }
 
 export function CreateDatabaseAccessModal({
@@ -33,69 +36,50 @@ export function CreateDatabaseAccessModal({
   onClose,
   onSuccess,
   selectedUser = "",
+  editingUser = "",
 }: CreateDatabaseAccessModalProps) {
+  const { user } = useAuthContext();
+  
   // Form state
-  const [userId, setUserId] = useState(selectedUser);
   const [selectedParentCompany, setSelectedParentCompany] = useState<string>("");
   const [selectedSubCompany, setSelectedSubCompany] = useState<string>("");
   const [selectedDatabase, setSelectedDatabase] = useState<string>("");
+  const [selectedUserId, setSelectedUserId] = useState<string>(""); // New state for user ID
 
   // Data state
-  const [parentCompanies, setParentCompanies] = useState<ParentCompanyData[]>([]);
-  const [subCompanies, setSubCompanies] = useState<SubCompanyData[]>([]);
-  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+  // Removed local state for parent and sub companies - using hook state directly
 
   // Hooks
   const { createUserAccess, isLoading, error } = useUserAccess();
-  const { databaseConfigs, fetchDatabaseConfigs } = useDatabaseConfig();
-  const { getParentCompanies } = useParentCompanies();
-  const { getSubCompanies } = useSubCompanies();
+  const { availableDatabases } = useDatabaseContext();
+  const { parentCompanies, getParentCompanies, isLoading: isLoadingParentCompanies } = useParentCompanies();
+  const { subCompanies, getSubCompanies, isLoading: isLoadingSubCompanies } = useSubCompanies();
 
   // Load data when modal opens
   useEffect(() => {
     if (isOpen) {
-      loadCompanyData();
-      loadDatabaseConfigs();
+      loadData();
     }
   }, [isOpen]);
 
-  // Load company data
-  const loadCompanyData = async () => {
-    setIsLoadingCompanies(true);
+  const loadData = async () => {
     try {
       // Load parent companies
-      const parentData = await getParentCompanies();
-      if (parentData) {
-        setParentCompanies(parentData);
-      }
-
+      await getParentCompanies();
+      
       // Load sub companies
-      const subData = await getSubCompanies();
-      if (subData) {
-        setSubCompanies(subData);
-      }
+      await getSubCompanies();
+      
+      // Note: availableDatabases is already loaded from context
+      // No need to fetch separately
     } catch (error) {
-      console.error("Error loading company data:", error);
-    } finally {
-      setIsLoadingCompanies(false);
-    }
-  };
-
-  // Load database configurations
-  const loadDatabaseConfigs = async () => {
-    try {
-      console.log('Loading database configurations...');
-      const result = await fetchDatabaseConfigs();
-      console.log('Database configs loaded:', result);
-      console.log('Current databaseConfigs state:', databaseConfigs);
-    } catch (error) {
-      console.error("Error loading database configs:", error);
+      console.error("Error loading data:", error);
     }
   };
 
   // Update userId when selectedUser prop changes
   useEffect(() => {
-    setUserId(selectedUser);
+    // This useEffect is no longer needed as user ID is now from auth context
   }, [selectedUser]);
 
   // Auto-populate database when company selection changes
@@ -163,12 +147,18 @@ export function CreateDatabaseAccessModal({
 
   // Handle form submission
   const handleSubmit = async () => {
-    if (!userId || !selectedParentCompany || !selectedDatabase) {
+    if (!selectedUserId) {
+      toast.error("User ID is required");
+      return;
+    }
+
+    if (!selectedParentCompany || !selectedDatabase) {
+      toast.error("Parent company and database are required");
       return;
     }
 
     const request: UserAccessCreateRequest = {
-      user_id: userId,
+      user_id: parseInt(selectedUserId), // Use the manually entered user ID
       parent_company_id: parseInt(selectedParentCompany),
       sub_company_ids: selectedSubCompany ? [parseInt(selectedSubCompany)] : [],
       database_access: {
@@ -192,8 +182,9 @@ export function CreateDatabaseAccessModal({
     try {
       const result = await createUserAccess(request);
       if (result) {
+        toast.success("Database access created successfully");
         onSuccess();
-        onClose();
+        handleClose();
         resetForm();
       }
     } catch (error) {
@@ -203,10 +194,10 @@ export function CreateDatabaseAccessModal({
 
   // Reset form
   const resetForm = () => {
-    setUserId("");
     setSelectedParentCompany("");
     setSelectedSubCompany("");
     setSelectedDatabase("");
+    setSelectedUserId(""); // Reset user ID
   };
 
   // Handle close
@@ -219,22 +210,31 @@ export function CreateDatabaseAccessModal({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-800 border-blue-500/30">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-white flex items-center">
-            <Database className="w-5 h-5 mr-2 text-blue-400" />
-            Create Database Access
+          <DialogTitle className="text-white flex items-center gap-2">
+            <Database className="h-5 w-5 text-blue-400" />
+            {editingUser ? "Edit Database Access" : "Create Database Access"}
           </DialogTitle>
+          <p className="text-gray-400 text-sm">
+            {editingUser 
+              ? "Update user access to MSSQL databases" 
+              : "Grant user access to MSSQL databases for data operations"
+            }
+          </p>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* User Selection */}
+          {/* User ID Input */}
           <div className="space-y-3">
-            <Label className="text-white font-medium">User ID</Label>
+            <Label className="text-white font-medium">User ID *</Label>
             <Input
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="Enter user ID or email"
+              placeholder="Enter user ID (email)"
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
               className="bg-slate-700 border-slate-600 text-white"
             />
+            <div className="text-sm text-gray-400">
+              Enter the email address of the user you want to grant database access to
+            </div>
           </div>
 
           {/* Company Selection */}
@@ -247,7 +247,7 @@ export function CreateDatabaseAccessModal({
               </Label>
               <Select value={selectedParentCompany} onValueChange={handleParentCompanyChange}>
                 <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                  <SelectValue placeholder={isLoadingCompanies ? "Loading..." : "Select parent company"} />
+                  <SelectValue placeholder={isLoadingParentCompanies ? "Loading..." : "Select parent company"} />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-700 border-slate-600">
                   {parentCompanies.map((company) => (
@@ -326,7 +326,7 @@ export function CreateDatabaseAccessModal({
                   {selectedSubCompany && (
                     <div>Sub Company ID: {selectedSubCompany}</div>
                   )}
-                  <div>Total DB Configs: {databaseConfigs.length}</div>
+                  <div>Total DB Configs: {availableDatabases.length}</div>
                 </div>
               </div>
             </div>
@@ -342,7 +342,7 @@ export function CreateDatabaseAccessModal({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-400">User:</span>
-                    <span className="text-white ml-2">{userId || 'Not specified'}</span>
+                    <span className="text-white ml-2">{selectedUserId || 'Not specified'}</span>
                   </div>
                   <div>
                     <span className="text-gray-400">Parent Company:</span>
@@ -397,7 +397,7 @@ export function CreateDatabaseAccessModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isLoading || !userId || !selectedParentCompany || !selectedDatabase}
+            disabled={isLoading || !selectedUserId || !selectedParentCompany || !selectedDatabase}
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
           >
             {isLoading ? "Creating..." : "Create Access"}

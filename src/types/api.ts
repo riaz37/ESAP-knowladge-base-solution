@@ -51,6 +51,7 @@ export interface SmartFileSystemRequest {
   file_descriptions: string[];
   table_names: string[];
   user_ids: string[];
+  use_table?: boolean; // Optional: whether to use table names or not
 }
 
 export interface TaskId {
@@ -121,7 +122,7 @@ export interface BundleTaskStatusAllResponse {
 // Files Search Types
 export interface FilesSearchRequest {
   query: string;
-  user_id: string;
+  user_id?: string; // Now optional - extracted from JWT token on backend
   use_intent_reranker?: boolean;
   use_chunk_reranker?: boolean;
   use_dual_embeddings?: boolean;
@@ -132,6 +133,7 @@ export interface FilesSearchRequest {
   answer_style?: string;
   table_specific?: boolean;
   tables?: string[];
+  file_ids?: string[]; // Added for file-specific queries
 }
 
 export interface SearchAnswer {

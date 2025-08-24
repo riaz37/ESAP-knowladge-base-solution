@@ -62,12 +62,24 @@ export function TaskProgress({
       try {
         setIsPolling(true);
         const response = await MSSQLConfigService.getTaskStatus(taskId);
-        // axios interceptor may already unwrap `data`
-        const taskData: any = (response as any)?.data ?? response;
+        
+        // Handle different response formats
+        let taskData: any = response;
+        if (response && typeof response === 'object') {
+          // Check if response has a data property (common with axios)
+          if ('data' in response && response.data) {
+            taskData = response.data;
+          }
+        }
+        
+        if (!taskData || typeof taskData !== 'object') {
+          throw new Error('Invalid task status response format');
+        }
+        
         const normalizedStatus = taskData.status === 'completed' ? 'success' : taskData.status;
         const newStatus: TaskStatus = {
           status: normalizedStatus,
-          progress: taskData.progress,
+          progress: taskData.progress || 0,
           error: taskData.error,
           result: taskData.result,
         };
@@ -86,14 +98,15 @@ export function TaskProgress({
         if (newStatus.status === 'pending' || newStatus.status === 'running') {
           pollTimer = setTimeout(pollTaskStatus, pollInterval);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error polling task status:', error);
+        const errorMessage = error?.message || error?.toString() || 'Failed to check task status';
         setTaskStatus(prev => ({
           ...prev,
           status: 'failed',
-          error: 'Failed to check task status',
+          error: errorMessage,
         }));
-        onTaskComplete?.(false, 'Failed to check task status');
+        onTaskComplete?.(false, errorMessage);
       } finally {
         setIsPolling(false);
       }

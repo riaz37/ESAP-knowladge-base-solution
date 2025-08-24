@@ -1,36 +1,147 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ESAP Knowledge Base Solution
+
+A comprehensive knowledge management system with AI-powered querying, business rules management, and user configuration.
+
+## Features
+
+- **AI-Powered Querying**: Intelligent database querying with business rules validation
+- **Business Rules Management**: Centralized business logic management
+- **User Configuration**: Persistent local storage for faster loading
+- **Database Management**: Multi-database support with MSSQL integration
+- **Company Hierarchy**: Organizational structure management
+- **File Processing**: Excel to database conversion and file-based queries
+
+## Local Storage Configuration
+
+The application now includes local storage functionality to improve performance and reduce API calls:
+
+### User Configuration Storage
+
+- **Automatic Saving**: Configuration is automatically saved to localStorage when:
+  - Databases are loaded from backend
+  - Current database is changed
+  - Business rules are updated
+  - User manually saves configuration
+
+- **Smart Loading**: The app prioritizes local storage:
+  1. First attempts to load from localStorage
+  2. Falls back to backend API if no local data exists
+  3. Automatically syncs local and remote data
+
+- **Data Persistence**: Stored configuration includes:
+  - Available databases list
+  - Current database selection
+  - Business rules content
+  - Last updated timestamp
+  - Configuration version
+
+### Storage Service
+
+The `UserConfigStorageService` provides:
+
+```typescript
+// Save complete configuration
+UserConfigStorageService.saveUserConfiguration(
+  userId, 
+  databases, 
+  currentDatabaseId, 
+  currentDatabaseName, 
+  businessRules
+);
+
+// Load configuration
+const config = UserConfigStorageService.loadUserConfiguration(userId);
+
+// Update specific parts
+UserConfigStorageService.updateCurrentDatabase(userId, dbId, dbName);
+UserConfigStorageService.updateBusinessRules(userId, rules);
+```
+
+### Context Integration
+
+Both `DatabaseContextProvider` and `BusinessRulesContextProvider` integrate with local storage:
+
+- **Automatic Sync**: Changes are automatically saved locally
+- **State Management**: Tracks unsaved changes and storage status
+- **Performance**: Reduces API calls by using cached data
+
+### Configuration Status
+
+The user configuration page shows:
+
+- **Local Storage Status**: Whether configuration is saved locally
+- **Unsaved Changes**: Visual indicators for pending changes
+- **Save Button**: Manual save option for immediate persistence
+- **Auto-save**: Automatic saving after major operations
 
 ## Getting Started
 
-First, run the development server:
+1. **Install Dependencies**:
+   ```bash
+   pnpm install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. **Run Development Server**:
+   ```bash
+   pnpm dev
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. **Access Application**:
+   - Navigate to `http://localhost:3000`
+   - Authenticate with your credentials
+   - Configure your database settings
+   - Business rules will be automatically saved locally
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Frontend**: Next.js with TypeScript
+- **State Management**: React Context with local storage persistence
+- **UI Components**: Custom components with Tailwind CSS
+- **API Integration**: Service registry pattern with standardized services
+- **Storage**: Browser localStorage with automatic validation and cleanup
 
-## Learn More
+## Benefits of Local Storage
 
-To learn more about Next.js, take a look at the following resources:
+1. **Faster Loading**: No need to fetch configuration on every page load
+2. **Reduced API Calls**: Minimizes backend requests for configuration data
+3. **Offline Capability**: Basic functionality works without network connection
+4. **Better UX**: Immediate access to user preferences and settings
+5. **Performance**: Improved app responsiveness and reduced loading times
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Configuration Management
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Manual Save
+Users can manually save their configuration using the "Save Configuration" button, which:
+- Saves current database selection
+- Persists business rules
+- Updates local storage timestamp
+- Provides visual feedback
 
-## Deploy on Vercel
+### Automatic Sync
+The system automatically syncs data when:
+- Switching between databases
+- Updating business rules
+- Loading new configuration from backend
+- Refreshing data
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Data Validation
+Local storage includes validation to ensure:
+- Configuration structure integrity
+- Data freshness (24-hour expiration)
+- User ID consistency
+- Required field presence
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Troubleshooting
+
+### Clear Local Configuration
+If you encounter issues with local storage:
+1. Open browser developer tools
+2. Go to Application > Local Storage
+3. Clear entries starting with `user_config_`
+4. Refresh the page to reload from backend
+
+### Force Refresh
+Use the "Refresh" button to force reload from backend and update local storage.
+
+### Configuration Reset
+The system automatically resets corrupted or expired configurations.

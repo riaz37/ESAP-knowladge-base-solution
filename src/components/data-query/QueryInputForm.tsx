@@ -19,6 +19,8 @@ interface QueryInputFormProps {
   showSaveButton?: boolean;
   submitButtonText?: string;
   clearButtonText?: string;
+  hasErrors?: boolean;
+  hasWarnings?: boolean;
 }
 
 export function QueryInputForm({
@@ -35,7 +37,9 @@ export function QueryInputForm({
   rows = 4,
   showSaveButton = false,
   submitButtonText = "Execute Query",
-  clearButtonText = "Clear"
+  clearButtonText = "Clear",
+  hasErrors = false,
+  hasWarnings = false,
 }: QueryInputFormProps) {
   return (
     <Card>
@@ -54,7 +58,13 @@ export function QueryInputForm({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             rows={rows}
-            className="resize-none font-mono text-sm"
+            className={`resize-none font-mono text-sm ${
+              hasErrors 
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                : hasWarnings 
+                ? 'border-yellow-500 focus:border-yellow-500 focus:ring-yellow-500'
+                : ''
+            }`}
             disabled={isDisabled}
           />
         </div>
@@ -62,7 +72,7 @@ export function QueryInputForm({
         <div className="flex gap-2">
           <Button
             onClick={onSubmit}
-            disabled={isDisabled || !value.trim() || isLoading}
+            disabled={isDisabled || !value?.trim() || isLoading}
             className="flex-1"
           >
             {isLoading ? (
@@ -80,7 +90,7 @@ export function QueryInputForm({
           <Button
             variant="outline"
             onClick={onClear}
-            disabled={!value.trim()}
+            disabled={!value?.trim()}
           >
             {clearButtonText}
           </Button>
@@ -88,7 +98,7 @@ export function QueryInputForm({
             <Button
               variant="outline"
               onClick={onSave}
-              disabled={!value.trim()}
+              disabled={!value?.trim()}
             >
               <Save className="h-4 w-4 mr-2" />
               Save

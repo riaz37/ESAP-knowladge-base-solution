@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { MSSQLConfigData } from "@/types/api";
 import { DatabaseConfigStepProps } from "../types";
+import { useAuthContext } from "@/components/providers/AuthContextProvider";
 
 export function DatabaseConfigStep({
   selectedDbId,
@@ -27,14 +28,15 @@ export function DatabaseConfigStep({
   setCurrentStep,
   setDatabaseCreationData,
   setCurrentTaskId,
+  refreshUserConfigs,
 }: DatabaseConfigStepProps) {
+  const { user } = useAuthContext();
   const [activeTab, setActiveTab] = useState("existing");
 
   // New database form states
   const [newDbUrl, setNewDbUrl] = useState("");
   const [newDbName, setNewDbName] = useState("");
   const [newDbBusinessRule, setNewDbBusinessRule] = useState("");
-  const [newDbUserId, setNewDbUserId] = useState("admin");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handlePrevious = () => {
@@ -50,8 +52,13 @@ export function DatabaseConfigStep({
   };
 
   const handleCreateDatabase = async () => {
-    if (!newDbUrl.trim() || !newDbName.trim() || !newDbUserId.trim()) {
-      toast.error("Database URL, name, and user ID are required");
+    if (!newDbUrl.trim() || !newDbName.trim()) {
+      toast.error("Database URL and name are required");
+      return;
+    }
+
+    if (!user?.user_id) {
+      toast.error("User authentication required");
       return;
     }
 
@@ -60,32 +67,50 @@ export function DatabaseConfigStep({
         db_url: newDbUrl.trim(),
         db_name: newDbName.trim(),
         business_rule: newDbBusinessRule.trim() || undefined,
-        user_id: newDbUserId.trim(),
+        user_id: user.user_id,
         file: selectedFile,
       };
 
       setDatabaseCreationData({ dbConfig, selectedFile });
 
       const taskResponse = await setConfig(dbConfig);
-      const taskId = (taskResponse as any)?.data?.task_id ?? (taskResponse as any)?.task_id ?? null;
+      
+      if (!taskResponse) {
+        toast.error("Failed to start database creation - no response received");
+        return;
+      }
+
+      // Handle different response formats
+      let taskId: string | null = null;
+      
+      if (typeof taskResponse === 'object') {
+        if ('task_id' in taskResponse) {
+          taskId = taskResponse.task_id;
+        } else if ('data' in taskResponse && taskResponse.data && 'task_id' in taskResponse.data) {
+          taskId = taskResponse.data.task_id;
+        }
+      }
 
       if (!taskId) {
-        toast.error("Failed to start database creation");
+        console.error("Task response structure:", taskResponse);
+        toast.error("Failed to start database creation - invalid task ID in response");
         return;
       }
 
       setCurrentTaskId(taskId);
       setCurrentStep("database-creation");
-    } catch (error) {
-      toast.error("Failed to create database");
+      toast.success("Database creation started successfully");
+    } catch (error: any) {
+      console.error("Database creation error:", error);
+      const errorMessage = error?.message || error?.toString() || "Failed to create database";
+      toast.error(`Database creation failed: ${errorMessage}`);
     }
   };
 
   const resetNewDbForm = () => {
-    setNewDbUrl("");
     setNewDbName("");
+    setNewDbUrl("");
     setNewDbBusinessRule("");
-    setNewDbUserId("admin");
     setSelectedFile(null);
   };
 
@@ -125,13 +150,24 @@ export function DatabaseConfigStep({
 
         <TabsContent value="existing" className="space-y-4">
           <div className="space-y-3">
-            <Label className="text-gray-300">Select Database</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-gray-300">Select Database</Label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refreshUserConfigs}
+                className="border-gray-600 text-gray-300 hover:bg-gray-700"
+              >
+                <Loader2 className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
             {mssqlLoading ? (
               <div className="flex items-center gap-2 p-4 bg-gray-800/50 rounded-lg">
                 <Loader2 className="w-4 h-4 animate-spin text-green-400" />
                 <span className="text-gray-400">Loading databases...</span>
               </div>
-            ) : (
+            ) : databases.length > 0 ? (
               <Select
                 value={selectedDbId?.toString() || ""}
                 onValueChange={(value) => setSelectedDbId(parseInt(value))}
@@ -150,6 +186,12 @@ export function DatabaseConfigStep({
                   ))}
                 </SelectContent>
               </Select>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Database className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No databases found</p>
+                <p className="text-sm">Create one to get started</p>
+              </div>
             )}
             
             {databases.length === 0 && !mssqlLoading && (
@@ -176,14 +218,11 @@ export function DatabaseConfigStep({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="newDbUserId">User ID *</Label>
-              <Input
-                id="newDbUserId"
-                value={newDbUserId}
-                onChange={(e) => setNewDbUserId(e.target.value)}
-                placeholder="admin"
-                className="bg-gray-800/50 border-green-400/30 text-white"
-              />
+              <Label className="text-gray-300">User ID</Label>
+              <div className="p-3 bg-gray-800/50 border border-green-400/30 rounded-lg">
+                <div className="text-green-400 font-medium">{user?.user_id || 'Not authenticated'}</div>
+                <div className="text-xs text-gray-400 mt-1">Automatically set from your account</div>
+              </div>
             </div>
           </div>
 
@@ -248,7 +287,7 @@ export function DatabaseConfigStep({
             <Button
               type="button"
               onClick={handleCreateDatabase}
-              disabled={!newDbUrl.trim() || !newDbName.trim() || !newDbUserId.trim()}
+              disabled={!newDbUrl.trim() || !newDbName.trim() || !user?.user_id}
               className="flex-1 bg-green-600 hover:bg-green-700 text-white"
             >
               <Plus className="w-4 h-4 mr-2" />

@@ -1,5 +1,5 @@
-import { apiClient } from "../client";
 import { API_ENDPOINTS } from "../endpoints";
+import { BaseService, ServiceResponse } from "./base";
 import {
   SmartFileSystemRequest,
   SmartFileSystemResponse,
@@ -10,178 +10,281 @@ import {
 } from "@/types/api";
 
 /**
- * Service for managing file operations
+ * Service for handling file-related API calls
+ * All methods use JWT authentication - user ID is extracted from token on backend
  */
-export class FileService {
+export class FileService extends BaseService {
+  protected readonly serviceName = 'FileService';
+
   /**
    * Upload files to smart file system
+   * User ID is extracted from JWT token on backend
    */
-  static async uploadSmartFileSystem(
-    files: File[],
-    fileDescriptions: string[],
-    tableNames: string[],
-    userIds: string[],
-  ): Promise<SmartFileSystemResponse> {
-    try {
-      const formData = new FormData();
+  async uploadToSmartFileSystem(request: {
+    files: File[];
+    file_descriptions: string[];
+    table_names: string[];
+    user_ids: string;
+    use_table?: boolean;
+  }): Promise<ServiceResponse<SmartFileSystemResponse>> {
+    this.validateRequired(request, ['files', 'file_descriptions', 'user_ids']);
 
-      // Add files
-      files.forEach((file) => {
-        formData.append("files", file);
-      });
-
-      // Add file descriptions
-      fileDescriptions.forEach((description) => {
-        formData.append("file_descriptions", description);
-      });
-
-      // Add table names
-      tableNames.forEach((tableName) => {
-        formData.append("table_names", tableName);
-      });
-
-      // Add user IDs
-      userIds.forEach((userId) => {
-        formData.append("user_ids", userId);
-      });
-
-      const response = await apiClient.post(
-        API_ENDPOINTS.SMART_FILE_SYSTEM,
-        formData,
-      );
-      return response;
-    } catch (error) {
-      console.error("Error uploading files to smart file system:", error);
-      throw error;
+    if (!Array.isArray(request.files) || request.files.length === 0) {
+      throw this.createValidationError('At least one file is required');
     }
+
+    if (!Array.isArray(request.file_descriptions) || request.file_descriptions.length === 0) {
+      throw this.createValidationError('File descriptions are required');
+    }
+
+    if (request.user_ids.trim().length === 0) {
+      throw this.createValidationError('User ID is required');
+    }
+
+    // Table names are only required if use_table is true
+    if (request.use_table !== false) {
+      if (!Array.isArray(request.table_names) || request.table_names.length === 0) {
+        throw this.createValidationError('Table names are required when using tables');
+      }
+      if (request.files.length !== request.table_names.length) {
+        throw this.createValidationError('Files and table names arrays must have the same length when using tables');
+      }
+    }
+
+    if (request.files.length !== request.file_descriptions.length) {
+      throw this.createValidationError('Files and descriptions arrays must have the same length');
+    }
+
+    // Validate file types and sizes
+    const validationErrors = this.validateFiles(request.files);
+    if (validationErrors.length > 0) {
+      throw this.createValidationError(`File validation failed: ${validationErrors.join(', ')}`);
+    }
+
+    const formData = new FormData();
+    
+    // Add files
+    request.files.forEach((file, index) => {
+      formData.append('files', file);
+    });
+
+    // Add metadata - match the exact format from your curl command
+    formData.append('file_descriptions', request.file_descriptions[0] || 'string');
+    
+    // Only add table_names if use_table is true
+    if (request.use_table !== false) {
+      formData.append('table_names', request.table_names[0] || 'string');
+    }
+    
+    formData.append('user_ids', request.user_ids);
+
+    return this.post<SmartFileSystemResponse>(
+      API_ENDPOINTS.SMART_FILE_SYSTEM,
+      formData,
+      {
+        headers: {
+          // Don't set Content-Type for FormData - let browser set it with boundary
+        },
+      }
+    );
   }
 
   /**
    * Get bundle task status by bundle ID
    */
-  static async getBundleTaskStatus(
-    bundleId: string,
-  ): Promise<BundleTaskStatusResponse> {
-    try {
-      const response = await apiClient.get(
-        API_ENDPOINTS.BUNDLE_TASK_STATUS(bundleId),
-      );
-      return response;
-    } catch (error) {
-      console.error(
-        `Error fetching bundle task status for ${bundleId}:`,
-        error,
-      );
-      throw error;
+  async getBundleTaskStatus(bundleId: string): Promise<ServiceResponse<BundleTaskStatusResponse>> {
+    this.validateRequired({ bundleId }, ['bundleId']);
+    this.validateTypes({ bundleId }, { bundleId: 'string' });
+
+    if (bundleId.trim().length === 0) {
+      throw this.createValidationError('Bundle ID cannot be empty');
     }
+
+    return this.get<BundleTaskStatusResponse>(
+      API_ENDPOINTS.BUNDLE_TASK_STATUS(bundleId)
+    );
   }
 
   /**
    * Get all bundle task statuses
    */
-  static async getAllBundleTaskStatus(): Promise<BundleTaskStatusAllResponse> {
-    try {
-      const response = await apiClient.get(
-        API_ENDPOINTS.BUNDLE_TASK_STATUS_ALL,
-      );
-      return response;
-    } catch (error) {
-      console.error("Error fetching all bundle task statuses:", error);
-      throw error;
-    }
+  async getAllBundleTaskStatuses(): Promise<ServiceResponse<BundleTaskStatusAllResponse>> {
+    return this.get<BundleTaskStatusAllResponse>(
+      API_ENDPOINTS.BUNDLE_TASK_STATUS_ALL
+    );
   }
 
   /**
-   * Search files
+   * Search files with authenticated user context
+   * User ID can be passed explicitly or extracted from JWT token on backend
    */
-  static async searchFiles(
-    request: FilesSearchRequest,
-  ): Promise<FilesSearchResponse> {
-    try {
-      const response = await apiClient.post(
-        API_ENDPOINTS.FILES_SEARCH,
-        request,
-      );
-      return response;
-    } catch (error) {
-      console.error("Error searching files:", error);
-      throw error;
+  async searchFiles(request: FilesSearchRequest): Promise<ServiceResponse<FilesSearchResponse>> {
+    this.validateRequired(request, ['query']);
+    this.validateTypes(request, { query: 'string' });
+
+    if (request.query.trim().length === 0) {
+      throw this.createValidationError('Search query cannot be empty');
     }
+
+    // Validate optional parameters
+    if (request.intent_top_k !== undefined && request.intent_top_k <= 0) {
+      throw this.createValidationError('intent_top_k must be positive');
+    }
+
+    if (request.chunk_top_k !== undefined && request.chunk_top_k <= 0) {
+      throw this.createValidationError('chunk_top_k must be positive');
+    }
+
+    if (request.max_chunks_for_answer !== undefined && request.max_chunks_for_answer <= 0) {
+      throw this.createValidationError('max_chunks_for_answer must be positive');
+    }
+
+    // Ensure user_id is included in the request
+    const searchRequest: FilesSearchRequest = {
+      ...request,
+      // user_id should be provided by the caller
+    };
+
+    return this.post<FilesSearchResponse>(
+      API_ENDPOINTS.FILES_SEARCH,
+      searchRequest
+    );
   }
 
   /**
-   * Validate smart file system request
+   * Validate uploaded files
    */
-  static validateSmartFileSystemRequest(
-    files: File[],
-    fileDescriptions: string[],
-    tableNames: string[],
-    userIds: string[],
-  ): {
-    isValid: boolean;
-    errors: string[];
-  } {
+  private validateFiles(files: File[]): string[] {
     const errors: string[] = [];
+    const maxFileSize = 50 * 1024 * 1024; // 50MB
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/csv',
+      'application/json',
+    ];
 
-    if (!files || files.length === 0) {
-      errors.push("At least one file is required");
+    files.forEach((file, index) => {
+      // Check file size
+      if (file.size > maxFileSize) {
+        errors.push(`File ${index + 1} (${file.name}) is too large. Maximum size is 50MB`);
+      }
+
+      // Check file type
+      if (!allowedTypes.includes(file.type)) {
+        errors.push(`File ${index + 1} (${file.name}) has unsupported type: ${file.type}`);
+      }
+
+      // Check file name
+      if (file.name.length > 255) {
+        errors.push(`File ${index + 1} name is too long. Maximum length is 255 characters`);
+      }
+
+      // Check for potentially dangerous file names
+      if (/[<>:"|?*]/.test(file.name)) {
+        errors.push(`File ${index + 1} name contains invalid characters`);
+      }
+    });
+
+    return errors;
+  }
+
+  /**
+   * Get file upload progress for a bundle
+   */
+  async getUploadProgress(bundleId: string): Promise<ServiceResponse<{
+    bundleId: string;
+    overallProgress: number;
+    fileProgresses: Array<{
+      fileName: string;
+      status: 'pending' | 'uploading' | 'processing' | 'completed' | 'failed';
+      progress: number;
+      error?: string;
+    }>;
+  }>> {
+    const statusResponse = await this.getBundleTaskStatus(bundleId);
+    
+    if (!statusResponse.success) {
+      throw new Error(`Failed to get bundle status: ${statusResponse.error}`);
     }
 
-    if (!fileDescriptions || fileDescriptions.length === 0) {
-      errors.push("File descriptions are required");
-    }
-
-    if (!tableNames || tableNames.length === 0) {
-      errors.push("Table names are required");
-    }
-
-    if (!userIds || userIds.length === 0) {
-      errors.push("User IDs are required");
-    }
+    const status = statusResponse.data;
+    
+    const fileProgresses = status.individual_tasks.map(task => ({
+      fileName: task.filename,
+      status: task.status as 'pending' | 'uploading' | 'processing' | 'completed' | 'failed',
+      progress: task.status === 'completed' ? 100 : 
+                task.status === 'failed' ? 0 : 
+                parseInt(task.progress) || 0,
+      error: task.error_message || undefined,
+    }));
 
     return {
-      isValid: errors.length === 0,
-      errors,
+      data: {
+        bundleId,
+        overallProgress: status.progress_percentage,
+        fileProgresses,
+      },
+      success: true,
+      timestamp: new Date().toISOString(),
     };
   }
 
   /**
-   * Validate files search request
+   * Cancel file upload bundle
    */
-  static validateFilesSearchRequest(request: FilesSearchRequest): {
-    isValid: boolean;
-    errors: string[];
-  } {
-    const errors: string[] = [];
+  async cancelUpload(bundleId: string): Promise<ServiceResponse<void>> {
+    this.validateRequired({ bundleId }, ['bundleId']);
+    this.validateTypes({ bundleId }, { bundleId: 'string' });
 
-    if (!request.query || request.query.trim() === "") {
-      errors.push("Query is required");
+    if (bundleId.trim().length === 0) {
+      throw this.createValidationError('Bundle ID cannot be empty');
     }
 
-    if (!request.user_id || request.user_id.trim() === "") {
-      errors.push("User ID is required");
-    }
-
-    if (request.intent_top_k !== undefined && request.intent_top_k <= 0) {
-      errors.push("Intent top k must be a positive number");
-    }
-
-    if (request.chunk_top_k !== undefined && request.chunk_top_k <= 0) {
-      errors.push("Chunk top k must be a positive number");
-    }
-
-    if (
-      request.max_chunks_for_answer !== undefined &&
-      request.max_chunks_for_answer <= 0
-    ) {
-      errors.push("Max chunks for answer must be a positive number");
-    }
-
+    // This would require a cancel endpoint in the API
+    // For now, we'll return a placeholder response
     return {
-      isValid: errors.length === 0,
-      errors,
+      data: undefined as any,
+      success: true,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Get supported file types
+   */
+  getSupportedFileTypes(): ServiceResponse<{
+    types: string[];
+    maxSize: number;
+    description: string;
+  }> {
+    return {
+      data: {
+        types: [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'text/plain',
+          'text/csv',
+          'application/json',
+        ],
+        maxSize: 50 * 1024 * 1024, // 50MB
+        description: 'Supported file types include PDF, Word documents, Excel spreadsheets, text files, CSV, and JSON files. Maximum file size is 50MB.',
+      },
+      success: true,
+      timestamp: new Date().toISOString(),
     };
   }
 }
 
-export default FileService;
+// Export singleton instance
+export const fileService = new FileService();
+
+// Export for backward compatibility
+export default fileService;

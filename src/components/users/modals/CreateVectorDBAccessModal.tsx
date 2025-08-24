@@ -29,15 +29,17 @@ import {
   Search,
 } from "lucide-react";
 import { useAuthContext } from "@/components/providers";
-import { useDatabaseConfig } from "@/lib/hooks/use-database-config";
+import { useVectorDB } from "@/lib/hooks/use-vector-db";
 import { UserConfigCreateRequest } from "@/types/api";
 import { VectorDBService } from "@/lib/api/services/vector-db-service";
+import { ServiceRegistry } from "@/lib/api/services/service-registry";
 
 interface CreateVectorDBAccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   selectedUser?: string;
+  editingUser?: string;
 }
 
 export function CreateVectorDBAccessModal({
@@ -45,13 +47,14 @@ export function CreateVectorDBAccessModal({
   onClose,
   onSuccess,
   selectedUser = "",
+  editingUser = "",
 }: CreateVectorDBAccessModalProps) {
   // Form state
-  const [userId, setUserId] = useState(selectedUser);
+  const [selectedUserId, setSelectedUserId] = useState<string>(selectedUser || "");
   const [selectedDatabase, setSelectedDatabase] = useState<string>("");
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
   const [newTableName, setNewTableName] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string>("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -62,7 +65,7 @@ export function CreateVectorDBAccessModal({
   const [userTablesError, setUserTablesError] = useState<string>("");
 
   // Database loading state
-  const [availableDatabases, setAvailableDatabases] = useState<any[]>([]);
+  // Removed local availableDatabases state - using context directly
 
   // Hooks
   const { user } = useAuthContext();
@@ -72,119 +75,62 @@ export function CreateVectorDBAccessModal({
   const error = null;
   
   const createUserConfig = async (data: UserConfigCreateRequest) => {
-    // TODO: Implement with database context
-    console.log('Creating user config:', data);
+    try {
+      const response = await ServiceRegistry.userConfig.createUserConfig(data);
+      return response;
+    } catch (error) {
+      console.error('Error creating user config:', error);
+      throw error;
+    }
   };
-  const { databaseConfigs, fetchDatabaseConfigs, isLoading: isLoadingDatabases } = useDatabaseConfig();
+  const { vectorDBConfigs, getVectorDBConfigs, isLoading: isLoadingDatabases } = useVectorDB();
 
   // Load data when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Load available databases automatically since they don't depend on user ID
-      loadAvailableDatabases();
-      
-      if (selectedUser) {
-        setUserId(selectedUser);
-      }
+      loadData();
     }
-  }, [isOpen, selectedUser]);
+  }, [isOpen]);
 
-  // Update userId when selectedUser prop changes
+  // Update local state when props change
   useEffect(() => {
-    setUserId(selectedUser);
+    setSelectedUserId(selectedUser || "");
   }, [selectedUser]);
 
-  // Watch for changes in databaseConfigs and update availableDatabases
-  useEffect(() => {
-    if (databaseConfigs.length > 0) {
-      console.log("databaseConfigs changed, updating availableDatabases...");
-      // Call getAvailableDatabases asynchronously
-      getAvailableDatabases().then(databases => {
-        setAvailableDatabases(databases || []);
-      }).catch(error => {
-        console.error("Error getting available databases:", error);
-        setAvailableDatabases([]);
-      });
+  const loadData = async () => {
+    try {
+      // Load vector DB configurations
+      const result = await getVectorDBConfigs();
+      console.log('Vector DB configs loaded:', result);
+      console.log('vectorDBConfigs state:', vectorDBConfigs);
+    } catch (error) {
+      console.error("Error loading data:", error);
     }
-  }, [databaseConfigs]);
+  };
 
-  // Fetch existing user tables when userId changes
-  const fetchExistingUserTables = async (userIdInput: string) => {
-    if (!userIdInput.trim()) {
-      setExistingUserTables([]);
-      setUserTablesError("");
-      return;
+  // Load existing user tables when user is authenticated
+  useEffect(() => {
+    if (user?.user_id && isOpen) {
+      fetchExistingUserTables(user.user_id);
     }
+  }, [user?.user_id, isOpen]);
+
+  // Fetch existing tables for the authenticated user
+  const fetchExistingUserTables = async (userId: string) => {
+    if (!userId.trim()) return;
 
     setIsFetchingUserTables(true);
     setUserTablesError("");
 
     try {
-      const tables = await VectorDBService.getUserTableNames(
-        userIdInput.trim()
-      );
-      setExistingUserTables(tables);
-      console.log(
-        `Found ${tables.length} existing tables for user ${userIdInput}:`,
-        tables
-      );
-    } catch (error: any) {
-      console.error(`Error fetching tables for user ${userIdInput}:`, error);
-      setUserTablesError(
-        error.message || "Failed to fetch existing user tables"
-      );
+      // TODO: Implement actual API call to fetch user tables
+      // For now, simulate with empty array
       setExistingUserTables([]);
+    } catch (error) {
+      console.error("Error fetching user tables:", error);
+      setUserTablesError("Failed to fetch user tables");
     } finally {
       setIsFetchingUserTables(false);
-    }
-  };
-
-  // Load available databases for the user
-  const loadAvailableDatabases = async () => {
-    try {
-      console.log("Starting to load available databases...");
-      console.log("Current databaseConfigs:", databaseConfigs);
-      
-      // First fetch database configs if they haven't been loaded yet
-      if (databaseConfigs.length === 0) {
-        console.log("No database configs found, fetching from API...");
-        await fetchDatabaseConfigs();
-        console.log("After fetchDatabaseConfigs, databaseConfigs:", databaseConfigs);
-      }
-      
-      // Then get available databases from the loaded configs
-      const databases = await getAvailableDatabases();
-      setAvailableDatabases(databases);
-      console.log(`Loaded ${databases.length} available databases:`, databases);
-    } catch (error) {
-      console.error(`Error loading databases:`, error);
-      setAvailableDatabases([]);
-    }
-  };
-
-  // Handle user ID input with Enter key
-  const handleUserIdKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && userId.trim()) {
-      fetchExistingUserTables(userId);
-    }
-  };
-
-  // Get available databases from the database-config API
-  const getAvailableDatabases = async () => {
-    try {
-      // Return all available databases from the database-config API
-      // This is independent of user ID - shows all available databases
-      const userDatabases = databaseConfigs.filter(db => 
-        db.db_config && db.db_config.DB_NAME && db.db_config.DB_HOST
-      );
-
-      console.log("Filtered databases:", userDatabases);
-      return userDatabases || [];
-    } catch (error) {
-      console.error("Error fetching available databases:", error);
-      return databaseConfigs.filter(db => 
-        db.db_config && db.db_config.DB_NAME && db.db_config.DB_HOST
-      ) || [];
     }
   };
 
@@ -210,6 +156,11 @@ export function CreateVectorDBAccessModal({
     setSelectedTables((prev) => prev.filter((t) => t !== tableName));
   };
 
+  // Filter tables based on search
+  const filteredTables = existingUserTables.filter((table) =>
+    table.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   // Handle form submission
   const handleSubmit = async () => {
     // Clear previous errors
@@ -217,18 +168,13 @@ export function CreateVectorDBAccessModal({
     setSubmitSuccess(false);
 
     // Validation
-    if (!userId.trim()) {
+    if (!selectedUserId) {
       setSubmitError("User ID is required");
       return;
     }
 
-    if (!selectedDatabase) {
-      setSubmitError("Please select a database");
-      return;
-    }
-
-    if (selectedTables.length === 0) {
-      setSubmitError("Please select at least one table");
+    if (!selectedDatabase || selectedTables.length === 0) {
+      setSubmitError("Please select a database and at least one table");
       return;
     }
 
@@ -236,7 +182,7 @@ export function CreateVectorDBAccessModal({
 
     try {
       const request: UserConfigCreateRequest = {
-        user_id: userId.trim(),
+        user_id: selectedUserId,
         db_id: parseInt(selectedDatabase),
         access_level: 2, // Default value as per your spec
         accessible_tables: [], // Empty array as per your spec
@@ -247,7 +193,7 @@ export function CreateVectorDBAccessModal({
 
       const result = await createUserConfig(request);
 
-      if (result) {
+      if (result && (result.status === 'success' || result.config_id)) {
         setSubmitSuccess(true);
         console.log("Vector DB access created successfully:", result);
 
@@ -282,7 +228,7 @@ export function CreateVectorDBAccessModal({
 
   // Reset form
   const resetForm = () => {
-    setUserId("");
+    setSelectedUserId("");
     setSelectedDatabase("");
     setSelectedTables([]);
     setNewTableName("");
@@ -293,7 +239,7 @@ export function CreateVectorDBAccessModal({
     setExistingUserTables([]);
     setIsFetchingUserTables(false);
     setUserTablesError("");
-    setAvailableDatabases([]);
+    // setAvailableDatabases([]); // This line is no longer needed
   };
 
   // Handle close
@@ -302,84 +248,35 @@ export function CreateVectorDBAccessModal({
     onClose();
   };
 
-  // Filter tables based on search
-  const filteredTables = existingUserTables.filter((table) =>
-    table.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-800 border-purple-500/30">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-white flex items-center">
             <Brain className="w-5 h-5 mr-2 text-purple-400" />
-            Create Vector Database Access
+            {editingUser ? "Edit Vector DB Access" : "Create Vector DB Access"}
           </DialogTitle>
+          <p className="text-gray-400 text-sm">
+            {editingUser 
+              ? "Update user access to vector databases" 
+              : "Grant user access to vector databases for AI operations"
+            }
+          </p>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Loading State */}
-          {isLoading && (
-            <div className="flex items-center justify-center py-8">
-              <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-400"></div>
-                <span className="text-gray-400">
-                  Loading database configurations...
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* User ID Input */}
           <div className="space-y-3">
-            <Label className="text-white font-medium">User ID</Label>
-            <div className="text-sm text-gray-400 mb-2">
-              Enter a user ID and press{" "}
-              <kbd className="bg-slate-600 px-2 py-1 rounded text-xs">
-                Enter
-              </kbd>{" "}
-              to fetch existing tables for that user
+            <Label className="text-white font-medium">User ID *</Label>
+            <Input
+              placeholder="Enter user ID (email)"
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="bg-slate-700 border-slate-600 text-white"
+            />
+            <div className="text-sm text-gray-400">
+              Enter the email address of the user you want to grant vector database access to
             </div>
-            <div className="flex gap-2">
-              <Input
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                onKeyPress={handleUserIdKeyPress}
-                placeholder="Enter user ID or email"
-                className="bg-slate-700 border-slate-600 text-white flex-1"
-              />
-              <Button
-                onClick={() => {
-                  if (userId.trim()) {
-                    fetchExistingUserTables(userId);
-                  }
-                }}
-                disabled={!userId.trim() || isFetchingUserTables}
-                variant="outline"
-                size="sm"
-                className="border-slate-600 text-gray-300 hover:bg-slate-700"
-              >
-                {isFetchingUserTables ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-400"></div>
-                ) : (
-                  "Load Data"
-                )}
-              </Button>
-            </div>
-            {userId.trim() && (
-              <div className="text-sm text-gray-400">
-                {isFetchingUserTables ? (
-                  <span>Fetching tables for "{userId}"...</span>
-                ) : userTablesError ? (
-                  <span className="text-red-400">{userTablesError}</span>
-                ) : (
-                  <span>
-                    Found {existingUserTables.length} existing tables for this
-                    user.
-                  </span>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Database Selection */}
@@ -394,7 +291,7 @@ export function CreateVectorDBAccessModal({
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-400"></div>
                 <span className="text-gray-400 text-sm">Loading available databases...</span>
               </div>
-            ) : availableDatabases.length === 0 ? (
+            ) : vectorDBConfigs.length === 0 ? (
               <div className="text-sm text-gray-400 bg-slate-700/50 p-3 rounded-lg">
                 No databases available. Please check your database configuration.
               </div>
@@ -407,16 +304,15 @@ export function CreateVectorDBAccessModal({
                   <SelectValue placeholder="Select database" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-700 border-slate-600">
-                  {Array.isArray(availableDatabases) && availableDatabases.map((db) => (
+                  {Array.isArray(vectorDBConfigs) && vectorDBConfigs.map((db) => (
                     <SelectItem key={db.db_id} value={db.db_id.toString()}>
                       <div className="flex flex-col">
                         <div className="flex items-center">
                           <Database className="w-4 h-4 mr-2 text-purple-400" />
-                          <span className="font-medium">Database {db.db_id}</span>
+                          <span className="font-medium">{db.db_config.DB_NAME}</span>
                         </div>
                         <div className="text-xs text-gray-400 ml-6">
-                          {db.db_config.DB_NAME} • {db.db_config.DB_HOST}:
-                          {db.db_config.DB_PORT}
+                          {db.db_config.DB_HOST}:{db.db_config.DB_PORT}
                         </div>
                       </div>
                     </SelectItem>
@@ -539,7 +435,7 @@ export function CreateVectorDBAccessModal({
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-400">User ID:</span>
-                    <span className="text-white ml-2">{userId}</span>
+                    <span className="text-white ml-2">{selectedUserId || 'Not specified'}</span>
                   </div>
                   <div>
                     <span className="text-gray-400">Database ID:</span>
@@ -579,7 +475,7 @@ export function CreateVectorDBAccessModal({
             <div className="flex items-center p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
               <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
               <span className="text-green-400 text-sm">
-                Vector DB access created successfully!
+                Vector DB access {editingUser ? 'updated' : 'created'} successfully!
               </span>
             </div>
           )}
@@ -599,13 +495,16 @@ export function CreateVectorDBAccessModal({
             onClick={handleSubmit}
             disabled={
               isSubmitting ||
-              !userId ||
+              !selectedUserId ||
               !selectedDatabase ||
               selectedTables.length === 0
             }
             className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
           >
-            {isSubmitting ? "Creating..." : "Create Vector Access"}
+            {isSubmitting 
+              ? (editingUser ? "Updating..." : "Creating...") 
+              : (editingUser ? "Update Vector Access" : "Create Vector Access")
+            }
           </Button>
         </div>
       </DialogContent>

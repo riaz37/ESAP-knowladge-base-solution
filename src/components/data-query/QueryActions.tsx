@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Download, Copy, Save, Share2, Bookmark } from "lucide-react";
+import { Download, Copy, Save, Share2, Bookmark, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface QueryAction {
@@ -12,23 +12,69 @@ interface QueryAction {
 }
 
 interface QueryActionsProps {
-  actions: QueryAction[];
+  // Legacy support for actions array
+  actions?: QueryAction[];
+  
+  // New props for database query actions
+  onExecute?: () => void;
+  onClear?: () => void;
+  onSave?: () => void;
+  isExecuting?: boolean;
+  hasQuery?: boolean;
+  hasResults?: boolean;
+  isDisabled?: boolean;
+  
   className?: string;
   layout?: "horizontal" | "vertical";
 }
 
 export function QueryActions({ 
-  actions, 
+  actions,
+  onExecute,
+  onClear,
+  onSave,
+  isExecuting = false,
+  hasQuery = false,
+  hasResults = false,
+  isDisabled = false,
   className = "",
   layout = "horizontal"
 }: QueryActionsProps) {
+  // Create actions array from props if not provided
+  const queryActions: QueryAction[] = actions || [
+    {
+      label: isExecuting ? "Executing..." : "Execute Query",
+      icon: <Play className="h-4 w-4" />,
+      onClick: onExecute || (() => {}),
+      variant: "default",
+      size: "default",
+      disabled: isDisabled || !hasQuery || isExecuting
+    },
+    {
+      label: "Clear Results",
+      icon: <Trash2 className="h-4 w-4" />,
+      onClick: onClear || (() => {}),
+      variant: "outline",
+      size: "sm",
+      disabled: !hasResults || isExecuting
+    },
+    {
+      label: "Save Query",
+      icon: <Save className="h-4 w-4" />,
+      onClick: onSave || (() => {}),
+      variant: "outline",
+      size: "sm",
+      disabled: !hasQuery || isExecuting
+    }
+  ];
+
   const containerClass = layout === "vertical" 
     ? "flex flex-col gap-2" 
     : "flex gap-2";
 
   return (
     <div className={`${containerClass} ${className}`}>
-      {actions.map((action, index) => (
+      {queryActions.map((action, index) => (
         <Button
           key={index}
           variant={action.variant || "outline"}
