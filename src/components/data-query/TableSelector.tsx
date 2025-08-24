@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Card components removed - now handled by parent component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -48,142 +48,158 @@ export function TableSelector({
       const errorMessage = error instanceof Error ? error.message : "Failed to fetch tables";
       console.error("Failed to fetch user tables:", error);
       setError(errorMessage);
-      setAvailableTables([]);
+      toast.error("Failed to load tables", {
+        description: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Fetch tables on mount and when databaseId changes
   useEffect(() => {
     if (user?.user_id) {
       fetchUserTables();
     }
   }, [user?.user_id, databaseId]);
 
-  const filteredTables = availableTables.filter(tableName =>
-    tableName.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filter tables based on search term
+  const filteredTables = availableTables.filter((table) =>
+    table.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleTableClick = (tableName: string) => {
-    onTableSelect(tableName);
-    toast.success(`Selected table: ${tableName}`);
-  };
-
+  // Handle refresh
   const handleRefresh = () => {
     fetchUserTables();
   };
 
   if (!user?.user_id) {
     return (
-      <Card className={className}>
-        <CardContent className="p-6">
-          <div className="text-center py-8">
-            <Database className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-            <p className="text-gray-500 text-sm">
-              Please log in to view available tables
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className={className}>
+        <div className="text-center py-8">
+          <Database className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+          <p className="text-gray-400 text-sm">
+            Please log in to view available tables
+          </p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          Available Tables
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-            {/* Search and Actions */}
-            <div className="flex items-center gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search tables..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+    <div className={className}>
+      <div className="space-y-4">
+        {/* Search and Actions */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search tables..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-gray-800/50 border-gray-600/30 text-white placeholder:text-gray-400"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="border-green-400/30 text-green-400 hover:bg-green-400/10"
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="text-center py-6">
+            <Loader2 className="h-8 w-8 mx-auto text-green-400 animate-spin mb-2" />
+            <p className="text-gray-400 text-sm">Loading tables...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className="text-center py-6">
+            <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+              <p className="text-red-400 text-sm">{error}</p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRefresh}
-                disabled={isLoading}
+                className="mt-2 border-red-400/30 text-red-400 hover:bg-red-400/10"
               >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
+                Try Again
               </Button>
             </div>
-
-            {/* Tables List */}
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-                <span className="ml-2 text-gray-500">Loading tables...</span>
-              </div>
-            ) : error ? (
-              <div className="text-center py-8">
-                <p className="text-red-500 text-sm">{error}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  className="mt-2"
-                >
-                  Try Again
-                </Button>
-              </div>
-            ) : filteredTables.length === 0 ? (
-              <div className="text-center py-8">
-                <Database className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                <p className="text-gray-500 text-sm">
-                  {searchTerm ? "No tables match your search" : "No tables available"}
-                </p>
-            {!searchTerm && (
-              <p className="text-gray-400 text-xs mt-1">
-                Tables will appear here once you have access to a database
-              </p>
-            )}
-              </div>
-            ) : (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between mb-2">
-              <Badge variant="secondary" className="text-xs">
-                {filteredTables.length} table{filteredTables.length !== 1 ? 's' : ''} found
-                        </Badge>
-                      </div>
-            <div className="max-h-64 overflow-y-auto space-y-1 border rounded-lg p-2">
-              {filteredTables.map((tableName) => (
-                <Button
-                  key={tableName}
-                  variant="ghost"
-                  className="w-full justify-start text-left h-auto p-3 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  onClick={() => handleTableClick(tableName)}
-                >
-                  <div className="flex items-center gap-3 w-full">
-                    <Database className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                    <span className="font-medium truncate">{tableName}</span>
-                  </div>
-                </Button>
-                ))}
-              </div>
           </div>
         )}
 
-        {/* Info message */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-          <p className="text-blue-800 dark:text-blue-200 text-sm">
-            💡 Click on a table name to add it to your query
-          </p>
+        {/* Tables List */}
+        {!isLoading && !error && (
+          <>
+            {filteredTables.length === 0 ? (
+              <div className="text-center py-6">
+                <Database className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                <p className="text-gray-400 text-sm">
+                  {availableTables.length === 0 
+                    ? "No tables found" 
+                    : "No tables match your search"
+                  }
+                </p>
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearchTerm("")}
+                    className="mt-2 text-green-400 hover:bg-green-400/10"
+                  >
+                    Clear search
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-400">
+                    {filteredTables.length} table{filteredTables.length !== 1 ? 's' : ''} found
+                  </p>
+                  <Badge variant="outline" className="border-green-400/30 text-green-400">
+                    {filteredTables.length}
+                  </Badge>
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {filteredTables.map((table) => (
+                    <Button
+                      key={table}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onTableSelect(table)}
+                      className="w-full justify-start text-left p-3 h-auto border border-gray-600/30 hover:bg-green-400/10 hover:border-green-400/30"
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <Database className="h-4 w-4 text-green-400" />
+                        <span className="text-white font-mono text-sm">{table}</span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Help Text */}
+        <div className="text-xs text-gray-400 space-y-1">
+          <p>💡 Click on a table name to add it to your query</p>
+          <p>🔍 Use the search box to find specific tables</p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 } 

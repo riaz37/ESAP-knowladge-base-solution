@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// Card components removed - now handled by parent component
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -356,40 +356,35 @@ export function FileUpload({
   }, [handleFileSelect]);
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Upload className="w-5 h-5" />
-            File Upload
-          </div>
-          {uploadedFiles.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {uploadedFiles.filter(f => f.status === 'completed').length} / {uploadedFiles.length} Complete
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearAllFiles}
-                disabled={isUploading}
-              >
-                Clear All
-              </Button>
-            </div>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className={className}>
+      {/* Header with status */}
+      {uploadedFiles.length > 0 && (
+        <div className="flex items-center justify-between mb-4">
+          <Badge variant="outline" className="border-blue-400/30 text-blue-400">
+            {uploadedFiles.filter(f => f.status === 'completed').length} / {uploadedFiles.length} Complete
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearAllFiles}
+            disabled={isUploading}
+            className="border-red-400/30 text-red-400 hover:bg-red-400/10"
+          >
+            Clear All
+          </Button>
+        </div>
+      )}
+
+      <div className="space-y-4">
         {/* Table Usage Toggle */}
-        <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+        <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-600/30">
           <div className="flex items-center gap-3">
-            <Database className="w-5 h-5 text-blue-600" />
+            <Database className="w-5 h-5 text-blue-400" />
             <div>
-              <Label htmlFor="use-table" className="text-sm font-medium text-gray-900 dark:text-white">
+              <Label htmlFor="use-table" className="text-sm font-medium text-white">
                 Use Table Names
               </Label>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-400">
                 {useTable ? 'Files will be associated with table names' : 'Files will be processed without table names'}
               </p>
             </div>
@@ -404,8 +399,8 @@ export function FileUpload({
 
         {/* File Drop Zone */}
         <div
-          className={`border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center transition-colors ${
-            disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-500 hover:bg-blue-50'
+          className={`border-2 border-dashed border-gray-600/50 rounded-lg p-6 text-center transition-colors ${
+            disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-400 hover:bg-blue-900/20'
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -424,21 +419,21 @@ export function FileUpload({
           
           {isUploading ? (
             <>
-              <Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-spin" />
-              <p className="text-lg font-medium text-gray-900 dark:text-white">
+              <Loader2 className="w-12 h-12 text-blue-400 mx-auto mb-4 animate-spin" />
+              <p className="text-lg font-medium text-white">
                 Uploading files...
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-400">
                 Please wait while your files are being processed
               </p>
             </>
           ) : (
             <>
               <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-lg font-medium text-gray-900 dark:text-white">
+              <p className="text-lg font-medium text-white">
                 Click to upload files or drag and drop
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-400">
                 Supports TXT, PDF, DOC, DOCX, CSV, XLSX, XLS
               </p>
             </>
@@ -454,7 +449,7 @@ export function FileUpload({
               uploadFiles(pendingFiles);
             }}
             disabled={disabled || uploadedFiles.filter(f => f.status === 'pending').length === 0 || !user?.user_id}
-            className="w-full"
+            className="w-full bg-blue-600 hover:bg-blue-700"
           >
             <Upload className="w-4 h-4 mr-2" />
             Upload {uploadedFiles.filter(f => f.status === 'pending').length} Files
@@ -477,65 +472,55 @@ export function FileUpload({
           </div>
         )}
 
-        {/* File List */}
+        {/* Uploaded Files List */}
         {uploadedFiles.length > 0 && (
           <div className="space-y-3">
-            <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">
-              Files ({uploadedFiles.length})
-            </h4>
-            {uploadedFiles.map((uploadFile) => (
-              <div
-                key={uploadFile.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border"
-              >
-                <div className="flex items-center gap-3 flex-1">
-                  {getStatusIcon(uploadFile.status)}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {uploadFile.file.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {(uploadFile.file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                    {useTable && (
-                      <p className="text-xs text-blue-600 dark:text-blue-400">
-                        Table: file_{uploadFile.file.name.replace(/[^a-zA-Z0-9]/g, '_')}
+            <h4 className="text-sm font-medium text-white">Uploaded Files</h4>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {uploadedFiles.map((uploadedFile) => (
+                <div key={uploadedFile.id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-600/30">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {getStatusIcon(uploadedFile.status)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {uploadedFile.file.name}
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className={`text-xs ${getStatusColor(uploadedFile.status)}`}>
+                          {uploadedFile.status}
+                        </Badge>
+                        <span className="text-xs text-gray-400">
+                          {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
+                      {uploadedFile.error && (
+                        <p className="text-xs text-red-400 mt-1">{uploadedFile.error}</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {(uploadedFile.status === 'uploading' || uploadedFile.status === 'processing') && (
+                      <div className="w-16">
+                        <Progress value={uploadedFile.progress} className="h-2" />
+                      </div>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(uploadedFile.id)}
+                      disabled={isUploading}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-3">
-                  {/* Progress Bar */}
-                  <div className="w-24">
-                    <Progress value={uploadFile.progress} className="h-2" />
-                  </div>
-                  
-                  {/* Progress Text */}
-                  <span className="text-xs text-gray-600 dark:text-gray-400 min-w-[3rem] text-right">
-                    {uploadFile.progress}%
-                  </span>
-                  
-                  {/* Status Badge */}
-                  <Badge variant="secondary" className={getStatusColor(uploadFile.status)}>
-                    {uploadFile.status}
-                  </Badge>
-                  
-                  {/* Remove Button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeFile(uploadFile.id)}
-                    disabled={uploadFile.status === 'processing' || uploadFile.status === 'uploading'}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 } 

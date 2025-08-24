@@ -1,104 +1,155 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Card components removed - now handled by parent component
 import { Badge } from "@/components/ui/badge";
-import { History, Clock, CheckCircle, XCircle, FileText, Database } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { History, Clock, CheckCircle, XCircle, FileText, Database, Trash2 } from "lucide-react";
 import { QueryHistoryItem } from "@/store/query-store";
 
 interface QueryHistoryPanelProps {
   history: QueryHistoryItem[];
-  queryType: 'file' | 'database';
+  onSelect?: (item: QueryHistoryItem) => void;
+  onClear?: () => void;
+  type?: 'file' | 'database';
   maxItems?: number;
   emptyMessage?: string;
-  onQuerySelect?: (query: string) => void;
 }
 
 export function QueryHistoryPanel({ 
   history, 
-  queryType, 
+  onSelect,
+  onClear,
+  type = 'file',
   maxItems = 10, 
-  emptyMessage,
-  onQuerySelect 
+  emptyMessage
 }: QueryHistoryPanelProps) {
   const getIcon = () => {
-    return queryType === 'file' ? <FileText className="h-5 w-5" /> : <Database className="h-5 w-5" />;
+    return type === 'file' ? <FileText className="h-4 w-4" /> : <Database className="h-4 w-4" />;
   };
 
   const getEmptyMessage = () => {
     if (emptyMessage) return emptyMessage;
-    return queryType === 'file' 
+    return type === 'file' 
       ? "No file query history yet" 
       : "No database query history yet";
   };
 
   const getEmptySubMessage = () => {
-    return queryType === 'file'
+    return type === 'file'
       ? "Execute your first file query to see history"
       : "Execute your first database query to see history";
   };
 
   const getStatusIcon = (status: string) => {
     return status === 'success' ? (
-      <CheckCircle className="h-3 w-3 text-green-600" />
+      <CheckCircle className="h-3 w-3 text-green-400" />
     ) : (
-      <XCircle className="h-3 w-3 text-red-600" />
+      <XCircle className="h-3 w-3 text-red-400" />
     );
   };
 
-  const handleQueryClick = (query: string) => {
-    if (onQuerySelect) {
-      onQuerySelect(query);
+  const handleQueryClick = (item: QueryHistoryItem) => {
+    if (onSelect) {
+      onSelect(item);
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <History className="h-5 w-5" />
-          Recent {queryType === 'file' ? 'File' : 'Database'} Queries
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3 max-h-96 overflow-auto">
-          {history.length > 0 ? (
-            history.slice(0, maxItems).map((item) => (
-              <div
-                key={item.id}
-                className={`p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
-                  onQuerySelect ? 'cursor-pointer' : ''
-                }`}
-                onClick={() => onQuerySelect && handleQueryClick(item.query)}
-              >
-                <div className="flex items-center justify-between mb-2">
+    <div className="space-y-3">
+      {/* Header with clear button */}
+      {history.length > 0 && onClear && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-400">
+            {history.length} quer{history.length !== 1 ? 'ies' : 'y'} in history
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClear}
+            className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            Clear All
+          </Button>
+        </div>
+      )}
+
+      {/* History List */}
+      <div className="space-y-2 max-h-80 overflow-y-auto">
+        {history.length > 0 ? (
+          history.slice(0, maxItems).map((item) => (
+            <div
+              key={item.id}
+              className={`p-3 bg-gray-800/30 border border-gray-600/30 rounded-lg transition-all duration-200 ${
+                onSelect 
+                  ? 'cursor-pointer hover:bg-indigo-900/20 hover:border-indigo-400/30' 
+                  : ''
+              }`}
+              onClick={() => onSelect && handleQueryClick(item)}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {getIcon()}
                   <Badge
-                    variant={item.status === 'success' ? 'default' : 'destructive'}
-                    className="text-xs"
+                    variant="outline"
+                    className={`text-xs ${
+                      item.status === 'success' 
+                        ? 'border-green-400/30 text-green-400' 
+                        : 'border-red-400/30 text-red-400'
+                    }`}
                   >
+                    {getStatusIcon(item.status)}
                     {item.status}
                   </Badge>
-                  <span className="text-xs text-gray-500 flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    {new Date(item.timestamp).toLocaleTimeString()}
-                  </span>
                 </div>
-                <div className="text-sm font-mono text-gray-700 dark:text-gray-300 truncate">
+                <span className="text-xs text-gray-400 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {new Date(item.timestamp).toLocaleString()}
+                </span>
+              </div>
+              
+              <div className="text-sm font-mono text-white bg-gray-900/50 p-2 rounded border border-gray-600/30 mb-2">
+                <div className="truncate" title={item.query}>
                   {item.query}
                 </div>
-                {item.executionTime && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {item.executionTime.toFixed(2)}s • {item.rowCount} rows
-                  </div>
+              </div>
+
+              {/* Query metadata */}
+              <div className="flex items-center justify-between text-xs text-gray-400">
+                <div className="flex items-center gap-3">
+                  {item.metadata?.executionTime && (
+                    <span>⏱️ {item.metadata.executionTime}ms</span>
+                  )}
+                  {item.metadata?.resultCount !== undefined && (
+                    <span>📊 {item.metadata.resultCount} results</span>
+                  )}
+                  {item.metadata?.fileIds && (
+                    <span>📄 {item.metadata.fileIds.length} files</span>
+                  )}
+                </div>
+                {onSelect && (
+                  <span className="text-indigo-400">Click to reuse →</span>
                 )}
               </div>
-            ))
-          ) : (
-            <div className="text-center py-4 text-gray-500">
-              <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">{getEmptyMessage()}</p>
-              <p className="text-xs">{getEmptySubMessage()}</p>
             </div>
-          )}
+          ))
+        ) : (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800/50 flex items-center justify-center border border-gray-600/30">
+              <History className="h-8 w-8 text-gray-400" />
+            </div>
+            <p className="text-gray-400 font-medium mb-1">{getEmptyMessage()}</p>
+            <p className="text-gray-500 text-sm">{getEmptySubMessage()}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Show more indicator */}
+      {history.length > maxItems && (
+        <div className="text-center py-2">
+          <p className="text-xs text-gray-500">
+            Showing {maxItems} of {history.length} queries
+          </p>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 } 

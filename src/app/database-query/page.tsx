@@ -114,7 +114,7 @@ export default function DatabaseQueryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+    <div className="w-full min-h-screen relative bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900">
       {/* Add top padding to account for fixed navbar */}
       <div className="pt-24 pb-8">
         <div className="container mx-auto px-4">

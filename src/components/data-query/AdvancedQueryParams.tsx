@@ -1,247 +1,198 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
-import { useState } from "react";
 
-interface AdvancedQueryParamsProps {
-  useIntentReranker: boolean;
-  useChunkReranker: boolean;
-  useDualEmbeddings: boolean;
-  intentTopK: number;
-  chunkTopK: number;
-  chunkSource: string;
-  maxChunksForAnswer: number;
-  answerStyle: string;
-  onIntentRerankerChange: (value: boolean) => void;
-  onChunkRerankerChange: (value: boolean) => void;
-  onDualEmbeddingsChange: (value: boolean) => void;
-  onIntentTopKChange: (value: number) => void;
-  onChunkTopKChange: (value: number) => void;
-  onChunkSourceChange: (value: string) => void;
-  onMaxChunksForAnswerChange: (value: number) => void;
-  onAnswerStyleChange: (value: string) => void;
-  onReset?: () => void;
-  className?: string;
-}
-
-export function AdvancedQueryParams({
-  useIntentReranker,
-  useChunkReranker,
-  useDualEmbeddings,
-  intentTopK,
-  chunkTopK,
-  chunkSource,
-  maxChunksForAnswer,
-  answerStyle,
-  onIntentRerankerChange,
-  onChunkRerankerChange,
-  onDualEmbeddingsChange,
-  onIntentTopKChange,
-  onChunkTopKChange,
-  onChunkSourceChange,
-  onMaxChunksForAnswerChange,
-  onAnswerStyleChange,
-  onReset,
-  className = "",
-}: AdvancedQueryParamsProps) {
+// Simple version without props for standalone use
+export function AdvancedQueryParams() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [params, setParams] = useState({
+    useIntentReranker: false,
+    useChunkReranker: false,
+    useDualEmbeddings: true,
+    intentTopK: 20,
+    chunkTopK: 40,
+    chunkSource: "files",
+    maxChunksForAnswer: 40,
+    answerStyle: "detailed",
+  });
+
+  const handleReset = () => {
+    setParams({
+      useIntentReranker: false,
+      useChunkReranker: false,
+      useDualEmbeddings: true,
+      intentTopK: 20,
+      chunkTopK: 40,
+      chunkSource: "files",
+      maxChunksForAnswer: 40,
+      answerStyle: "detailed",
+    });
+  };
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Advanced Query Parameters
-          </div>
-          <div className="flex items-center gap-2">
-            {onReset && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onReset}
-                className="h-8 px-2"
-                title="Reset to defaults"
-              >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="h-8 w-8 p-0"
-            >
-              {isExpanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-purple-400 hover:bg-purple-400/10 p-0 h-auto"
+        >
+          <Settings className="w-4 h-4 mr-2" />
+          Advanced Parameters
+          {isExpanded ? (
+            <ChevronUp className="w-4 h-4 ml-2" />
+          ) : (
+            <ChevronDown className="w-4 h-4 ml-2" />
+          )}
+        </Button>
+        {isExpanded && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="text-gray-400 hover:text-gray-300 hover:bg-gray-700/50"
+          >
+            <RotateCcw className="w-3 h-3 mr-1" />
+            Reset
+          </Button>
+        )}
+      </div>
+
+      {/* Expanded Content */}
       {isExpanded && (
-        <CardContent className="space-y-4">
-          {/* Reranking Settings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
+        <div className="space-y-4 p-4 bg-gray-800/30 rounded-lg border border-gray-600/30">
+          {/* Reranking Options */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-purple-400">Reranking Options</Label>
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="intent-reranker" className="text-sm font-medium">
-                  Intent Reranker
+                <Label htmlFor="intent-reranker" className="text-sm text-gray-300">
+                  Use Intent Reranker
                 </Label>
                 <Switch
                   id="intent-reranker"
-                  checked={useIntentReranker}
-                  onCheckedChange={onIntentRerankerChange}
+                  checked={params.useIntentReranker}
+                  onCheckedChange={(checked) =>
+                    setParams(prev => ({ ...prev, useIntentReranker: checked }))
+                  }
                 />
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Use intent-based reranking for better query understanding
-              </p>
-            </div>
-
-            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label htmlFor="chunk-reranker" className="text-sm font-medium">
-                  Chunk Reranker
+                <Label htmlFor="chunk-reranker" className="text-sm text-gray-300">
+                  Use Chunk Reranker
                 </Label>
                 <Switch
                   id="chunk-reranker"
-                  checked={useChunkReranker}
-                  onCheckedChange={onChunkRerankerChange}
+                  checked={params.useChunkReranker}
+                  onCheckedChange={(checked) =>
+                    setParams(prev => ({ ...prev, useChunkReranker: checked }))
+                  }
                 />
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Use chunk-based reranking for better content relevance
-              </p>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="dual-embeddings" className="text-sm text-gray-300">
+                  Use Dual Embeddings
+                </Label>
+                <Switch
+                  id="dual-embeddings"
+                  checked={params.useDualEmbeddings}
+                  onCheckedChange={(checked) =>
+                    setParams(prev => ({ ...prev, useDualEmbeddings: checked }))
+                  }
+                />
+              </div>
             </div>
           </div>
 
-          {/* Embeddings Settings */}
+          {/* Retrieval Parameters */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="dual-embeddings" className="text-sm font-medium">
-                Dual Embeddings
-              </Label>
-              <Switch
-                id="dual-embeddings"
-                checked={useDualEmbeddings}
-                onCheckedChange={onDualEmbeddingsChange}
-              />
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Use dual embedding approach for enhanced semantic understanding
-            </p>
-          </div>
-
-          {/* Top-K Settings */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="intent-top-k" className="text-sm font-medium">
-                Intent Top-K
-              </Label>
-              <Input
-                id="intent-top-k"
-                type="number"
-                min="1"
-                max="100"
-                value={intentTopK}
-                onChange={(e) => onIntentTopKChange(parseInt(e.target.value) || 20)}
-                className="h-9"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Number of top intent results to consider
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="chunk-top-k" className="text-sm font-medium">
-                Chunk Top-K
-              </Label>
-              <Input
-                id="chunk-top-k"
-                type="number"
-                min="1"
-                max="100"
-                value={chunkTopK}
-                onChange={(e) => onChunkTopKChange(parseInt(e.target.value) || 40)}
-                className="h-9"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Number of top chunk results to consider
-              </p>
-            </div>
-          </div>
-
-          {/* Chunk Source and Max Chunks */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="chunk-source" className="text-sm font-medium">
-                Chunk Source
-              </Label>
-              <Select value={chunkSource} onValueChange={onChunkSourceChange}>
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder="Select chunk source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="reranked">Reranked</SelectItem>
-                  <SelectItem value="original">Original</SelectItem>
-                  <SelectItem value="hybrid">Hybrid</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Source of chunks for processing
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="max-chunks" className="text-sm font-medium">
-                Max Chunks for Answer
-              </Label>
-              <Input
-                id="max-chunks"
-                type="number"
-                min="1"
-                max="100"
-                value={maxChunksForAnswer}
-                onChange={(e) => onMaxChunksForAnswerChange(parseInt(e.target.value) || 40)}
-                className="h-9"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Maximum chunks to use for answer generation
-              </p>
+            <Label className="text-sm font-medium text-purple-400">Retrieval Parameters</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="intent-topk" className="text-xs text-gray-400">
+                  Intent Top K
+                </Label>
+                <Input
+                  id="intent-topk"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={params.intentTopK}
+                  onChange={(e) =>
+                    setParams(prev => ({ ...prev, intentTopK: parseInt(e.target.value) || 20 }))
+                  }
+                  className="bg-gray-800/50 border-gray-600/30 text-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="chunk-topk" className="text-xs text-gray-400">
+                  Chunk Top K
+                </Label>
+                <Input
+                  id="chunk-topk"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={params.chunkTopK}
+                  onChange={(e) =>
+                    setParams(prev => ({ ...prev, chunkTopK: parseInt(e.target.value) || 40 }))
+                  }
+                  className="bg-gray-800/50 border-gray-600/30 text-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="max-chunks" className="text-xs text-gray-400">
+                  Max Chunks for Answer
+                </Label>
+                <Input
+                  id="max-chunks"
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={params.maxChunksForAnswer}
+                  onChange={(e) =>
+                    setParams(prev => ({ ...prev, maxChunksForAnswer: parseInt(e.target.value) || 40 }))
+                  }
+                  className="bg-gray-800/50 border-gray-600/30 text-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="answer-style" className="text-xs text-gray-400">
+                  Answer Style
+                </Label>
+                <Select
+                  value={params.answerStyle}
+                  onValueChange={(value) =>
+                    setParams(prev => ({ ...prev, answerStyle: value }))
+                  }
+                >
+                  <SelectTrigger className="bg-gray-800/50 border-gray-600/30 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectItem value="concise" className="text-white">Concise</SelectItem>
+                    <SelectItem value="detailed" className="text-white">Detailed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
-          {/* Answer Style */}
-          <div className="space-y-2">
-            <Label htmlFor="answer-style" className="text-sm font-medium">
-              Answer Style
-            </Label>
-            <Select value={answerStyle} onValueChange={onAnswerStyleChange}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Select answer style" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="detailed">Detailed</SelectItem>
-                <SelectItem value="concise">Concise</SelectItem>
-                <SelectItem value="summary">Summary</SelectItem>
-                <SelectItem value="bullet">Bullet Points</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Style of the generated answer
-            </p>
+          {/* Info Text */}
+          <div className="text-xs text-gray-400 space-y-1">
+            <p>• Intent reranker improves query understanding</p>
+            <p>• Chunk reranker refines content selection</p>
+            <p>• Higher Top K values return more candidates</p>
+            <p>• Max chunks controls answer comprehensiveness</p>
           </div>
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   );
 } 
